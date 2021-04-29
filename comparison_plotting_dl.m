@@ -1,18 +1,15 @@
 opengl software
-cd Results
-sim1 = load("dil9_5deg_low_phi_small_early.txt");
-% sim2 = load("dil9_5deg_dl_small.txt");
-% sim3 = load("sim3_out.txt");
-cd ../
-sim_list = {sim1};
+names = ["dil9_5deg_init_elastic.txt","dil9deg_slowing_flow.txt"];
+
 % Loads the data to compare and puts them in a list of simulations
 
-sim_num = size(sim_list,2);
-n_times = zeros(1,sim_num);
-for j=1:sim_num
-    n_times(1,j) = size(sim_list{1,j},1);
-end
-
+sim_num = size(names,2);
+sim_list = cell(1,sim_num);
+n_times = zeros(sim_num,1);
+% for j=1:sim_num
+%     n_times(1,j) = size(sim_list{1,j},1);
+% end
+sim_type = strings(1,sim_num);
 % Need to specify the type of simulation:
 % dilatancy - "dil"
 % diffusion only - "pdriv"
@@ -20,36 +17,52 @@ end
 % constant velocity profile - "ucon"
 % Need to create lists storing the parameters in positions that corrrelate to
 % the data in sim_list
-sim_type = ["dil","dil","pdriv"];
 
-N=[200,400,200];
-h = [4e-3,4e-3,4e-3];
-d=[1.43e-5, 1.43e-5,1.43e-4];
-dz = h./(N-0.5); % z spacing
-phi_c=[0.6,0.6,0.6]; % Volume fraction
-eta_f = [0.0010016,0.0010016,0.0010016]; % Pa s
-g=[9.81,9.81,9.81]; % m/s^2
-rho_f = [1000,1000,1000]; % kg/m^3
-rho_p = [2500,2500,2500]; % kg/m^3
-theta = [9.5,9.5,5.0]; % deg
-alpha = [0.001,0.001,0.001]; % 1/Pa
+N=zeros(1,sim_num);
+h = zeros(1,sim_num);
+d=zeros(1,sim_num);
+dz = zeros(1,sim_num);
+phi_c=zeros(1,sim_num);
+eta_f_dl = zeros(1,sim_num);
+g=9.81*ones(1,sim_num); % m/s^2
+theta = zeros(1,sim_num); % deg
+alpha_dl = zeros(1,sim_num); % 1/Pa
 s_frac = [0.0,0,0.7];
+density_ratio = zeros(1,sim_num);
+t_step = zeros(1,sim_num);
+
+record = readtable('Results/result_record.csv');
+
+for k=1:sim_num
+    in_table = strcmp(record.Name, names(k));
+    cd Results
+    sim_list{k,1} = load(names(k));
+    cd ../
+    sim_type(k) = record.Type(in_table);
+    N(k) = record.N(in_table);
+    h(k) = record.h(in_table);
+    d(k) = record.d(in_table);
+    dz(i) = h/(N-0.5);
+    phi_c(k) = record.phi_c(in_table);
+    density_ratio(k) = record.rho_r(in_table);
+    eta_f_dl(k) = record.eta_f(in_table);
+    theta(k) = record.theta(in_table);
+    alpha_dl(k) = record.alpha(in_table);
+    t_step(k) = record.t_step(in_table);
+    n_times(k) = size(sim_list{k,1},1);
+end
 
 v_scale = sqrt(g.*h);
-p_scale = rho_f.*g.*h;
 t_scale = sqrt(h./g);
 z_scale = h;
-density_ratio = rho_p./rho_f;
+
 
 d_dl = d./z_scale;
 dz_dl = dz./z_scale;
-eta_f_dl = eta_f./(p_scale.*t_scale);
-alpha_dl = alpha.*p_scale;
 
 % Creates cells to store the matrices of values
 
 buoyancy = zeros(sim_num);
-buoyancy_dl = zeros(sim_num);
 z_pe = cell(sim_num,1);
 z_u = cell(sim_num,1);
 p_b = cell(sim_num,1);
@@ -58,9 +71,6 @@ p_p = cell(sim_num,1);
 phi = cell(sim_num,1);
 u_f = cell(sim_num,1);
 u_p = cell(sim_num,1);
-z_pe_dl = cell(sim_num,1);
-z_u_dl = cell(sim_num,1);
-p_b_dl = cell(sim_num,1);
 I = cell(sim_num,1);
 Iv = cell(sim_num,1);
 mu = cell(sim_num,1);
@@ -73,6 +83,7 @@ drag_term_p = cell(sim_num,1);
 drag_mult_f = cell(sim_num,1);
 drag_term_f = cell(sim_num,1);
 dpdz = cell(sim_num,1);
+dppdz = cell(sim_num,1);
 d2pdz2 = cell(sim_num,1);
 d3pdz3 = cell(sim_num,1);
 dufdz = cell(sim_num,1);
@@ -89,17 +100,12 @@ dufdt = cell(sim_num,1);
 
 % loops over the simulations
 for i = 1:sim_num
-    buoyancy(i) = -(rho_p(i)-rho_f(i))*g(i)*phi_c(i)*cosd(theta(i))*h(i);
-
+    buoyancy(i) = -(density_ratio(i)-1)*phi_c(i)*cosd(theta(i));
     z_pe{i,1} = linspace(1/(2*N(i)),1,N(i))';
     z_u{i,1} = linspace(0,1-1/(2*N(i)),N(i))';
-    p_b{i,1} = (rho_p(i)-rho_f(i))*g(i)*phi_c(i)*cosd(theta(i))*(1-z_pe{i,1}).*h(i)./p_scale(i);
-    z_pe_dl{i,1} = z_pe{i,1}./z_scale(i);
-    z_u_dl{i,1} = z_u{i,1}./z_scale(i);
-    p_b_dl{i,1} = p_b{i,1}/p_scale(i);
-    buoyancy_dl(i) = buoyancy(i)/(p_scale(i));
+    p_b{i,1} = (density_ratio(i)-1)*phi_c(i)*cosd(theta(i))*(1-z_pe{i,1});
     
-    vec = sim_list{1,i};
+    vec = sim_list{i,1};
     % Processes the data differently depending on the simulation type
     if (sim_type(i) == "dil")
         p_e{i,1} = vec(:,1:N(i))';
@@ -112,13 +118,13 @@ for i = 1:sim_num
         p_p{i,1} = (1-s_frac(i))*p_b{i,1};
         % If looking at initial values for dilatancy sim, need to set phi
         % to zero here
-        phi{i,1} = alpha(i)*p_p{i,1};
+        phi{i,1} = alpha_dl(i)*p_p{i,1};
         u_f{i,1} = vec(:,1:N(i))';
         u_p{i,1} = vec(:,N(i)+1:end)';
     elseif (sim_type(i) == "pdriv")
         p_e{i,1} = vec(:,1:N(i))';
         p_p{i,1} = (p_b{i,1}-p_e{i,1});
-        phi{i,1} = alpha(i)*p_p{i,1};
+        phi{i,1} = alpha_dl(i)*p_p{i,1};
         u_f{i,1} = vec(:,N(i)+1:2*N(i))';
         u_p{i,1} = vec(:,2*N(i)+1:end)';
     elseif (sim_type(i) == "ucon")
@@ -130,17 +136,18 @@ for i = 1:sim_num
         u_p{i,1} = initial_u(7,N(i)+1:end)'.*(ones(1,11));
     end
     beta_pe{i,1} = 150*(phi_c(i) + phi{i,1}).^2.*eta_f_dl(i)./((1-phi_c(i)-phi{i,1}).^3.*d_dl(i)^2);
-    beta_u{i,1} = interp1(z_pe_dl{i,1},beta_pe{i,1},z_u_dl{i,1},'linear','extrap');
+    beta_u{i,1} = interp1(z_pe{i,1},beta_pe{i,1},z_u{i,1},'linear','extrap');
     % If the velocity evolves we need to define these quantities
     dpdz{i,1} = vertcat(zeros(1,n_times(i)),diff(p_e{i,1},1,1))./dz_dl(i);
     d2pdz2{i,1} = vertcat(diff(dpdz{i,1},1,1),zeros(1,n_times(i)))./dz_dl(i);
     d3pdz3{i,1} = vertcat(zeros(1,n_times(i)),diff(d2pdz2{i,1},1,1))./dz_dl(i);
+    dppdz{i,1} = vertcat(zeros(1,n_times(i)),diff(p_p{i,1},1,1))./dz_dl(i);
     dufdz{i,1} = vertcat(diff(u_f{i,1},1,1),zeros(1,n_times(i)))./dz_dl(i);
     d2ufdz2{i,1} = vertcat(zeros(1,n_times(i)),diff(dufdz{i,1},1,1))./dz_dl(i);
     dupdz{i,1} = vertcat(diff(u_p{i,1},1,1),zeros(1,n_times(i)))./dz_dl(i);
     d2updz2{i,1} = vertcat(zeros(1,n_times(i)),diff(dupdz{i,1},1,1))./dz_dl(i);
     Iv_temp = eta_f_dl(i).*abs(dupdz{i,1})./(p_p{i,1}+1e-8);
-    Iv_temp(N(i),:) = eta_f_dl(i).*d2updz2{i,1}(N(i),:)./(-buoyancy_dl(i)-dpdz{i,1}(N(i),:));
+    Iv_temp(N(i),:) = eta_f_dl(i).*d2updz2{i,1}(N(i),:)./(-buoyancy(i)-dpdz{i,1}(N(i),:));
     Iv{i,1} = Iv_temp;
     if (sim_type(i)~="ucon")
         tau_f{i,1} = eta_f_dl(i).*d2ufdz2{i,1}./(1-phi_c(i));
@@ -177,171 +184,126 @@ for i = 1:sim_num
 end
 %% 
 
-for i=1:sim_num
+for i=1:sim_num-2
+
     % Set the quantity to be plotted here
 
 %     test = 1/(phi_c(i).*density_ratio(i)).*sign(dupdz{i,1}).*mu{i,1}.*vertcat(zeros(1,n_times(i)),diff((p_p{i,1}.*ones(1,n_times(i))),1,1)./dz_dl(i));
 %     plot_vec = vertcat(zeros(1,n_times(i)),test(2:end,:)+sind(theta(i))+drag_term_p{i,1}(2:end,:));
 
 %     [M,Index] = min(dilatancy{i,1});
+%     crit_pp = get_critical_value(u_p{i,1}',p_e{i,1}',true,1e-5);
+%     crit_dppdz = get_critical_value(u_p{i,1}',dppdz{i,1}',false,1e-5);
+%     crit_tau_f = get_critical_value(u_p{i,1}',tau_f{i,1}'*(1-phi_c(i)),false,1e-5);
+%     crit_p_deriv = get_critical_value(u_p{i,1}',(vertcat(zeros(1,n_times(i)),diff(p_p{i,1},1,1))./dz_dl(i).*mu{i,1})',false,1e-5);
+%     crit_mu_deriv = get_critical_value(u_p{i,1}',(vertcat(zeros(1,n_times(i)),diff(mu{i,1},1,1))./dz_dl(i).*p_p{i,1})',false,1e-5);
+%     
 
-    s_c = 1 - (1-phi_c(i)+density_ratio(i)*phi_c(i))/((density_ratio(i)-1)*phi_c(i))*tand(theta(i))/0.342;
-    plot_vec = u_p{i,1};%vertcat(zeros(1,n_times(i)),diff(mu{i,1},1,1))./dz_dl(i);
-    % Plots initial profile
-%     plot(plot_vec(:diffusion_term,1),z_u{i,1}, 'DisplayName', 't=0.0'); 
-%     SetPaperSize(15,10)
-    subplot(sim_num,1,i);
-    hold on
-    % Plots profile at other times
-    t1=[1500];
-    nfig=1;
+%     s_c = 1-(1-phi_c(i)+density_ratio(i)*phi_c(i))/((density_ratio(i)-1)*phi_c(i))*tand(theta(i))/0.342;
+%      plot(crit_tau_f,z_u{i,1},'DisplayName','Actual Value')
+%     hold on
+%     plot(crit_p_deriv,z_u{i,1},'DisplayName','Actual Value')
+%     plot(crit_mu_deriv,z_u{i,1},'DisplayName','Actual Value')
+%     plot(crit_dppdz,z_u{i,1},'DisplayName','Actual Value')
     a=0.0107;
     b=-0.0101;
-    p=0.9078;
+    p=0.9169;%0.9078;
     c=0.01128;
-    approx_up = 0.25*p*(-a^2*(1-z_u{i,1}).^4-2/3*a*b*(1-z_u{i,1}).^3-b^2*(1-z_u{i,1}).^2)/(eta_f_dl(i)*phi_c(i)^2)+c;
-    comp_vec = p_p{i,1}.*(phi{i,1}).^2/(phi_c(i)^2*eta_f_dl(i));
+%     plot(-crit_grad*(1-z_u{i,1}),z_u{i,1})
+    approx_up = (-0.25*p*a^2*(1-z_u{i,1}).^4-2/3*a*b*p*(1-z_u{i,1}).^3-b^2*p/2*(1-z_u{i,1}).^2)/(eta_f_dl(i)*phi_c(i)^2)+c;
+%     comp_vec = p_p{i,1}.*(phi{i,1}).^2/(phi_c(i)^2*eta_f_dl(i));
     approx_dupdz = (a*(1-z_u{i,1})+b).^2.*p.*(1-z_u{i,1})./(phi_c(i)^2*eta_f_dl(i));
-    test_vec = a*(1-z_u{i,1})+b;
-    for j=linspace(t1(i),t1(i)+(nfig-1)*300,nfig)
-        t_val = j;
-%         plot(dilatancy{i,1}(1:end,j),z_u{i,1}(1:end),'DisplayName','Dilatant Term');
-%         plot(diffusion_term{i,1}(1:end,j),z_u{i,1}(1:end),'DisplayName','Diffusion Term');
-%         plot(linspace(-5e-5,5e-5,100),ones(1,100)*shear_end(86)/N(i))
-%         plot(dpdt{i,1}(1:end,j),z_u{i,1}(1:end),'DisplayName','$\frac{\partial p_e}{\partial t}$');
-        plot(plot_vec(110:end,j),z_u{i,1}(110:end),'DisplayName',"t="+num2str(t_val));
-%         plot(comp_vec(110:end,j),z_u{i,1}(110:end),'DisplayName',"t="+num2str(t_val));
-%         plot(approx_dupdz(110:end),z_u{i,1}(110:end),'DisplayName',"t="+num2str(t_val));
-        plot(approx_up(110:end),z_u{i,1}(110:end))
-%         plot((dupdt{i,1}(:,j)>2e-6)-(p_e{i,1}(:,j)>s_c*(1-z_u{i,1})) ,z_u{i,1})
-    end
-%     plot(-sind(theta(i))*(phi_c(i)*density_ratio(i)+1-phi_c(i))*ones(N(i),1),z_u{i,1},'--') % 
-%     yyaxis left
-%     plot(linspace(15,1000,986).*50,Index(15:1000)./N(i),'DisplayName', 'Peak Position')
-    ylabel("z/h");
-    xlabel('$\frac{\partial p_e}{\partial t}$');
-    legend();
-%     xlim([-0.22 -0.2])
-%     hold on
-%     yyaxis right
-%     plot(linspace(15,1000,986).*50,M(15:1000),'DisplayName', 'Peak Magnitude')
-%     hold off
-%     ylabel('Dilatancy')
-%     xlabel('t');
+%     plot(approx_up,z_pe{i,1}(1:end))
+%     test_vec = a*(1-z_u{i,1})+b;
+    crit_grad = -(density_ratio(i)*phi_c(i)+(1-phi_c(i)))*sind(theta(i))/0.342;
+    M = 3.1159*2.*d_dl(i).*sqrt(density_ratio(i));
+    approx_f = (eta_f_dl(i)+M*sqrt(-crit_grad*(1-z_u{i,1}))).*approx_dupdz/(0.342);
+
+%     erosion_point = get_erosion_time(u_p{i,1}',5e-6);
+%     pe_grad = zeros(6001,1);
+%     for k=1:6001
+%         pe_grad(k,1) = dpdz{i,1}(round(max(erosion_point(k)*N(i)-3,1)),k);
+%     end
+%     ep_diff = erosion_point(430:2030)-erosion_point(400:2000);
+%     ep_grad = zeros(1601,1);
+%     ep_grad(1)=(ep_diff(1)+ep_diff(2)+ep_diff(3))/3;
+%     ep_grad(2)=(ep_diff(1)+ep_diff(2)+ep_diff(3)+ep_diff(4))/4;
+%     for l=3:1599
+%         ep_grad(l)=(ep_diff(l-2)+ep_diff(l-1)+ep_diff(l)+ep_diff(l+1)+ep_diff(l+2))/5;
+%     end
+%     ep_grad(1600)=(ep_diff(1598)+ep_diff(1599)+ep_diff(1600)+ep_diff(1601))/4;
+%     ep_grad(1601)=(ep_diff(1599)+ep_diff(1600)+ep_diff(1601))/3;
+%     plot_vec = -0.342*((crit_grad+8e-5).*(1-z_pe{i,1}.*ones(1,6001))+p_p{i,1})./(eta_f_dl(i)+M*sqrt(p_p{i,1}));%vertcat(zeros(1,n_times(i)),diff(mu{i,1},1,1))./dz_dl(i).*p_p{i,1};
     
-%     xlim([0,0.5])
-    title('Contributions of the Dilatant and Diffusive Terms at t=1050');
-%     legend('UserData',12,'Location','NorthEast');
+    approx_pe = p_b{i,1}+(crit_grad+4e-5*(2.5*0.6+0.4)).*(1-z_pe{i,1})+approx_f;
+    % Plots initial profile  
+%     subplot(sim_num,1,i);
+    % Plots profile at other times
+%     SetPaperSize(10,10);
+    
+%     plot(linspace(40,200,1601),dupdt{i,1}(155,400:2000))
+
+    p_p_deriv = (vertcat(zeros(1,n_times(i)),diff(p_p{i,1},1,1))./dz_dl(i).*mu{i,1});
+    mu_deriv = (vertcat(zeros(1,n_times(i)),diff(mu{i,1},1,1))./dz_dl(i).*p_p{i,1});
+    
+    plot_vec = u_p{i,1};
+    t1=[110,5,2000];
+    nfig=5;
+    for j=linspace(t1(i),t1(i)+(nfig-1)*10,nfig)
+        t_val = j;
+        plot(plot_vec(1:end,j),z_pe{i,1},'DisplayName',"t="+num2str(t_val));
+        hold on
+%         plot(approx_pe,z_pe{i,1},'DisplayName',"Approximated Profile");
+%         plot(plot_vec(1:end,j)+(crit_grad-8e-5)*(1-z_u{i,1}),z_u{i,1},'DisplayName',"t="+num2str(t_val));       
+        
+%         plot(-13.26*(1-z_u{i,1}).^(3/2)+13.26,z_u{i,1})
+%         plot(diffusion_term{i,1}(1:end,j),z_pe{i,1}(1:end),'DisplayName',"t="+num2str(t_val));
+%         plot(tau_f{i,1}(:,j),z_pe{i,1}(1:end),'DisplayName','$\frac{\partial \tau_f}{\partial z}$')
+%         plot(p_p_deriv(:,j),z_pe{i,1}(1:end),'DisplayName','$\frac{\partial p_p}{\partial z} \mu$')
+%         plot(mu_deriv(:,j),z_pe{i,1}(1:end),'DisplayName','$\frac{\partial \mu}{\partial z} p_p$')
+    end
+%     plot((-buoyancy(i)+crit_grad)*(1-z_u{i,1}),z_u{i,1},"r--")
+    legend('Location', "northwest",'UserData', 13);
+    ylabel("z/h");
+    xlabel('$p_e$');
+
+    
+    title('Excess Pressure and the Approximated Profile');
+
 %      ax = gca;
 % %      ax.YAxis(2).Exponent = 0;
 %      ax.XAxis.Exponent = 0;
 % %      ytickformat('%.0e');
 %      xtickformat('%.1e');
 % %     hold off
-%     pdfname = 'dil9_5_dil_diff_dpdt_low_phi_small';
+%     pdfname = 'dil9_5deg_pe_appox';
 %     PrintFig(pdfname)
 %     movefile([pdfname '.pdf'], 'Figures/Dilatant/')
 end
-% legend("0s","0.45s","0.9s","1.35s","1.8s","2.25s","2.7s","3.15s","3.6s","4.05s","4.5s", 'Location',"east");
-% saveas(gcf,"dpdt_evolution.png")
 
-
-
-make_animation = false;
 ani_num = 1;
-
-% if (make_animation)
-%     axis tight manual
-%     nr_fr = 5000;
-%     t_vals = (1:nr_fr)*0.5;
-%     figure(1)
-%     animation_name = 'dil9_5_erosion_small.gif';
-%     for i = 1 : nr_fr
-% %         plot(dilatancy{ani_num,1}(:,i), z_u{ani_num,1});
-% % %         xlim([0 2e-4]);
-% %         ylim([0 1]);
-% %         xlabel("Excess Pressure Diffusion");
-% %         ylabel("z");
-% %         legend("t="+num2str(t_vals(i)));
-% %         xlim([-0.1 0]);
-% %         ylim([0 1]);
-% %         xlabel("p_e");
-% %         ylabel("z");
-% 
-%         subplot(2,2,1)
-%         plot(p_e{ani_num,1}(:,i), z_u{ani_num,1}, 'DisplayName','High u_p IC');
-% %         hold on
-% %         plot(p_e{2,1}(:,i+29), z_u{2,1}, 'DisplayName', 'High p_p IC');
-% %         hold off
-%         legend("t="+num2str(t_vals(i),'%.1f'));
-% %         legend();
-%         xlim([-0.05 0]);
-%         ylim([0 1]);
-%         xlabel("p_e");
-%         ylabel("z");
-% 
-%         subplot(2,2,2)
-%         plot(phi{ani_num,1}(:,i), z_u{ani_num,1});
-% %         hold on
-% %         plot(phi{2,1}(:,i+29), z_u{2,1});
-% %         hold off
-%         xlim([-0.03,0])
-%         ylim([0 1])
-%         xlabel('\phi-\phi_c');
-%         ylabel("z");
-% 
-%         subplot(2,2,3)
-%         plot(u_f{ani_num,1}(:,i), z_u{ani_num,1});
-% %         hold on
-% %         plot(u_f{2,1}(:,i+29), z_u{2,1});
-% %         hold off
-%         xlim([0,0.1])
-%         ylim([0 1])
-%         xlabel("u_f");
-%         ylabel("z");
-% 
-%         subplot(2,2,4)
-%         plot(u_p{ani_num,1}(:,i), z_u{ani_num,1});
-% %         hold on
-% %         plot(u_p{2,1}(:,i+29), z_u{2,1});
-% %         hold off
-%         xlim([0,0.1])
-%         ylim([0 1])
-%         xlabel("u_p");
-%         ylabel("z");
-%         drawnow
-%         frame = getframe(1);
-%         im = frame2im(frame);
-%         [imind,cm] = rgb2ind(im,256);
-%         if i == 1
-%           imwrite(imind,cm,animation_name,'gif', 'LoopCount',Inf);
-%         else
-%           imwrite(imind,cm,animation_name,'gif','WriteMode','append','DelayTime', 0.05);
-%         end
-%     end
-% end
 make_avi=false;
 if (make_avi) 
-    nframes=6000;
-    t_vals = (1:nframes);
+    nframes=1500;
+    t_vals = (0:nframes)*0.1;
     Frames=moviein(nframes);
     figure
-    v = VideoWriter('dil9_5_low_phi_small.avi');
+    v = VideoWriter('dil9_5_low_phi_erosion.avi');
     v.FrameRate=50;
     open(v)
     ax = gca();
-    for i=1:nframes
+    for i=500:nframes+500
         subplot(2,2,1)
-        plot(p_e{ani_num,1}(:,i), z_u{ani_num,1});
-%         hold on
-%         plot(p_e{2,1}(:,i+29), z_u{2,1}, 'DisplayName', 'High p_p IC');
-%         hold off
-        legend("t="+num2str(t_vals(i),'%.1f'));
+        plot(p_e{ani_num,1}(:,i), z_pe{ani_num,1});
+        hold on
+        plot((-buoyancy(ani_num)-(density_ratio(ani_num)*phi_c(ani_num)+(1-phi_c(ani_num)))*sind(theta(ani_num))/0.342)*(1-z_pe{ani_num,1}), z_u{2,1},"--");
+        hold off
+        legend("t="+num2str(t_vals(i-499)+50,'%.1f'),"Critical $p_e$","Location",'northwest','Interpreter','latex');
 %         legend();
         xlim([-0.05 0]);
         ylim([0 1]);
-        xlabel("p_e");
-        ylabel("z");
+        xlabel("$p_e$",'Interpreter','latex');
+        ylabel("$z$",'Interpreter','latex');
 
         subplot(2,2,2)
         plot(phi{ani_num,1}(:,i), z_u{ani_num,1});
@@ -350,29 +312,28 @@ if (make_avi)
 %         hold off
         xlim([-0.03,0])
         ylim([0 1])
-        xlabel('\phi-\phi_c');
-        ylabel("z");
+        xlabel('$\hat{\phi}$','Interpreter','latex');
+        ylabel("$z$",'Interpreter','latex');
 
         subplot(2,2,3)
         plot(u_f{ani_num,1}(:,i), z_u{ani_num,1});
 %         hold on
 %         plot(u_f{2,1}(:,i+29), z_u{2,1});
 %         hold off
-        xlim([0,0.1])
+        xlim([0,0.05])
         ylim([0 1])
-        xlabel("u_f");
-        ylabel("z");
+        xlabel("$u_f$",'Interpreter','latex');
+        ylabel("$z$",'Interpreter','latex');
 
         subplot(2,2,4)
         plot(u_p{ani_num,1}(:,i), z_u{ani_num,1});
 %         hold on
 %         plot(u_p{2,1}(:,i+29), z_u{2,1});
 %         hold off
-        xlim([0,0.1])
+        xlim([0,0.05])
         ylim([0 1])
-        xlabel("u_p");
-        ylabel("z");
-
+        xlabel("$u_p$",'Interpreter','latex');
+        ylabel("$z$",'Interpreter','latex','Interpreter','latex');
         drawnow();
         writeVideo(v,getframe(gcf))
     end

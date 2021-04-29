@@ -1,13 +1,12 @@
 function simple_submerged_system
-opengl software
 N = 200; % number of discretisation points in z for each of tau, u
 h = 4e-3; % layer height (m)
-d=1.43e-5; % grain diameter (m)
+d=1.43e-6; % grain diameter (m)
 
 mu1_I=0.342; % \frac{u+u_d}{\rho_f \phi_c}
 mu2_I=0.557; % 
 I_0 = 0.069;
-reg_param = 10^8;
+reg_param = 10^7;
 
 phi_c=0.6; % Volume fraction
 eta_f = 0.0010016; % Pa s
@@ -38,10 +37,11 @@ z_u_dl = z_u/z_scale;
 p_b_dl = p_b/p_scale;
 buoyancy_dl = buoyancy/p_scale*z_scale;
 
-
-fname = "dil9_5deg_low_phi_small_early.txt";
+t_step = 10;
+fname = "dil9_5deg_init_elastic.txt";
 run_dil_sim()
-
+movefile(fname,'Results');
+write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,eta_f_dl,t_step);
 
     % The function that defines the evolution of p_e, u_p and u_f for the case
     % where the evolution of p_e is purely diffusive
@@ -58,7 +58,6 @@ run_dil_sim()
         p_p = p_b_dl - p_e;
         phi_hat = p_p.*alpha_dl;
 
-         
         I = 2.*d_dl.*dupdz.*sqrt(density_ratio)./sqrt(p_p+0.000001);
         
         beta_pe = beta_fn(phi_hat);
@@ -69,7 +68,7 @@ run_dil_sim()
         tau_p = mu_I_fn(I).*p_p;
         drag_force = (1-phi_c)^2.*beta_u.*(u_f-u_p);
         dufdt = [0 1/(1-phi_c).*diff(tau_f)./dz_dl+sind(theta)-drag_force(2:end)./(1-phi_c)];
-        dupdt = [0 1/(rho_p*phi_c).*diff(tau_p)./dz_dl + sind(theta)+drag_force(2:end)./(density_ratio*phi_c)];
+        dupdt = [0 1/(density_ratio*phi_c).*diff(tau_p)./dz_dl + sind(theta)+drag_force(2:end)./(density_ratio*phi_c)];
         dvecdt = [dpdt dufdt dupdt]';
     end
 
@@ -143,9 +142,9 @@ run_dil_sim()
         dufdz=[diff(u_f)./dz_dl 0];
         dupdz=[diff(u_p)./dz_dl 0];
         
-        p_p = p_b_dl;
-        phi_hat = 0*p_p;
-        I = 2.*d_dl.*dupdz.*sqrt(rho_p)./sqrt(p_p+0.000001);
+        p_p = 0.4*p_b_dl;
+        phi_hat = alpha_dl*p_p;
+        I = 2.*d_dl.*dupdz.*sqrt(density_ratio)./sqrt(p_p+0.000001);
         beta_pe = beta_fn(phi_hat);
         beta_u = interp1(z_pe_dl,beta_pe,z_u_dl,'linear','extrap');
         
@@ -208,36 +207,50 @@ run_dil_sim()
 %         % Saves initial velocity in a file for reference
 %         init_uf=init_vec(7,1:N);
 %         init_up=init_vec(7,N+1:end);
+        cd Results
+        init_data = load("dil9_5deg_dl_small_reg8.txt");
+        steady_state = init_data(3999,:);
+        
         vec=zeros(4*N,1);
 %         whole_data = load('dil9_5deg_small.txt');
         for j=1:N
             vec(j,1) = 0;%0.6.*sind(theta)*phi_c*(1-z_pe_dl(j));
-            vec(N+j,1) = -0.01*z_pe_dl(j);
-            vec(2*N+j,1) = 0; %init_uf(j);
-            vec(3*N+j,1) = 0; %init_up(j);
+            vec(N+j,1) = alpha_dl.*p_b_dl(j);
+            vec(2*N+j,1) = 0;%steady_state(800+2*j); %init_uf(j);
+            vec(3*N+j,1) = 0;%steady_state(1200+2*j); %init_up(j);
         end
 
         % No initial pressure of phihat and initial values of u_p and u_f
         % defined above
-        time_vals = (0:6000)*0.1;
+        time_vals = (0:6000)*100;
         opts=odeset('AbsTol',1e-12,'RelTol',1e-12,'Stats','on');
 
         [~,vec]=ode15s(@dilatancy_derivs,time_vals,vec,opts);
         size(vec)
         save(fname, 'vec','-ascii')
+        cd ../
         success=1;
     end
 
     % Runs the diffusion only system
     function success = run_p_e_sim()
+        init_vec=zeros(2*N,1); 
+        % particles are initially stationary
+
+        init_time_vals = [0,5.0,5000.0];
+        opts=odeset('AbsTol',1e-10,'RelTol',1e-10,'Stats','on');
+        
+        [~,init_vec]=ode15s(@p_const_derivs,init_time_vals,init_vec,opts);
+        init_uf=init_vec(3,1:N);
+        init_up=init_vec(3,N+1:end);
         % Sets pressure and velocity initial conditions
         vec=zeros(3*N,1);
         for j=1:N
-            vec(j,1) = 0.6*abs(p_b(j));
-            vec(N+j,1) = 0;
-            vec(2*N+j,1) = 0;
+            vec(j,1) = 0.6*abs(p_b_dl(j));
+            vec(N+j,1) = init_uf(j);
+            vec(2*N+j,1) = init_up(j);
         end
-        time_vals = (0:100);
+        time_vals = (0:4000)*50;
 
         opts=odeset('AbsTol',1e-10,'RelTol',1e-10,'Stats','on');
 
