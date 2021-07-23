@@ -1,12 +1,16 @@
 function simple_submerged_system
 N = 200; % number of discretisation points in z for each of tau, u
 h = 4e-3; % layer height (m)
-d=1.43e-6; % grain diameter (m)
+d=1.43e-5; % grain diameter (m)
 
 mu1_I=0.342; % \frac{u+u_d}{\rho_f \phi_c}
 mu2_I=0.557; % 
 I_0 = 0.069;
-reg_param = 10^7;
+
+mu1_Iv = 0.32;
+mu2_Iv = 0.7;
+Iv_0 = 0.005;
+reg_param = 10^8;
 
 phi_c=0.6; % Volume fraction
 eta_f = 0.0010016; % Pa s
@@ -14,8 +18,8 @@ g=9.81; % m/s^2
 rho_f = 1000; % kg/m^3
 rho_p = 2500; % kg/m^3
 theta = 9.5; % deg
-alpha = 0.001; % 1/Pa
 
+alpha = 0.001; % 1/Pa
 dz = h/(N-0.5); % z spacing
 z_pe = linspace(dz/2,h,N);
 z_u = linspace(0,h-dz/2,N);
@@ -27,6 +31,7 @@ p_scale = rho_f.*g.*h;
 t_scale = sqrt(h./g);
 z_scale = h;
 density_ratio = rho_p./rho_f;
+rho = phi_c*density_ratio+1-phi_c;
 
 d_dl = d/z_scale;
 dz_dl = dz/z_scale;
@@ -38,10 +43,10 @@ p_b_dl = p_b/p_scale;
 buoyancy_dl = buoyancy/p_scale*z_scale;
 
 t_step = 10;
-fname = "dil9_5deg_init_elastic.txt";
+fname = "dil_9_5deg_high_init_u.txt";
 run_dil_sim()
-movefile(fname,'Results');
-write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,eta_f_dl,t_step);
+movefile(fname,'Results/');
+write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,theta,eta_f_dl,t_step);
 
     % The function that defines the evolution of p_e, u_p and u_f for the case
     % where the evolution of p_e is purely diffusive
@@ -52,23 +57,23 @@ write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,eta_f_dl,t
         u_p = vec(2*len/3+1:end)';
 
         dpdz=[0 diff(p_e)./dz_dl]; % transposes u and then finds differences to approx deriv
-        dufdz=[diff(u_f)./dz_dl 0];
-        dupdz=[diff(u_p)./dz_dl 0];
+        dufdz=diff(u_f)./dz_dl;
+        dupdz=diff(u_p)./dz_dl;
         
         p_p = p_b_dl - p_e;
         phi_hat = p_p.*alpha_dl;
 
-        I = 2.*d_dl.*dupdz.*sqrt(density_ratio)./sqrt(p_p+0.000001);
+        I = 2.*d_dl.*dupdz.*sqrt(density_ratio)./sqrt(p_p(1:end-1));
         
         beta_pe = beta_fn(phi_hat);
         beta_u = interp1(z_pe_dl,beta_pe,z_u_dl,'linear','extrap');
         dpdt = [phi_c./alpha_dl.*diff((1./beta_u.*dpdz))./dz_dl 0];
        
-        tau_f = eta_f_dl.* dufdz;
-        tau_p = mu_I_fn(I).*p_p;
+        tau_f = [eta_f_dl.* dufdz 0];
+        tau_p = [mu_I_fn(I).*p_p(1:end-1) 0];
         drag_force = (1-phi_c)^2.*beta_u.*(u_f-u_p);
-        dufdt = [0 1/(1-phi_c).*diff(tau_f)./dz_dl+sind(theta)-drag_force(2:end)./(1-phi_c)];
-        dupdt = [0 1/(density_ratio*phi_c).*diff(tau_p)./dz_dl + sind(theta)+drag_force(2:end)./(density_ratio*phi_c)];
+        dufdt = [0 (1/(1-phi_c).*diff(tau_f)./dz_dl+sind(theta)-drag_force(2:end)./(1-phi_c))];
+        dupdt = [0 (1/(density_ratio*phi_c).*diff(tau_p)./dz_dl + sind(theta)+drag_force(2:end)./(density_ratio*phi_c))];
         dvecdt = [dpdt dufdt dupdt]';
     end
 
@@ -82,22 +87,22 @@ write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,eta_f_dl,t
         u_p = vec(3*len/4+1:end)';
         
         dpdz=[0 diff(p_e)./dz_dl]; % transposes u and then finds differences to approx deriv
-        dufdz=[diff(u_f)./dz_dl 0];
-        dupdz=[diff(u_p)./dz_dl 0];
+        dufdz=diff(u_f)./dz_dl;
+        dupdz=diff(u_p)./dz_dl;
         d2updz2=[0 diff(dupdz)./dz_dl];
         
         p_p = p_b_dl - p_e;
 
-        Iv = eta_f_dl.*abs(dupdz)./(p_p+1e-8);
-        Iv(end) = eta_f_dl.*d2updz2(end)./(buoyancy_dl-dpdz(end));
-        I = 2.*d_dl.*abs(dupdz).*sqrt(density_ratio)./sqrt(p_p+1e-8);
+        Iv = eta_f_dl.*abs(dupdz)./(p_p(1:end-1));
+%         Iv(end) = eta_f_dl.*d2updz2(end)./(buoyancy_dl-dpdz(end));
+        I = 2.*d_dl.*abs(dupdz).*sqrt(density_ratio)./sqrt(abs(p_p(1:end-1)));
 %         I_u = interp1(z_pe,I,z_u,'linear','extrap');
         
         beta_pe = beta_fn(phi_hat);
         beta_u = interp1(z_pe,beta_pe,z_u,'linear','extrap');
 
-        dilatancy = 1./alpha_dl.*abs(dupdz).*(phi_hat+ (sqrt(abs(Iv)).*phi_c./(1+sqrt(abs(Iv)))));
-        dpdt = [1./alpha_dl.*diff((1./beta_u.*dpdz))./dz_dl-dilatancy(1:end-1) 0];
+        dilatancy = 1./alpha_dl.*abs(dupdz).*(phi_hat(1:end-1)+ (sqrt(abs(Iv)).*phi_c./(1+sqrt(abs(Iv)))));
+        dpdt = [1./alpha_dl.*diff((1./beta_u.*dpdz))./dz_dl-dilatancy 0];
         dphidt = -phi_c.*diff((1./beta_u.*dpdz))./dz_dl;
         dphidt = interp1(z_pe(1:end-1),dphidt,z_pe,'linear','extrap');
        
@@ -105,9 +110,40 @@ write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,eta_f_dl,t
         tau_p = mu_I_fn(I).*sign(dupdz).*p_p;
 %         diff_tau_p = (mu_I_fn(I).*[0 diff(sign(dupdz).*p_p)]+(abs(I_u)>10/reg_param).*sign(dupdz).*p_p.*[0 diff(mu_I_fn(I))])./dz_dl;
         drag_force = (1-phi_c)^2.*beta_u.*(u_f-u_p);
-        dufdt = [0 1/(1-phi_c).*diff(tau_f)./dz_dl + sind(theta)-drag_force(2:end)./(1-phi_c)];
-        dupdt = [0 1/(density_ratio*phi_c).*diff(tau_p)./dz_dl + sind(theta)+drag_force(2:end)./(density_ratio*phi_c)];
+        dufdt = [0 (1/(1-phi_c).*diff(tau_f)./dz_dl + sind(theta)-drag_force(2:end)./(1-phi_c))];
+        dupdt = [0 (1/(density_ratio*phi_c).*diff(tau_p)./dz_dl + sind(theta)+drag_force(2:end)./(density_ratio*phi_c))];
         dvecdt = [dpdt dphidt dufdt dupdt]';
+    end
+
+    function dvecdt=single_phase_derivs(t,vec)
+        len = length(vec);
+        p_e = vec(1:len/3)';
+        phi_hat = vec(len/3+1:2*len/3)';
+        u = vec(2*len/3+1:end)';
+        
+        dpdz=[0 diff(p_e)./dz_dl]; % transposes u and then finds differences to approx deriv
+        dudz=[diff(u)./dz_dl 0];
+        d2udz2=[0 diff(dudz)./dz_dl];
+        
+        p_p = p_b_dl - p_e;
+
+        Iv = eta_f_dl.*abs(dudz)./(p_p+1e-8);
+        Iv(end) = eta_f_dl.*d2udz2(end)./(buoyancy_dl-dpdz(end));
+        I = 2.*d_dl.*abs(dudz).*sqrt(density_ratio)./sqrt(p_p+1e-8);
+%         I_u = interp1(z_pe,I,z_u,'linear','extrap');
+        
+        beta_pe = beta_fn(phi_hat);
+        beta_u = interp1(z_pe,beta_pe,z_u,'linear','extrap');
+
+        dilatancy = 1./alpha_dl.*abs(dudz).*(phi_hat+ (sqrt(abs(Iv)).*phi_c./(1+sqrt(abs(Iv)))));
+        dpdt = [1./alpha_dl.*diff((1./beta_u.*dpdz))./dz_dl-dilatancy(1:end-1) 0];
+        dphidt = -phi_c.*diff((1./beta_u.*dpdz))./dz_dl;
+        dphidt = interp1(z_pe(1:end-1),dphidt,z_pe,'linear','extrap');
+       
+        tau_f = eta_f_dl.* dudz;
+        tau_p = mu_I_fn(I).*sign(dudz).*p_p;
+        dudt = [0 (1/(rho).*(diff(tau_f)./dz_dl + diff(tau_p)./dz_dl)+ sind(theta))];
+        dvecdt = [dpdt dphidt dudt]';
     end
 
     % The function that defines evolution of p_e and phihat with constant
@@ -142,7 +178,7 @@ write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,eta_f_dl,t
         dufdz=[diff(u_f)./dz_dl 0];
         dupdz=[diff(u_p)./dz_dl 0];
         
-        p_p = 0.4*p_b_dl;
+        p_p = 0.5*p_b_dl;
         phi_hat = alpha_dl*p_p;
         I = 2.*d_dl.*dupdz.*sqrt(density_ratio)./sqrt(p_p+0.000001);
         beta_pe = beta_fn(phi_hat);
@@ -165,7 +201,7 @@ write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,eta_f_dl,t
         end
         % particles are initially stationary
         
-        time_vals = [0,0.01,0.05,0.1,0.5,1.0,5.0,100];
+        time_vals = (0:100);
         % time values of interest
         opts=odeset('AbsTol',1e-10,'RelTol',1e-10,'Stats','on');
         
@@ -207,50 +243,87 @@ write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,eta_f_dl,t
 %         % Saves initial velocity in a file for reference
 %         init_uf=init_vec(7,1:N);
 %         init_up=init_vec(7,N+1:end);
-        cd Results
-        init_data = load("dil9_5deg_dl_small_reg8.txt");
-        steady_state = init_data(3999,:);
-        
+%         cd Results
+%         init_data = load("dil_15deg_deep_smaller_Iv.txt");
+%         steady_state = init_data(6000,:);
+%         cd ../
         vec=zeros(4*N,1);
 %         whole_data = load('dil9_5deg_small.txt');
         for j=1:N
-            vec(j,1) = 0;%0.6.*sind(theta)*phi_c*(1-z_pe_dl(j));
-            vec(N+j,1) = alpha_dl.*p_b_dl(j);
-            vec(2*N+j,1) = 0;%steady_state(800+2*j); %init_uf(j);
-            vec(3*N+j,1) = 0;%steady_state(1200+2*j); %init_up(j);
+            vec(j,1) = 0;
+            vec(N+j,1) = 0;
+            vec(2*N+j,1) = (1-(1-z_u_dl(j))^(3/2)); %init_uf(j);
+            vec(3*N+j,1) = (1-(1-z_u_dl(j))^(3/2)); %init_up(j);
         end
 
         % No initial pressure of phihat and initial values of u_p and u_f
         % defined above
-        time_vals = (0:6000)*100;
+        time_vals = (0:5000)*t_step;
         opts=odeset('AbsTol',1e-12,'RelTol',1e-12,'Stats','on');
 
         [~,vec]=ode15s(@dilatancy_derivs,time_vals,vec,opts);
         size(vec)
         save(fname, 'vec','-ascii')
+        success=1;
+    end
+
+    % Runs the single phase simulation
+    function success = run_single_phase_sim()
+        % Start by running simulation for initial velocity profile. Want
+%         % the steady state velocity at zero pressure and zero phihat
+%         init_vec=zeros(2*N,1); 
+%         % particles are initially stationary
+% 
+%         init_time_vals = [0,0.01,0.05,0.1,0.5,1.0,5.0,100.0];
+%         opts=odeset('AbsTol',1e-10,'RelTol',1e-10,'Stats','on');
+%         
+%         [~,init_vec]=ode15s(@p_const_derivs,init_time_vals,init_vec,opts);
+%         save('initial_velocity.txt', 'init_vec','-ascii')
+%         % Saves initial velocity in a file for reference
+%         init_uf=init_vec(7,1:N);
+%         init_up=init_vec(7,N+1:end);
+        cd Results
+        init_data = load("dil15deg_acc.txt");
+        steady_state = init_data(6000,:);
         cd ../
+        vec=zeros(3*N,1);
+%         whole_data = load('dil9_5deg_small.txt');
+        for j=1:N
+            vec(j,1) = 0;%0.6.*sind(theta)*phi_c*(1-z_pe_dl(j));
+            vec(N+j,1) = steady_state(200+j);
+            vec(2*N+j,1) = steady_state(400+j); %init_uf(j);
+        end
+
+        % No initial pressure of phihat and initial values of u_p and u_f
+        % defined above
+        time_vals = (0:3000)*t_step;
+        opts=odeset('AbsTol',1e-12,'RelTol',1e-12,'Stats','on');
+
+        [~,vec]=ode15s(@single_phase_derivs,time_vals,vec,opts);
+        size(vec)
+        save(fname, 'vec','-ascii')
         success=1;
     end
 
     % Runs the diffusion only system
     function success = run_p_e_sim()
-        init_vec=zeros(2*N,1); 
+%         init_vec=zeros(2*N,1); 
         % particles are initially stationary
 
-        init_time_vals = [0,5.0,5000.0];
-        opts=odeset('AbsTol',1e-10,'RelTol',1e-10,'Stats','on');
-        
-        [~,init_vec]=ode15s(@p_const_derivs,init_time_vals,init_vec,opts);
-        init_uf=init_vec(3,1:N);
-        init_up=init_vec(3,N+1:end);
+%         init_time_vals = [0,5.0,5000.0];
+%         opts=odeset('AbsTol',1e-10,'RelTol',1e-10,'Stats','on');
+%         
+%         [~,init_vec]=ode15s(@p_const_derivs,init_time_vals,init_vec,opts);
+%         init_uf=init_vec(3,1:N);
+%         init_up=init_vec(3,N+1:end);
         % Sets pressure and velocity initial conditions
         vec=zeros(3*N,1);
         for j=1:N
-            vec(j,1) = 0.6*abs(p_b_dl(j));
-            vec(N+j,1) = init_uf(j);
-            vec(2*N+j,1) = init_up(j);
+            vec(j,1) = 0.6*p_b_dl(j);
+            vec(N+j,1) = 0;%init_uf(j);
+            vec(2*N+j,1) = 0;%init_up(j);
         end
-        time_vals = (0:4000)*50;
+        time_vals = (0:400)*t_step;
 
         opts=odeset('AbsTol',1e-10,'RelTol',1e-10,'Stats','on');
 
@@ -274,5 +347,9 @@ write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,eta_f_dl,t
 
     function mu_val = mu_I_fn(I)
             mu_val = tanh(reg_param*I).*(mu1_I+(mu2_I-mu1_I)./(1+I_0./abs(I)));
+    end
+
+    function mu_val = mu_Iv_fn(Iv)
+            mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
     end
 end

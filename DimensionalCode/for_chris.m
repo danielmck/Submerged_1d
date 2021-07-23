@@ -2,7 +2,7 @@ function simple_submerged_system
 opengl software
 N = 200; % number of discretisation points in z for each of tau, u
 h = 4e-3; % layer height (m)
-d=1.43e-5; % grain diameter (m)
+d=1.43e-4; % grain diameter (m)
 
 mu1_I=0.342; % \frac{u+u_d}{\rho_f \phi_c}
 mu2_I=0.557; % 
@@ -23,10 +23,10 @@ z_pe = linspace(dz/2,h,N);
 z_u = linspace(0,h-dz/2,N);
 
 p_b = (rho_p-rho_f)*g*phi_c*cosd(theta)*(h-z_pe);
-%% 
 
-fname = "dil9_5deg_small.txt";
-run_dil_sim()
+
+fname = "pconst_5deg_params1.txt";
+run_const_p_sim()
 
     % The function that defines the evolution of p_e, u_p and u_f for the case
     % where the evolution of p_e is purely diffusive
@@ -131,7 +131,7 @@ run_dil_sim()
         dupdz=[diff(u_p)./dz 0];
         
         p_p = p_b;
-        phi_hat = 0*p_p;
+        phi_hat = 0.4*p_p;
         I = 2.*d.*dupdz.*sqrt(rho_p)./sqrt(p_p+0.000001);
         beta_pe = beta_fn(phi_hat);
         beta_u = interp1(z_pe,beta_pe,z_u,'linear','extrap');

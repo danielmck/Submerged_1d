@@ -6,7 +6,7 @@ function write_record(data_file,sim_type,N,h,d,reg_param,rho_r,alpha,phi_c,theta
         T = [T;row_data];
     else
         row_num = find(in_table,1);
-        T(row_num,:) = row_data;
+        T = [T(1:row_num-1,:);row_data;T(row_num+1:end,:)];
     end
     writetable(T,'Results/result_record.csv');
 end
