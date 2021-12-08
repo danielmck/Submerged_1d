@@ -17,7 +17,7 @@ rho_p = 2500; % kg/m^3
 theta = 5; % deg
 fric_ang = 0.65;
 
-alpha = 0.0001;
+alpha = 1e-4;
 kappa = ((1-phi_c).^3.*d^2)./(150*phi_c.^2);
 
 buoyancy = -(rho_p-rho_f)*g*phi_c*cosd(theta);
@@ -40,15 +40,15 @@ t_step = 10;
 %     r=mod(l,10);
 %     fname = "Ive_da_"+num2str(q);
 %     if (r==0)
-%         fname = append(fname,"_deep_v2.txt");
+%         fname = append(fname,"_deep_v3.txt");
 %     else
-%         fname = append(fname,"_"+num2str(r)+"_deep_v2.txt");
+%         fname = append(fname,"_"+num2str(r)+"_deep_v3.txt");
 %     end
 %     theta = 0.1*l;
 %     run_Ive_da_sim()
 %     movefile(fname,'DA_Results/');
 % end
-fname = "Ive_da_5_deep_v4.txt";
+fname = "Ive_da_5_deep_25_start.txt";
 run_Ive_da_sim()
 movefile(fname,'DA_Results/');
 % EOS_write_record(fname,N,h,d,reg_param,density_ratio,phi_c,theta,eta_f_dl,a_dl,phi_rcp,phi_rlp,t_step,2,shear_lim_dl);
@@ -62,8 +62,8 @@ movefile(fname,'DA_Results/');
         rho = density_ratio*phi+(1-phi);
         pe = (pb-cosd(theta)*h);
         pp = rho*h*cosd(theta)-pb;
-        Iv = 5*u*eta_f_dl/(h*(pp));
-        Iv_base = 5*u*eta_f_dl/(2*h*(pp));
+        Iv = 3*u*eta_f_dl/(h*(pp));
+        Iv_base = 3*u*eta_f_dl/(h*(pp));
         tan_psi = phi-phi_c/(1+sqrt(Iv));
         tau_zx = pp*mu_Iv_fn(Iv_base)+(1-phi)*eta_f_dl*2*u/h;
         D = -2*kappa_dl/(eta_f_dl*h)*pe;
@@ -78,25 +78,26 @@ movefile(fname,'DA_Results/');
 
     function success = run_Ive_da_sim()
 %         cd Results
-        init_data = load('../Iverson_Closure/Results/dil_5deg_deep_comp_new_phic.txt');
-%         steady_state = init_data(5001,:);
-%         cd ../
-        vec = init_data(1,:);
-        depth_u = depth_average(vec(601:800)',200,1);
-        depth_phi_orig = phi_c+depth_average(vec(201:400)',200,1);
-        pb_init=cosd(theta)+vec(1);
-        Iv_init = 5*depth_u*eta_f_dl/((2.5*0.6+0.4)*cosd(theta)-pb_init);
-        depth_phi = phi_c/(1+sqrt(Iv_init));
-%         da_init_data = load('DA_Results/Ive_da_13deg_v2.txt');
-%         init_vec = da_init_data(5001,:);
+%         init_data = load('../Iverson_Closure/Results/dil_5deg_deep_comp_new_phic.txt');
+% %         steady_state = init_data(5001,:);
+% %         cd ../
+%         vec = init_data(1,:);
+%         depth_u = depth_average(vec(601:800)',200,1);
+%         depth_phi_orig = phi_c+depth_average(vec(201:400)',200,1);
+%         pb_init=cosd(theta)+vec(1);
+%         Iv_init = 3*depth_u*eta_f_dl/((2.5*0.6+0.4)*cosd(theta)-pb_init);
+%         depth_phi = phi_c/(1+sqrt(Iv_init));
+        da_init_data = load('DA_Results/Ive_da_25_deep.txt');
+        init_vec = da_init_data(end-1,2:end);
         
         % No initial pressure of phihat and initial values of u_p and u_f
         % defined above
-        time_vals = (0:5000)*t_step;
+        time_vals = [0,5000*t_step];
         opts=odeset('AbsTol',1e-12,'RelTol',1e-12,'Stats','on');
 
-        [~,vec]=ode15s(@Ive_depth_ave,time_vals,[1,depth_phi,depth_u,pb_init],opts);
-%         [~,vec]=ode15s(@Ive_depth_ave,time_vals,init_vec,opts);
+%         [~,vec]=ode15s(@Ive_depth_ave,time_vals,[1,depth_phi_orig,depth_u,pb_init],opts);
+        [tvals,vec]=ode15s(@Ive_depth_ave,time_vals,init_vec,opts);
+        vec = horzcat(tvals,vec);
         size(vec)
         save(fname, 'vec','-ascii')
         success=1;

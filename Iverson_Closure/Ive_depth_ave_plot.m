@@ -15,17 +15,17 @@ function Ive_depth_ave_plot
             fname = append(fname,"_"+num2str(r)+"_deep.txt");
         end
         data_file = load(fname);
-%         u_p = data_file(:,3*N+1:end);
+        u_p = data_file(:,2*N+1:3*N);
 %         dz = 1/(N-0.5);
 %         dupdz = diff(u_p,1,2)/dz;
 %         dupdz = horzcat(dupdz,zeros(n_times,1));
 %         base_shear_vals(:,l+1) = dupdz(:,1);
 %         is_flow = ((u_p > 5e-4) | (dupdz > 2e-3));
 %         h_vals(:,l) = sum(is_flow,2)/N;
-        depth_ave_vals(:,l) = data_file(:,1);
+        depth_ave_vals(:,l) = depth_average(u_p',N,n_times);
     end
 %     save('Ive_flow_height_angles.txt', 'h_vals','-ascii')
 %     save('Ive_shear_base_angles.txt', 'base_shear_vals','-ascii')
-    save('Ive_basal_pe_angles.txt', 'depth_ave_vals','-ascii')
+    save('Ive_ave_phi_angles.txt', 'depth_ave_vals','-ascii')
     cd ..
 end

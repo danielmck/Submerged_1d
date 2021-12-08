@@ -1,38 +1,40 @@
 function simple_submerged_system
-N = 200; % number of discretisation points in z for each of tau, u
-h = 4e-2; % layer height (m)
-d=1.43e-5; % grain diameter (m)
+    N = 200; % number of discretisation points in z for each of tau, u
+    h = 4e-2; % layer height (m)
+    d=1.43e-5; % grain diameter (m)
 
-mu1_I=0.342; % \frac{u+u_d}{\rho_f \phi_c}
-mu2_I=0.557; % 
-I_0 = 0.069;
+    mu1_I=0.342; % \frac{u+u_d}{\rho_f \phi_c}
+    mu2_I=0.557; % 
+    I_0 = 0.069;
 
-mu1_Iv = 0.32;
-mu2_Iv = 0.7;
-Iv_0 = 0.005;
+    mu1_Iv = 0.32;
+    mu2_Iv = 0.7;
+    Iv_0 = 0.005;
 
-mu1_K = 0.2764;
-mu2_K = 0.8797;
-K_0 = 0.1931;
-a_K = 0.7071;
-reg_param = 10^8;
+    mu1_K = 0.2764;
+    mu2_K = 0.8797;
+    K_0 = 0.1931;
+    a_K = 0.7071;
+    reg_param = 10^8;
 
-phi_c=0.585; % Volume fraction
-eta_f = 0.0010016; % Pa s
-g=9.81; % m/s^2
-rho_f = 1000; % kg/m^3
-rho_p = 2500; % kg/m^3
-% theta = 8.5; % deg
-for l=5:70
-    q=fix(l/10);
-    r=mod(l,10);
-    fname = "Ive_comp_"+num2str(q);
-    if (r==0)
-        fname = append(fname,"_deep.txt");
-    else
-        fname = append(fname,"_"+num2str(r)+"_deep.txt");
-    end
-    theta = 0.1*l;
+    phi_c=0.585; % Volume fraction
+    eta_f = 0.0010016; % Pa s
+    g=9.81; % m/s^2
+    rho_f = 1000; % kg/m^3
+    rho_p = 2500; % kg/m^3
+    theta = 4; % deg
+% for l=1:9
+%     q= 9; %fix(l/10);
+%     r=l; %mod(l,10);
+%     fname = "Ive_comp_4";
+%     if (r==0)
+%         fname = append(fname,+"_deep_9"+"_start.txt");
+%     else
+%         fname = append(fname,"_deep_9_"+num2str(r)+"_start.txt");
+%     end
+%     fname = "Ive_comp_4_deep_v2.txt";
+%     theta = 9+0.1*r;
+    init_file_name = "Ive_comp_9_2_deep.txt";
     alpha = 0.0001; % 1/Pa
     dz = h/(N-0.5); % z spacing
     z_pe = linspace(dz/2,h,N);
@@ -55,11 +57,12 @@ for l=5:70
     z_u_dl = z_u/z_scale;
     p_b_dl = p_b/p_scale;
     buoyancy_dl = buoyancy/p_scale*z_scale;
-    t_step = 10;
+    t_step = 1;
+    fname = "Ive_comp_4_deep_9_2_start_early.txt";
     run_dil_sim()
     movefile(fname,'Results/');
     write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,theta,eta_f_dl,t_step);
-end
+% end
 
 
 % fname = "dil_8_5deg_deep_comp_new_phic.txt";
@@ -121,7 +124,7 @@ end
         beta_pe = beta_fn(phi_hat);
         beta_u = interp1(z_pe,beta_pe,z_u,'linear','extrap');
 
-        dilatancy = 1./alpha_dl.*abs(dupdz).*(phi_hat(1:end-1)+ (sqrt(abs(Iv)).*phi_c./(1+sqrt(abs(Iv)))));
+        dilatancy = 1./alpha_dl.*(dupdz>5e-4).*abs(dupdz).*(phi_hat(1:end-1)+ (sqrt(abs(Iv)).*phi_c./(1+sqrt(abs(Iv)))));
         dpdt = [1./alpha_dl.*diff((1./beta_u.*dpdz))./dz_dl-dilatancy 0];
         dphidt = -phi_c.*diff((1./beta_u.*dpdz))./dz_dl;
         dphidt = interp1(z_pe(1:end-1),dphidt,z_pe,'linear','extrap');
@@ -264,7 +267,8 @@ end
 %         init_uf=init_vec(7,1:N);
 %         init_up=init_vec(7,N+1:end);
         cd Results
-        init_data = load('dil_13deg_deep_comp_new_phic.txt');
+%         init_file_name = 'Ive_comp_13_deep_custom_time.txt';
+        init_data = load(init_file_name);
 %         steady_state = init_data(5001,:);
         cd ../
         vec=init_data(5001,:);
@@ -280,10 +284,11 @@ end
 
         % No initial pressure of phihat and initial values of u_p and u_f
         % defined above
-        time_vals = (0:5000)*t_step;
-        opts=odeset('AbsTol',1e-12,'RelTol',1e-12,'Stats','on');
+        time_vals = [0 250];
+        opts=odeset('AbsTol',1e-8,'RelTol',1e-8,'Stats','on');
 
-        [~,vec]=ode15s(@dilatancy_derivs,time_vals,vec,opts);
+        [tvals,vec]=ode15s(@dilatancy_derivs,time_vals,vec,opts);
+        vec = horzcat(tvals,vec);
         size(vec)
         save(fname, 'vec','-ascii')
         success=1;

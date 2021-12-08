@@ -1,4 +1,4 @@
-depth_ave_pe = load('Results/Ive_basal_pe_angles.txt');
+depth_ave_pe = load('Results/Ive_phi_ave_angles.txt');
 
 depth_ave_h = load('Results/Ive_flow_height_angles.txt');
 % deposit_time = sum(depth_ave_h>2e-3);

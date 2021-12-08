@@ -10,9 +10,9 @@ function Ive_depth_ave_plot
         r=mod(l,10);
         fname = "Ive_da_"+num2str(q);
         if (r==0)
-            fname = append(fname,"_deep_v2.txt");
+            fname = append(fname,"_deep_v3.txt");
         else
-            fname = append(fname,"_"+num2str(r)+"_deep_v2.txt");
+            fname = append(fname,"_"+num2str(r)+"_deep_v3.txt");
         end
         data_file = load(fname);
         theta =0.1*l;
@@ -23,8 +23,8 @@ function Ive_depth_ave_plot
         pe_vals(:,l+1) = data_file(:,4)-cosd(theta)*h_vals(:,l+1);
 %         depth_ave_vals(:,l+1) = depth_average(u_p',N,n_times);
     end
-    save('DA_flow_height_angles_v2.txt', 'h_vals','-ascii')
-    save('DA_phi_ave_angles_v2.txt', 'phi_vals','-ascii')
-    save('DA_u_ave_angles_v2.txt', 'u_vals','-ascii')
-    save('DA_pe_base_angles_v2.txt', 'pe_vals','-ascii')
+    save('DA_flow_height_angles_v3.txt', 'h_vals','-ascii')
+    save('DA_phi_ave_angles_v3.txt', 'phi_vals','-ascii')
+    save('DA_u_ave_angles_v3.txt', 'u_vals','-ascii')
+    save('DA_pe_base_angles_v3.txt', 'pe_vals','-ascii')
 end

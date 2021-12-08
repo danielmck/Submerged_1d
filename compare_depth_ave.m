@@ -14,7 +14,7 @@ function compare_depth_ave
     end
     Rau_name = "Rauter_Closure/EqnOfState_Results/Rauter_"+deg_string+".txt";
     Ive_name = "Iverson_Closure/Results/Ive_comp_"+deg_string+".txt";
-    da_name = "Iverson_DA/DA_Results/Ive_da_"+deg_string+"_v2.txt";
+    da_name = "Iverson_DA/DA_Results/Ive_da_"+deg_string+"_v3.txt";
     da_name3 = "Iverson_DA/DA_Results/Ive_da_"+deg_string+"_v4.txt";
     
     h = 4e-2;
@@ -76,7 +76,9 @@ function compare_depth_ave
     DA_phi_vals = DA_file(:,2);
     DA_u_vals = DA_file(:,3);
     DA_pe_vals = DA_file(:,4)-cosd(theta)*DA_h_vals;
-    DA_Iv_base = 5*DA_u_vals*eta_f_dl./(2*h*((density_ratio-1)*h*cosd(theta)-DA_pe_vals));
+    DA_dupdz_base = 3*DA_u_vals;
+    DA_Iv_base = 3*DA_u_vals*eta_f_dl./(2*h*((density_ratio-1)*h*cosd(theta)-DA_pe_vals));
+    
     
     DA_file3 = load(da_name3);
     DA_h_vals3 = DA_file3(:,1);
@@ -86,19 +88,19 @@ function compare_depth_ave
     DA_pp_vals3 = ((density_ratio-1)*DA_phi_vals3.*DA_h_vals3*cosd(theta)-DA_pe_vals3);
     DA_dupdz_base3 = 5/2*DA_u_vals3;
     DA_Iv_base3 = 5*DA_u_vals3*eta_f_dl./(2*DA_h_vals3.*DA_pp_vals3);
-    
+
     %% 
-    t_max = Ive_erosion_start;
+    t_max = 100;
     hold on
 %     SetPaperSize(10,10)
 %     plot(linspace(1,t_max,t_max+1),Rau_u_vals(1:t_max+1),'DisplayName',"Rauter Model")
-%     plot(linspace(0,10*t_max,t_max+1),Ive_pe_base(1:t_max+1),'DisplayName',"Iverson Model")
-%     plot(linspace(0,10*t_max,t_max+1),DA_pe_vals(1:t_max+1),'DisplayName',"DA Model")
-%     plot(linspace(0,10*t_max,t_max+1),DA_pe_vals3(1:t_max+1),'DisplayName',"DA Model with Adapted ICs")
-    plot(Ive_pe_all(floor(t_max),:),z_pe);
-    plot(DA_pe_vals3(floor(t_max)),0,'x');
-    top_grad = 2*Ive_pe_all(floor(t_max),100);
-    plot(top_grad*(1-z_pe),z_pe,'--')
+    plot(linspace(0,10*t_max,t_max+1),Ive_u_vals(1:t_max+1),'DisplayName',"Iverson Model")
+    plot(linspace(0,10*t_max,t_max+1),DA_u_vals(1:t_max+1),'DisplayName',"DA Model")
+    plot(linspace(0,10*t_max,t_max+1),DA_u_vals3(1:t_max+1),'DisplayName',"DA Model with Adapted ICs")
+%     plot(Ive_pe_all(floor(t_max),:),z_pe);
+%     plot(DA_pe_vals3(floor(t_max)),0,'x');
+%     top_grad = 2*Ive_pe_all(floor(t_max),100);
+%     plot(top_grad*(1-z_pe),z_pe,'--')
 
 %     plot(Rau_up(850,:),z_u,'DisplayName',"Rauter Model");
 %     plot(Ive_up(850,:),z_u,'DisplayName',"Iverson Model");
