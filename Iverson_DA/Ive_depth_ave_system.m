@@ -1,5 +1,4 @@
 function Ive_depth_ave_system
-N = 200; % number of discretisation points in z for each of tau, u
 h0 = 4e-2; % layer height (m)
 d=1.43e-5; % grain diameter (m)
 
@@ -14,8 +13,8 @@ eta_f = 0.0010016; % Pa s
 g=9.81; % m/s^2
 rho_f = 1000; % kg/m^3
 rho_p = 2500; % kg/m^3
-theta = 5; % deg
-fric_ang = 0.65;
+theta = 4.5; % deg
+% fric_ang = 0.65;
 
 alpha = 1e-4;
 kappa = ((1-phi_c).^3.*d^2)./(150*phi_c.^2);
@@ -34,23 +33,23 @@ eta_f_dl = eta_f/(p_scale*t_scale);
 alpha_dl = alpha*p_scale;
 kappa_dl = kappa/(z_scale)^2;
 
-t_step = 10;
-% for l=1:70
-%     q=fix(l/10);
-%     r=mod(l,10);
-%     fname = "Ive_da_"+num2str(q);
-%     if (r==0)
-%         fname = append(fname,"_deep_v3.txt");
-%     else
-%         fname = append(fname,"_"+num2str(r)+"_deep_v3.txt");
-%     end
-%     theta = 0.1*l;
-%     run_Ive_da_sim()
-%     movefile(fname,'DA_Results/');
-% end
-fname = "Ive_da_5_deep_25_start.txt";
-run_Ive_da_sim()
-movefile(fname,'DA_Results/');
+flux_con = load('../Iverson_Closure/Results/flux_conditions.txt');
+for l=1:50
+    flux=flux_con(l,1);
+    theta_init=flux_con(l,2);
+    init_phi=flux_con(l,3);
+    unit = floor(flux);
+    tenth = mod(l,10);
+    if (tenth == 0)
+        fname = "Ive_DA_4_5_deep_"+num2str(unit)+"_flux.txt";
+    else
+        fname = "Ive_DA_4_5_deep_"+num2str(unit)+"_"+num2str(tenth)+"_flux.txt";
+    end
+    run_Ive_da_sim()
+    movefile(fname,'Results/');
+end
+% fname = "Ive_da_13_acc.txt";
+
 % EOS_write_record(fname,N,h,d,reg_param,density_ratio,phi_c,theta,eta_f_dl,a_dl,phi_rcp,phi_rlp,t_step,2,shear_lim_dl);
 
     function dvecdt=Ive_depth_ave(t,vec)
@@ -87,16 +86,16 @@ movefile(fname,'DA_Results/');
 %         pb_init=cosd(theta)+vec(1);
 %         Iv_init = 3*depth_u*eta_f_dl/((2.5*0.6+0.4)*cosd(theta)-pb_init);
 %         depth_phi = phi_c/(1+sqrt(Iv_init));
-        da_init_data = load('DA_Results/Ive_da_25_deep.txt');
-        init_vec = da_init_data(end-1,2:end);
+%         da_init_data = load('DA_Results/Ive_da_25_deep.txt');
+%         init_vec = da_init_data(end-1,2:end);
         
         % No initial pressure of phihat and initial values of u_p and u_f
         % defined above
-        time_vals = [0,5000*t_step];
+        time_vals = [0,10000];
         opts=odeset('AbsTol',1e-12,'RelTol',1e-12,'Stats','on');
 
 %         [~,vec]=ode15s(@Ive_depth_ave,time_vals,[1,depth_phi_orig,depth_u,pb_init],opts);
-        [tvals,vec]=ode15s(@Ive_depth_ave,time_vals,init_vec,opts);
+        [tvals,vec]=ode15s(@Ive_depth_ave,time_vals,[1,init_phi,flux,cosd(4)],opts);
         vec = horzcat(tvals,vec);
         size(vec)
         save(fname, 'vec','-ascii')

@@ -1,4 +1,4 @@
-names = ["Rauter_6_9_deep.txt"];%"rau_5_deep_small_creep.txt"]; %,"rau_5_alt_creep_small.txt","rau_5.txt"]; %,"rau_8_5_no_creep.txt"];
+names = ["Rauter_5_deep.txt"];%"rau_5_deep_small_creep.txt"]; %,"rau_5_alt_creep_small.txt","rau_5.txt"]; %,"rau_8_5_no_creep.txt"];
 sim_num=size(names,2);
 sim_list = cell(1,sim_num);
 sim_title = ["$8.5$ degree Slope", "$5$ degree Slope", "Linear Law, $S_0=5$", "Constant $\phi_m$"];
@@ -77,6 +77,7 @@ phi = cell(sim_num,1);
 u_f = cell(sim_num,1);
 u_p = cell(sim_num,1);
 Iv = cell(sim_num,1);
+tan_psi = cell(sim_num,1);
 Iv_phi = cell(sim_num,1);
 mu_Iv = cell(sim_num,1);
 beta_pe = cell(sim_num,1);
@@ -151,6 +152,7 @@ for i = 1:sim_num
 
     Iv{i,1} = eta_f_dl(i).*abs(dupdz{i,1})./(p_p{i,1}(:,1:end-1));
     phi_Iv{i,1} = phi_c(i)./(1+sqrt(abs(Iv{i,1})));
+    tan_psi{i,1} = phi{i,1}-horzcat(phi_Iv{i,1}, phi_rcp(i)*ones(n_times(i),1));
     crit_grad(i) = -(density_ratio(i).*phi_c(i)+(1-phi_c(i))).*sind(theta(i))/0.32;
     excess_p_c{i,1} = p_b_dl{i,1}+crit_grad(i)*(1-z_pe_dl{i,1});
     p_crit{i,1} = -crit_grad(i)*(1-z_pe_dl{i,1});
@@ -235,24 +237,26 @@ end
 % cube2 = root1.^3.*c1+root1.^2.*c2+root1.*c3+c4;
 nfig = 1;
 % axes('ColorOrder',brewermap(nfig+3,'*Purples'))
+C = brewermap(nfig+2, 'PuRd');
+set(0, 'DefaultAxesColorOrder', C(3:end,:))
 % subplot(2,1,1);
 slowing_u = load("rau_5_deep_no_pe.txt");
 hold on
 % pe_approx = p_b_dl{i,1}(1:end-1)./mu_Iv{i,1}.*(mu_Iv{i,1} - (density_ratio(i).*phi_c(i)+(1-phi_c(i)))/((density_ratio(i)-1)*phi_c(i)).*tand(theta(i)));
 % 
-% SetPaperSize(12,12);
-plot_times = [3000,300];
+% SetPaperSize(10,10);
+plot_times = [51,300];
 % shear_lim_zone = (sum(u_p{i,1}>1e-4,2)-sum(dupdz{i,1}>shear_lim_dl(i),2))/N(i);
 
 for i= 1:sim_num
 %     plot(shear_lim_dl(i)*ones(200,1),z_pe_dl{i,1}(1:end),'DisplayName',"$\frac{\partial p_i}{\partial \phi}$");
     for j=linspace(1,nfig,nfig)
-        k = plot_times(i)+(j-1)*10;
+        k = plot_times(i)+(j-1)*100;
         t_val = (k-1)*t_step;
 %         shear_lim_zone = (sum(dupdz{i,1}<shear_lim_dl(i),2)-sum(u_p{i,1}<1e-4,2))/N(i);
 %         plot(shear_lim_zone)
-        plot(p_e{i,1}(k,1:end),z_pe_dl{i,1}(1:end),'DisplayName',"t="+num2str(t_val)); 
-%         plot(p_b_dl{i,1}-p_crit{i,1},z_pe_dl{i,1}(1:end),'DisplayName',"$\frac{\partial p_i}{\partial \phi}$");
+        plot(phi{i,1}(k,1:end),z_pe_dl{i,1}(1:end),'DisplayName',"t="+num2str(t_val)); 
+        
 %         plot(dpidt_gd{i,1}(k,1:end),z_pe_dl{i,1}(1:end-1),'DisplayName',"$\frac{\partial p_i}{\partial \dot\gamma}$");
 %         plot(dupdz{i,1}(k,1:end),z_pe_dl{i,1}(1:end-1),'DisplayName',sim_title(i)+ " at t="+num2str(t_val));
 %         plot(p_b_dl{i,1}-p_crit{i,1},z_pe_dl{i,1}(1:end),'DisplayName',sim_title(i));
@@ -271,12 +275,13 @@ for i= 1:sim_num
     %     plot(linspace(2000,3500,1500),p_e(2001:3500,1)')
     %     plot(linspace(1,1500,1500),pi_ave(1:1500)')
     end
+%     plot(p_b_dl{i,1}-p_crit{i,1},z_pe_dl{i,1}(1:end),"k--",'DisplayName',"Critical $p_e$");
 end
-% annotation('arrow',[0.571120689655172 0.853448275862069],...
-%     [0.535912751677852 0.740492170022371]);
+% annotation('arrow',[0.5 0.208762886597938],...
+%     [0.335927223719677 0.606469002695418]);
 % plot(shear_lim_dl(i)*ones(200,1),z_pe_dl{i,1}(1:end),'--','DisplayName',"$S_0$");
 % plot(excess_p_c{i,1},z_pe_dl{i,1}(1:end),"--");
-h_leg = legend('Location', "best",'UserData', 4);
+% h_leg = legend('Location', "best",'UserData', 4);
 % get(h_leg,'Position')
 % HeightScaleFactor = 1.2;
 % NewHeight = h_leg.Position(4) * HeightScaleFactor;
@@ -285,16 +290,16 @@ h_leg = legend('Location', "best",'UserData', 4);
 % h_leg.Position(4) = NewHeight;
 % get(h_leg,'Position')
 ylabel("$z/h$");
-xlabel('$\phi$');
+xlabel('$p_e$');
 % box on
 % xlim([0, 5])
-title("Increasing Volume Fraction on $8.5$ degree slope");
+title("Decrease of $u_p$ at Late Time in Rauter Model");
 % ax = gca;
 %      set(gca,'ytick',[])
 %      ax.YAxis(1).Exponent = 0;
 % ax.XAxis.Exponent = 0;
 % xtickformat('%5.1e');
-% PrintFig('Rau_8_5deg_phi_time_evo')
+% PrintFig('Rau_5deg_up_late')
 % subplot(2,1,2);
 % hold on
 % for j=linspace(1,nfig,nfig) 
