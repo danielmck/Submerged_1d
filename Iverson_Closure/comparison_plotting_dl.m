@@ -1,5 +1,5 @@
 % opengl firmware
-names = ["Ive_comp_4_deep_0_6_flux_big_part.txt","Ive_comp_4_deep_1_flux_big_part.txt"]; %"Ive_comp_4_deep_1_flux.txt"];%,"Ive_comp_4_deep_9_2_start.txt""Ive_comp_4_deep_9_1_start.txt","
+names = ["Ive_mu_I_phi_I_13deg_water.txt"]; %"Ive_comp_4_deep_1_flux.txt"];%,"Ive_comp_4_deep_9_2_start.txt""Ive_comp_4_deep_9_1_start.txt","
 % names = ["Ive_comp_5_deep_custom_time_IC.txt"]; %,"Ive_comp_5_deep_custom_time_IC.txt"];%
 % Loads the data to compare and puts them in a list of simulations
 
@@ -269,26 +269,30 @@ for i=1:sim_num
     end
     
 %     plot(linspace(0,2e-4,201),mu_Iv_fn(linspace(0,0.02,201)))
-    nfig=4;
+    nfig=1;
     C = brewermap(nfig+2, colour);
     plot_vec = u_p{i,1};
-
+    da_Iv = depth_average(Iv{i,1},N(i),n_times(i));
+    da_phi_Iv = depth_average(phi_Iv{i,1},N(i),n_times(i));
     for j=linspace(1,nfig,nfig)
 %         t_vals{j,1}(t1(j))
-        t_max = 10+15*(j-1);
+        t_max = 1800+150*(j-1);
 %         t_max = [50000,100000];
 %         t_val = (k-1)*t_step(i);
         t1=[sum(t_vals{i,1}<t_max)+1];
         hold on
         C = brewermap(nfig+2, colour);
-%         plot(plot_vec(1:end,t1),z_pe{i,1}(1:end),'color',C(j+2,:),'DisplayName',"t="+num2str(t_max))
+        plot(plot_vec(1:end,t1),z_pe{i,1}(1:end),'DisplayName','Full Profile')%,'color',C(j+2,:)"t="+num2str(t_max))
 %         plot(plot_vec(end,t1)*(1-(1-z_u{i,1}).^2),z_pe{i,1}(1:end),'color','green','DisplayName',"t="+num2str(t_max))
-       
-%         ylabel("$z/h$");
-%         xlabel('$p_e$');
+%         plot(da_phi_Iv(t1)*ones(N(i),1),z_pe{i,1}(1:end),'DisplayName','Depth Averaged Value')
+%         plot((phi_c/(1+sqrt(da_Iv(t1))))*ones(N(i),1),z_pe{i,1}(1:end),'DisplayName','Value with DA $I_v$')
+        
+%         depth_average(plot_vec(1:end,t1),N(i),1)
+        ylabel("$z/h$");
+        xlabel('$\phi(I_v)$');
 %         xlabel('$\frac{\partial u_p}{\partial z}$');
         box on
-        C = brewermap(nfig+2, 'Reds');
+%         C = brewermap(nfig+2, 'Reds');
 %         xlim([0,25])
 %         plot(diffusion_term{i,1}(1:end,j),z_pe{i,1}(1:end),'DisplayName',"Diffusion Term")
 %         plot(pe_medium(:,t1),z_pe{i,1},'color',C(j+2,:),'DisplayName',"Approx"+" t="+num2str(t_max))
@@ -302,14 +306,13 @@ for i=1:sim_num
 %     plot(const_bl+(cos_coeff_bl).*(1-(z_pe{i,1}/0.4).^2),z_pe{i,1}(1:end),'DisplayName',"Steady State")
 %     plot(const_bl+(cos_coeff_bl).*(cos(z_pe{i,1}/eps_bl*pi/2)),z_pe{i,1}(1:end),'DisplayName',"Steady State")
 %     plot(crit_pe,z_pe{i,1}(1:end),"k--",'DisplayName',"Critical $p_e$");
-    legend('Location', "best",'UserData', 6);
+    legend('Location', "best",'UserData', 14);
 %     ax = gca;
 %     annotation('arrow',[0.306701030927835 0.268041237113402],...
 %     [0.608164420485175 0.746630727762803]);
-    title('Excess Pressure of Slowing Flow from Short Run on 9.2 degree Slope')
-    pdfname = 'Ive_pe_9_2deg_short_run';    
-  
+    title('Values of $\phi(I_v)$ with $\mu(I)$ Rheology') 
 %     cd Figures/ShallowSlowing
+    pdfname = 'Ive_mu_I_DA_phi_Iv';
 %     PrintFig(pdfname)
 %     cd ../../
 
@@ -422,7 +425,7 @@ end
 % ylabel('stuff','Position',[x y]) 
 
 ani_num = 1;
-make_avi=true;
+make_avi=false;
 if (make_avi) 
     nframes=1000;
 %     t_vals = ((0:nframes))*10;
@@ -534,17 +537,17 @@ if (make_avi)
 end
 
 %%
-imageNames = dir(fullfile(workingDir,'images','*.jpg'));
-imageNames = {imageNames.name}';
-
-outputVideo = VideoWriter(fullfile(workingDir,'shuttle_out.avi'));
-outputVideo.FrameRate = 30;
-open(outputVideo)
-for ii = 1:length(imageNames)
-   img = imread(fullfile(workingDir,'images',imageNames{ii}));
-   writeVideo(outputVideo,img)
-end
-close(outputVideo)
+% imageNames = dir(fullfile(workingDir,'images','*.jpg'));
+% imageNames = {imageNames.name}';
+% 
+% outputVideo = VideoWriter(fullfile(workingDir,'shuttle_out.avi'));
+% outputVideo.FrameRate = 30;
+% open(outputVideo)
+% for ii = 1:length(imageNames)
+%    img = imread(fullfile(workingDir,'images',imageNames{ii}));
+%    writeVideo(outputVideo,img)
+% end
+% close(outputVideo)
 
 function beta_val=dimless_beta_fn(phi)
     phi_c=0.6;

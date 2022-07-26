@@ -1,30 +1,35 @@
-function wave_stability_rho
+function wave_stability_theta
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;
 
     reg_param = 1*10^7;
 
-    d_dl = 2e-3;
+    d_dl = 2e-4;
     phi_c=0.585; % Volume fraction
-    eta_f = 0.0010016; % Pa s
+    
     g=9.81; % m/s^2
 
     rho_p = 2500; % kg/m^3
-    rho_f = 1000; % kg/m^3
-%     theta = 20; % deg
     
-
+%     rho_f = 1000; % kg/m^3
+%     eta_f = 0.0010016; 
+    
+    rho_f = 1; % kg/m^3
+    eta_f = 1.18e-5; % Pa s
+    
+%     theta = 20; % deg
     alpha = 1e-4; % 1/Pa
       
-        n_pts = 200;
+        n_pts = 20;
 
         max_sig = zeros(n_pts);
+        num_unstab = zeros(n_pts);
         A_mat = zeros(4);
         
-        Fr_list = linspace(0.005,0.6,n_pts);
+        Fr_list = linspace(0.01,5.0,n_pts);
 %         rho_list = (linspace(2.5,250,n_pts));
-        theta_list = (linspace(9,30,n_pts));
+        theta_list = (linspace(20,35,n_pts));
         
         for j = 1:n_pts
             theta = theta_list(j);
@@ -75,7 +80,7 @@ function wave_stability_rho
                 A_mat(4,1) = 1i * -(P-rho_f_dl/rho_dl).*2./beta_dl;
                 A_mat(4,3) = (P+rho_f_dl/rho_dl)*2/beta_dl*1i;
                 
-                num_k = 16;
+                num_k = 20;
                 sigma_mat = zeros(4,num_k);
                 for i=1:num_k
                     k = 0.25*2^(i/2);
@@ -90,20 +95,21 @@ function wave_stability_rho
                     A_eig = eig(A_mat);
                     sigma_mat(:,i) = sort(imag(A_eig),'descend');  
                 end
-    %             plot(0.25.*2.^((1:num_k)/2),sigma_mat)
+%                 plot(0.25.*2.^((1:num_k)/2),sigma_mat(1:3,:))
                 max_sig(j,l) = max(max(sigma_mat));
+                num_unstab(j,l) = sum(max(sigma_mat')>0);
             end  
         end
         stability = (max_sig>0);
         contourf(Fr_list,theta_list,stability,2)
                
-        SetPaperSize(10,10)
+%         SetPaperSize(10,10)
         colormap(winter)
         xlabel('Froude Number')
         ylabel('Slope Angle')
         title("Stability Criteria for Different Slope Angles")
         fig_name = 'StabCrit_Fr_theta_Norm';
-        PrintFig(fig_name)
+%         PrintFig(fig_name)
         full_fig = strcat(fig_name,'.pdf');
         movefile(full_fig, 'Figures/StabilityPlots');
 

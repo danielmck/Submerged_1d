@@ -8,9 +8,9 @@ function wave_stability_d
     phi_c=0.585; % Volume fraction
     eta_f = 0.0010016; % Pa s
     g=9.81; % m/s^2
-    rho_f = 1000; % kg/m^3
+    rho_f = 10; % kg/m^3
     rho_p = 2500; % kg/m^3
-    theta = 10; % deg
+    theta = 20; % deg
     rho = phi_c*rho_p + (1-phi_c)*rho_f;
 
     alpha = 1e-4; % 1/Pa
@@ -22,6 +22,7 @@ function wave_stability_d
         n_pts = 100;
 
         max_sig = zeros(n_pts);
+        num_unstab = zeros(n_pts);
         A_mat = zeros(4);
 
         Fr_list = linspace(0.005,0.5,n_pts);
@@ -87,18 +88,19 @@ function wave_stability_d
                     sigma_mat(:,i) = sort(imag(A_eig),'descend');  
                 end
     %             plot(0.25.*2.^((1:num_k)/2),sigma_mat)
+                num_unstab(j,l) = sum(max(sigma_mat')>0);
                 max_sig(j,l) = max(max(sigma_mat));
             end  
         end
         stability = (max_sig>0);
         contourf(Fr_list,d_list,stability',2)
-        SetPaperSize(10,10)
+%         SetPaperSize(10,10)
         colormap(winter)
         xlabel('Froude Number')
         ylabel('Nondimensional Particle Size')
         title("Stability Criteria for Normal Parameter Set")
         fig_name = 'StabCrit_Fr_d_Norm_10deg';
-        PrintFig(fig_name)
+%         PrintFig(fig_name)
         full_fig = strcat(fig_name,'.pdf');
         movefile(full_fig, 'Figures/StabilityPlots');
     end

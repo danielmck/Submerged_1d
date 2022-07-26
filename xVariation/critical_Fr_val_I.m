@@ -1,4 +1,4 @@
-function critical_Fr_val
+function critical_Fr_val_I
 
     rho_p = 2500;
     
@@ -18,12 +18,12 @@ function critical_Fr_val
 %     alpha_list = [1e-6 5e-6 1e-5 5e-5 1e-4];
 %     n_pts1 = size(alpha_list,2);
     
-    var_list = {[1e-5 1e-4 1e-3],[1e-6 5e-6 1e-5 5e-5 1e-4]};
+    var_list = {[1e-5 5e-5 1e-4 5e-4 1e-3],[1e-6 5e-6 1e-5 5e-5 1e-4]};
     var_names = ["d" "alpha"];
 
     n_pts2 = 100;
-    theta_start = [8.6 18];
-    theta_stop = [30 32];
+    theta_start = [10 20];
+    theta_stop = [14 32];
 %     theta_start = [10 20];
 %     theta_stop = [30 35];
     phase_name = ["water" "air"];
@@ -36,7 +36,8 @@ function critical_Fr_val
         eta_f = eta_list(a);
         for b = 1:2
             alpha = 1e-4; % 1/Pa
-            d = 1e-3;
+            d = 1e-4;
+            h = 5e-1;
             n_pts1 = size(var_list{b},2);
             crit_Fr = zeros(n_pts1,n_pts2);
             for i = 1:n_pts1
@@ -47,12 +48,12 @@ function critical_Fr_val
                 end
                 for j = 1:n_pts2
                     theta = theta_list(j);
-%                     rho = phi_c*rho_p + (1-phi_c)*rho_f;
+                    rho = phi_c*rho_p + (1-phi_c)*rho_f;
         %             crit_mu = rho/(rho-rho_f)*tand(theta);
-                    crit_Fr(i,j) = get_critical_Fr(theta, rho_p, rho_f, d, eta_f, alpha);
+                    crit_Fr(i,j) = get_critical_Fr_I(theta, rho_p, rho_f, d, eta_f, alpha);
                 end
             end
-            save("Results/crit_Fr_"+var_names(b)+"_theta_"+phase_name(a)+"_no_diff.txt", 'crit_Fr','-ascii')
+            save("Results/crit_Fr_"+var_names(b)+"_theta_"+phase_name(a)+"_I.txt", 'crit_Fr','-ascii')
         end
     end
     
