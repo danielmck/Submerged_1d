@@ -1,19 +1,19 @@
 function plot_2d_stab
     phase = 'water';
-    var = 'alpha';
-    crit_Fr = load("Results/crit_Fr_"+var+"_theta_"+phase+"_no_diff.txt");
+    var = 'd';
+    crit_Fr = load("Results/crit_Fr_"+var+"_theta_"+phase+".txt");
 %     
     if strcmp(var, 'alpha')
         var_list = [1e-6 5e-6 1e-5 5e-5 1e-4];
         var_name = "Compressibilies";
         slash = "\";
     else
-        var_list = [2e-4 2e-3 2e-2];
+        var_list = [2e-5 2e-4 2e-3];
         var_name = "Particle Size";
         slash = "";
     end
     if strcmp(phase, 'air')
-        x_min = 18;
+        x_min = 17.8;
         x_max = 35;
     else
         x_min = 8.8;
@@ -30,19 +30,24 @@ function plot_2d_stab
     for i=1:size(var_list,2)
         plot(theta_list,crit_Fr(i,:),'DisplayName',"$"+slash+var+"=$ "+num2str(var_list(i)))
     end
-%     ylim([0 0.6])
+    ylim([0 0.6])
 %     xlim([0 1e-3])
     ax = gca;
     ax.YAxis.Exponent = 0;
+    YL = get(gca, 'YLim');
+    plot([1 1]*x_min, [0 0.6],'--','Color',[0.2 0.2 0.2 0.5],'DisplayName','Min Slope Angle')
+    lines1 = get(gca, 'Children');
+    lines2 = vertcat(lines1(2:end),lines1(1));
+    set(gca, 'Children', lines2 )
 %     xtickformat('%5.1e');
-    legend('Location', "best",'UserData', 6)
+    legend('Location', "best",'UserData', 9)
     xlabel("Slope angle $\theta$")
 %     xlabel("Viscous Number $I_v$")
-%     ylabel("Froude Number $Fr$")
-    ylabel("Flow Height $h$")
+    ylabel("Froude Number $Fr$")
+%     ylabel("Flow Height $h$")
     
-    title("Critical Flow Height for Different "+var_name+" and Slope Angles for "+strcat(upper(phase(1)),phase(2:end)))
-    plot_name = strcat('Crit_h_',var,'_',phase,'_2');
+    title("Critical $Fr$ for Different "+var_name+" and Slope Angles for "+strcat(upper(phase(1)),phase(2:end)))
+    plot_name = strcat('Crit_Fr_',var,'_',phase);
     PrintFig(plot_name)
     movefile(plot_name+".pdf","Figures/StabilityLinePlots")
 end

@@ -17,12 +17,13 @@ function critical_Fr_val
     
 %     alpha_list = [1e-6 5e-6 1e-5 5e-5 1e-4];
 %     n_pts1 = size(alpha_list,2);
-    
+
+%     var_list = {[1e-5 1e-4 1e-3],[1e-3 5e-3 1e-2 5e-2 1e-1]};
     var_list = {[1e-5 1e-4 1e-3],[1e-6 5e-6 1e-5 5e-5 1e-4]};
     var_names = ["d" "alpha"];
 
     n_pts2 = 100;
-    theta_start = [8.6 18];
+    theta_start = [8.6 17.8];
     theta_stop = [30 32];
 %     theta_start = [10 20];
 %     theta_stop = [30 35];
@@ -35,7 +36,8 @@ function critical_Fr_val
         rho_f = rho_list(a);
         eta_f = eta_list(a);
         for b = 1:2
-            alpha = 1e-4; % 1/Pa
+%             alpha = 1e-2; % 1/Pa
+            alpha = 1e-4;
             d = 1e-3;
             n_pts1 = size(var_list{b},2);
             crit_Fr = zeros(n_pts1,n_pts2);
@@ -52,7 +54,7 @@ function critical_Fr_val
                     crit_Fr(i,j) = get_critical_Fr(theta, rho_p, rho_f, d, eta_f, alpha);
                 end
             end
-            save("Results/crit_Fr_"+var_names(b)+"_theta_"+phase_name(a)+"_no_diff.txt", 'crit_Fr','-ascii')
+            save("Results/crit_h_"+var_names(b)+"_theta_"+phase_name(a)+".txt", 'crit_Fr','-ascii')
         end
     end
     
