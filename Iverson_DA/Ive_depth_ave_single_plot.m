@@ -1,7 +1,7 @@
 % fname = ["Ive_da_13_acc.txt"]; %,"Ive_da_13_deep_quad_alpha4.txt","Ive_da_13_deep_quad_alpha5.txt"];
 % fname = ["Ive_da_5_deep_alpha3.txt","Ive_da_5_deep_alpha4.txt","Ive_da_5_deep_alpha5.txt"];
 % fname = ["Ive_da_4_deep_9_2_start.txt"]; %,"Ive_da_4_deep_9_start.txt"];
-fname = ["Ive_DA_4_5_deep_0_8_flux.txt","Ive_DA_4_5_deep_1_2_flux.txt"];
+fname = ["Ive_da_5deg_13init_fast.txt"];
 plot_titles = ["$\alpha = 10^{-3}$","$\alpha = 10^{-4}$","$\alpha = 10^{-5}$"];
 
 sim_num = size(fname,2);
@@ -11,7 +11,7 @@ custom_times = zeros(sim_num,1);
 
 N=[200,200,200]';
 h = [4e-2,4e-2,4e-2]';
-d= 1.43e-5*ones(sim_num,1);
+d= 1e-5*ones(sim_num,1);
 
 phi_c= 0.585*ones(sim_num,1);
 eta_f = 0.0010016*ones(sim_num,1);
@@ -25,7 +25,7 @@ t_step = 10*ones(sim_num,1);
 
 N = 200; % number of discretisation points in z for each of tau, u
 h0 = 4e-2; % layer height (m)
-d=1.43e-5; % grain diameter (m)
+d=1e-5; % grain diameter (m)
 
 mu1_Iv = 0.32;
 mu2_Iv = 0.7;
@@ -163,11 +163,11 @@ for i=1:sim_num
     t_stop = 1500;
     t_begin = max(sum(t_vals(i,1:n_times(1,i))<t_start)-1,1);
     t_end = min(sum(t_vals(i,1:n_times(1,i))<t_stop)+1,n_times(1,i));
-    plot(t_vals(i,t_begin:t_end),u(i,t_begin:t_end),colour,'DisplayName',"Exact Value")
+    plot(t_vals(i,t_begin:t_end),pp(i,t_begin:t_end),colour,'DisplayName',"Exact Value")
     hold on
 %     plot(t_vals(i,t_begin:t_end),dIvdt_phi(i,t_begin:t_end),"red",'DisplayName',"Exact Value")
 %     plot(t_vals(i,t_begin:t_end),(3.*u(i,t_begin:t_end).*eta_f_dl./Iv_phi(i,t_begin:t_end)),'DisplayName',"Approximation")
-%     plot(t_vals(i,t_begin:t_end),(tan_psi_approx(i,t_begin:t_end)),"red",'DisplayName',"Approximation")
+    plot(t_vals(i,t_begin:t_end),(pp_approx_early(i,t_begin:t_end)),"red",'DisplayName',"Approximation")
 %     plot(theta_times,theta_tan_psi)
 
 
@@ -180,7 +180,7 @@ end
 legend('Location', "best",'UserData', 8);
 xlabel("$t$");
 ylabel('$\tan \psi$');%,'Position',[-35 0.0045]);
-xlim([t_start t_stop])
+% xlim([t_start t_stop])
 % ylim([0 0.01])
 box on
 title('Exact Value and Approximation of $\tan \psi$ during the Fast Timescale')

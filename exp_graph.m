@@ -3,7 +3,7 @@ function exp_graph(fig, fname)
     xlab=get(get(a,'xlabel'),'string');
     ylab=get(get(a,'ylabel'),'string');
     figtitle = get(get(a,'title'),'string');
-    fs = 10;
+    fs = 8;
     H = get(a,'Children');
     if size(xlab,2)
         xlabel(xlab,'Interpreter','latex','FontSize', fs)
@@ -26,6 +26,9 @@ function exp_graph(fig, fname)
             c.TickLabelInterpreter = 'latex';
         end
     end
+%     if ~strcmp(fname(end-4:end),'.png')
+%         fname = strcat(fname,".png");
+%     end
     exportgraphics(fig,fname,'Resolution',300)
 end
     

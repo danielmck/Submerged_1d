@@ -21,7 +21,9 @@ function k_contour_plot
     ax.YAxis.Exponent = 0;
     ytickformat('%5.1e');
     %         SetPaperSize(10,10)
-    colormap(winter)
+    m=10;
+    cm_magma=magma(m);
+    colormap(cm_magma);
     xlabel('Froude Number')
     ylabel('Particle Compressibility')
 

@@ -87,14 +87,14 @@ function fn_out = single_Fr_stab(Fr,crit_Iv,theta, rho_p, rho_f, d, eta_f, alpha
     end
     num_unstab = sum(max(sigma_mat,[],2)>0);
     fn_out = [num_unstab k_unstab];
-    f = figure;
-    set(f, 'PaperUnits', 'centimeters');
-    set(f, 'PaperSize', [10 10]);
-    plot(k_val(1:40),sigma_mat(1:2,1:40))
-    xlabel('Wavenumber')
-    ylabel('Eigenvalue Complex Part')
-    title('$\theta = 18$, $d = 10^{-4}$, $\alpha = 10^{-4}$, $Fr = 5$, Phase = Air')
-    exp_graph(f,"Air_18deg_multi_unstab.png")
+%     f = figure;
+%     set(f, 'PaperUnits', 'centimeters');
+%     set(f, 'PaperSize', [10 10]);
+%     plot(k_val(1:45),sigma_mat(1:2,1:45))
+%     xlabel('Wavenumber')
+%     ylabel('Eigenvalue Complex Part')
+%     title('$\theta = 18$, $d = 10^{-4}$, $\alpha = 10^{-4}$, $Fr = 5$, Phase = Air')
+%     exp_graph(f,"Air_18deg_multi_unstab.png")
 %     
     function mu_val = mu_Iv_fn(Iv)
        mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));

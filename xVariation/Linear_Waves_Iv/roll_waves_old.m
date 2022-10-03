@@ -1,23 +1,23 @@
-function roll_waves
-    h_crit = 0.8; % layer height (m)
-    d=1.43e-5; % grain diameter (m)
-    d_dl = d/h_crit;
+function roll_waves_old
+    phi_c=0.585; % Volume fraction
+    eta_f = 0.0010016; % Pa s
+    g=9.81; % m/s^2
+    rho_f = 1000; % kg/m^3
+    rho_p = 2500; % kg/m^3
+    theta = 10; % deg
+    alpha = 1e-5; % 1/Pa
+
+    
+%     h_crit = 0.8; % layer height (m)
+    d=1e-4; % grain diameter (m)
+%     d_dl = d/h_crit;
 
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;
 
     reg_param = 1*10^7;
-
-    phi_c=0.585; % Volume fraction
-    eta_f = 0.0010016; % Pa s
-    g=9.81; % m/s^2
-    rho_f = 1000; % kg/m^3
-    rho_p = 2500; % kg/m^3
-    theta = 15; % deg
-    alpha = 0.0001; % 1/Pa
-
-    Fr_min = get_critical_Fr(theta, rho_p, rho_f, d_dl, eta_f, alpha);
+    Fr_min = get_critical_Fr(theta, rho_p, rho_f, d, eta_f, alpha);
 
     
     % v_scale = sqrt(g.*h);
@@ -26,28 +26,32 @@ function roll_waves
     % z_scale = h;
     rho = phi_c*rho_p+(1-phi_c)*rho_f;
 
-    pb_grad = (rho_p-rho_f)*g*phi_c*cosd(theta);
-
+    pp_grad = (rho_p-rho_f)*g*phi_c*cosd(theta);
+    Fr = 0.6;
+    
     crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f);
-    h_crit_min = (Fr_min*sqrt(g*cosd(theta))/(crit_Iv*pb_grad))^(2/3);
+    u_const = crit_Iv.*pp_grad./eta_f./2;
+    h_crit = ((Fr*sqrt(g*cosd(theta)))./u_const)^(2/3);
+    
+    h_crit_min = (Fr_min*sqrt(g*cosd(theta))/u_const)^(2/3);
     if (h_crit < h_crit_min)
-        'Flow not deep enough for travelling waves to occur'
+        error('Flow not deep enough for travelling waves to occur');
         h_crit_min
     else
-        crit_u = crit_Iv.*h_crit^2.*pb_grad./eta_f./2;
+        crit_u = crit_Iv.*h_crit^2.*pp_grad./eta_f./2;
         Q1 = h_crit^(3/2).*sqrt(g.*cosd(theta));
         u_w = crit_u + sqrt(h_crit.*g.*cosd(theta));
 
-        determ = -4*u_w^3+27*Q1^2*crit_Iv*pb_grad./eta_f./2;
-        eq_heights = roots([crit_Iv*pb_grad./eta_f./2 0 -u_w Q1]);
+        determ = -4*u_w^3+27*Q1^2*crit_Iv*pp_grad./eta_f./2;
+        eq_heights = roots([crit_Iv*pp_grad./eta_f./2 0 -u_w Q1]);
         h_min = max(eq_heights(eq_heights<(h_crit-1e-6) & eq_heights>0));
         h_max = get_h_plus(h_min);
         hold on
         n_line = 10;
-        h_low = 5e-2;
+        h_low = max(0.05*h_crit,h_min+1e-3);
         h_high = 0.95*h_crit;
         p = h_crit*crit_u;
-        fluxes = zeros(n_line,1);
+%         fluxes = zeros(n_line,1);
 %         SetPaperSize(12,10)
         for i = 1:n_line
             h1 = h_low+(i-1)/n_line*(h_high-h_low);
@@ -56,8 +60,8 @@ function roll_waves
             u_vals = get_u(h_vals);
             n_point = sum(h_vals<h2);
             plot(xi_vals(h_vals<h2),h_vals(h_vals<h2),'r')
-            flux = (h_vals(1).*u_vals(1)+h_vals(n_point).*u_vals(n_point) + 2*sum(h_vals(2:n_point-1).*u_vals(2:n_point-1)))./(2*n_point);
-            fluxes(i) = flux;
+%             flux = (h_vals(1).*u_vals(1)+h_vals(n_point).*u_vals(n_point) + 2*sum(h_vals(2:n_point-1).*u_vals(2:n_point-1)))./(2*n_point);
+%             fluxes(i) = flux;
         end
         xlabel('$\xi(m)$')
         ylabel('h(m)')
@@ -87,7 +91,7 @@ function roll_waves
 
     function num_val = force_bal(h)
         u = get_u(h);
-        Iv = 2.*u.*eta_f./(pb_grad.*h.^2);
+        Iv = 2.*u.*eta_f./(pp_grad.*h.^2);
         num_val = tand(theta)-mu_Iv_fn(Iv).*(rho-rho_f)/rho;
     end
 end

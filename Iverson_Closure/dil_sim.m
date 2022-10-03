@@ -1,16 +1,16 @@
 function dil_sim
     N = 200; % number of discretisation points in z for each of tau, u
-    h = 0.3364; % layer height (m)
-    d= 2e-3; % grain diameter (m)
+    h = 4e-2; % layer height (m)
+    d= 1e-5; % grain diameter (m)
 
-%     mu1_I=0.342; % \frac{u+u_d}{\rho_f \phi_c}
-%     mu2_I=0.557; % 
-%     I_0 = 0.069;
+    mu1_I=0.342; % \frac{u+u_d}{\rho_f \phi_c}
+    mu2_I=0.557; % 
+    I_0 = 0.069;
     
-    mu1_I=tand(20); 
-    mu2_I=tand(33);  
-    I_0 = 0.3;
-    del_phi = 0.2;
+%     mu1_I=tand(20); 
+%     mu2_I=tand(33);  
+%     I_0 = 0.3;
+%     del_phi = 0.2;
     
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
@@ -28,14 +28,14 @@ function dil_sim
     
     g=9.81; % m/s^2
     rho_p = 2500; % kg/m^3
-    theta = 13; % deg
+    theta = 5; % deg
+    theta0 = 13;
 
 %     init_file_name = "dil_13deg_deep_comp_new_phic.txt";
-    alpha = 0.0001; % 1/Pa
+    alpha = 1e-4; % 1/Pa
     dz = h/(N-0.5); % z spacing
     z_pe = linspace(dz/2,h,N);
     z_u = linspace(0,h-dz/2,N);
-
 
     v_scale = sqrt(g.*h);
     p_scale = rho_f.*g.*h;
@@ -57,7 +57,8 @@ function dil_sim
     z_pe_dl = z_pe/z_scale;
     z_u_dl = z_u/z_scale;
     
-    
+    init_Iv = newt_solve_crit_Iv(theta0,rho_p,rho_f);
+    init_umax = init_Iv/eta_f_dl*(density_ratio-1)*phi_c*cosd(theta0)/2;
 %     pe_crit = p_b_dl+crit_grad*(1-z_pe);
     t_step = 1;
     % for l=1:90
@@ -72,10 +73,10 @@ function dil_sim
 %     fname = "Ive_comp_4_deep_v2.txt";
     flux_con = load('Results/flux_conditions.txt');
 %     for l=10:10
-    l = 20;
-        flux=flux_con(l,1);
-        theta_init=flux_con(l,2);
-        init_phi=flux_con(l,3);
+%     l = 20;
+%         flux=flux_con(l,1);
+%         theta_init=flux_con(l,2);
+%         init_phi=flux_con(l,3);
 %         unit = floor(flux);
 %         tenth = mod(l,10);
 %         if (tenth == 0)
@@ -89,7 +90,7 @@ function dil_sim
 %         end
 %         init_file_name = fname;
 %     init_file_name = "Ive_comp_9_2_deep_long_run.txt";
-        fname = "Ive_mu_I_phi_I_13deg_water.txt";
+        fname = "Ive_"+num2str(theta)+"deg_"+num2str(theta0)+"init_short_ts.txt";
         run_dil_sim()
         movefile(fname,'Results/');
         write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,theta,eta_f_dl,t_step);
@@ -108,7 +109,7 @@ function dil_sim
         
         len = length(vec);
         p_e = vec(1:len/4)';
-        phi_hat = vec(len/4+1:len/2)';
+        phi = vec(len/4+1:len/2)';
         u_f = vec(len/2+1:3*len/4)';
         u_p = vec(3*len/4+1:end)';
         
@@ -121,22 +122,22 @@ function dil_sim
 
         Iv = eta_f_dl.*abs(dupdz)./(p_p(1:end-1));
 %         Iv(end) = eta_f_dl.*d2updz2(end)./(buoyancy_dl-dpdz(end));
-        I = 2.*d_dl.*abs(dupdz).*sqrt(density_ratio)./sqrt(abs(p_p(1:end-1)));
+%         I = 2.*d_dl.*abs(dupdz).*sqrt(density_ratio)./sqrt(abs(p_p(1:end-1)));
 %         I_u = interp1(z_pe,I,z_u,'linear','extrap');
-        K = sqrt(I.^2+2*Iv);
+%         K = sqrt(I.^2+2*Iv);
         
-        beta_pe = beta_fn(phi_hat);
+        beta_pe = beta_fn(phi);
         beta_u = interp1(z_pe,beta_pe,z_u,'linear','extrap');
 
-%         dilatancy = 1./alpha_dl.*(dupdz>5e-4).*abs(dupdz).*(phi_hat(1:end-1)+ (sqrt(abs(Iv)).*phi_c./(1+sqrt(abs(Iv)))));
-        dilatancy = 1./alpha_dl.*(dupdz>5e-4).*abs(dupdz).*(phi_hat(1:end-1) + (del_phi*I));
+        dilatancy = 1./alpha_dl.*(dupdz>1e-3).*abs(dupdz).*(phi(1:end-1)- phi_c./(1+sqrt(abs(Iv))));
+%         dilatancy = 1./alpha_dl.*(dupdz>5e-4).*abs(dupdz).*(phi_hat(1:end-1) + (del_phi*I));
         
         dpdt = [1./alpha_dl.*diff((1./beta_u.*dpdz))./dz_dl-dilatancy 0];
         dphidt = -phi_c.*diff((1./beta_u.*dpdz))./dz_dl;
         dphidt = interp1(z_pe(1:end-1),dphidt,z_pe,'linear','extrap');
        
         tau_f = [eta_f_dl.* dufdz 0];
-        tau_p = [mu_I_fn(I).*sign(dupdz).*p_p(1:end-1) 0];
+        tau_p = [mu_Iv_fn(abs(Iv)).*sign(dupdz).*p_p(1:end-1) 0];
 %         diff_tau_p = (mu_I_fn(I).*[0 diff(sign(dupdz).*p_p)]+(abs(I_u)>10/reg_param).*sign(dupdz).*p_p.*[0 diff(mu_I_fn(I))])./dz_dl;
         drag_force = (1-phi_c)^2.*beta_u.*(u_f-u_p);
         dufdt = [0 (1/(1-phi_c).*diff(tau_f)./dz_dl + sind(theta)-drag_force(2:end)./(1-phi_c))];
@@ -169,15 +170,15 @@ function dil_sim
 %         whole_data = ;
         for j=1:N
 %             vec(j,1) = p_b_dl(j)*-0.4;
-            vec(j,1) = 0;
-            vec(N+j,1) = init_phi-phi_c;
-            vec(2*N+j,1) = (1-(1-z_u_dl(j))^(3/2))*10; %(1-(1-z_u_dl(j))^2)*3/2*flux+(1-phi_c).*sind(theta_init)./beta_fn(init_phi)./(1-phi_c)^2; %init_uf(j);
-            vec(3*N+j,1) = (1-(1-z_u_dl(j))^(3/2))*10; %(1-(1-z_u_dl(j))^2).*3/2*flux; %init_up(j);
+            vec(j,1) = (cosd(theta0)-cosd(theta))*(1-z_u_dl(j));
+            vec(N+j,1) = phi_c/(1+sqrt(init_Iv));
+            vec(2*N+j,1) = (1-(1-z_u_dl(j))^2)*init_umax; %(1-(1-z_u_dl(j))^2)*3/2*flux+(1-phi_c).*sind(theta_init)./beta_fn(init_phi)./(1-phi_c)^2; %init_uf(j);
+            vec(3*N+j,1) = (1-(1-z_u_dl(j))^2)*init_umax; %(1-(1-z_u_dl(j))^2).*3/2*flux; %init_up(j);
         end
 
         % No initial pressure of phihat and initial values of u_p and u_f
         % defined above
-        time_vals = [0 2000];
+        time_vals = linspace(0,0.5);
         opts=odeset('AbsTol',1e-8,'RelTol',1e-8,'Stats','on');
 
         [tvals,vec]=ode15s(@dilatancy_derivs,time_vals,vec,opts);
@@ -187,8 +188,8 @@ function dil_sim
         success=1;
     end
 
-    function beta_val=beta_fn(phihat)
-        beta_val = 150*(phi_c + phihat).^2.*eta_f_dl./((1-phi_c-phihat).^3.*d_dl^2);
+    function beta_val=beta_fn(phi)
+        beta_val = 150*phi.^2.*eta_f_dl./((1-phi).^3.*d_dl^2);
     end
 
     function mu_val = mu_I_fn(I)
