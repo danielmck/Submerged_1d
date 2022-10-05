@@ -1,4 +1,6 @@
-function int_to_wave    
+function int_to_wave
+%     Uses the ode solve method to find the waveform in the viscous case
+%     with pressure variation. Does not work!!!
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;

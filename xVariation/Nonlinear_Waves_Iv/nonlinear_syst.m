@@ -1,4 +1,6 @@
 function nonlinear_syst
+% Something else that does not work, trying to find solutions to the full
+% system with the bvp method
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;

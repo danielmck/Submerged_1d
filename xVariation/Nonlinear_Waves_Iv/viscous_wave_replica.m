@@ -1,4 +1,6 @@
-function viscous_wave_replica    
+function viscous_wave_replica
+%  A replica of the visous wave from the viroulet paper in order to get the
+%  process working.
     mu1 = tand(20.9);
     mu2 = tand(32.76);
     beta = 0.136;

@@ -1,4 +1,7 @@
 function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, eta_f, nu, Fr_eq, lambda)
+%     Finds a solution for the viscous problem withut pe that is close to
+%     the given value lambda. Is used in conjunction with
+%     viscous_Iv_bvp_from_ode to find a wave of a specific length.
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;
@@ -54,7 +57,7 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, 
         [xi_wave,out_wave,eq_val,~,~] = ode15s(@full_system_orig_dl,[0, 50],out_vals(end,:),opts);
         non_zero_eq = eq_val(eq_val>1e-6);
         if size(non_zero_eq,1) > 2
-            lambda_i = non_zero_eq(1);
+            lambda_i = non_zero_eq(1)
             ratio = max(lambda/lambda_i,lambda_i/lambda);
             if ((lambda_ratio<0)||(ratio<lambda_ratio))
                 lambda_ratio = ratio;

@@ -1,4 +1,7 @@
 function viscous_Iv_bvp_from_master
+% Converts the master wave stored in master_wave_no_pe.txt into a waveform
+% for the conditions specified. Allows change in theta, lambda, Froude
+% number and viscosity nu.
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;
@@ -27,9 +30,9 @@ function viscous_Iv_bvp_from_master
     master_theta = master_cond.theta;
     master_lambda = master_cond.lambda;
     
-    Fr_eq = 0.8; 
-    lambda = 12;
-    theta = 12;
+    Fr_eq = 1.0; 
+    lambda = 10;
+    theta = 14;
     nu = 1.13e-3;
     
     Fr_ratio = max(Fr_eq/master_Fr,master_Fr/Fr_eq);
@@ -38,7 +41,7 @@ function viscous_Iv_bvp_from_master
     lambda_ratio = max(lambda/master_lambda,master_lambda/lambda);
     max_ratio = max([Fr_ratio,nu_ratio,theta_ratio,lambda_ratio]);
     
-    n_steps = max(min(ceil(20*(max_ratio-1)),500),20);
+    n_steps = max(min(ceil(30*(max_ratio-1)),500),20);
     
     Fr_list = linspace(master_Fr,Fr_eq,n_steps);
     nu_list = linspace(master_nu,nu,n_steps);
@@ -49,7 +52,8 @@ function viscous_Iv_bvp_from_master
         
     [xi_final,y_final] = run_bvp_step(Fr_list, nu_list, theta_list, lambda_list, master_xi, master_y);
     h_final = y_final(3,:);
-    plot(xi_final,h_final)
+    u_final = y_final(1,1) - y_final(2,2)./h_final;
+    plot(xi_final,u_final)
     out_final = vertcat(xi_final,y_final);
 %     save("master_wave_no_pe.txt","out_final","-ascii")
     
@@ -79,16 +83,24 @@ function viscous_Iv_bvp_from_master
             solN1 = bvp4c(@viscous_syst,@bc_vals,solInit1);
             resid = solN1.stats.maxres;
             if resid < tol
-                xi_in = linspace(0,lambda_in);
-                y_in = interp1(solN1.x,solN1.y',xi_in)';
+                h_wave = solN1.y(3,:);
+                h_diff = max(h_wave)-min(h_wave);
+                if (h_diff>1e-4)
+                    xi_in = linspace(0,lambda_in);
+                    y_in = interp1(solN1.x,solN1.y',xi_in)';
+                else
+                    [xi_in,y_in] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
+                    ,linspace(nu_vals(i-1),nu_vals(i),3) ,linspace(theta_vals(i-1),theta_vals(i),3)...
+                    ,linspace(lambda_vals(i-1),lambda_in,3),xi_in, y_in, tol,counter+1);
+                end
             else
-                [xi_in,y_in] = run_bvp_step(linspace(theta_vals(i-1),theta_in,3)...
+                [xi_in,y_in] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
                     ,linspace(nu_vals(i-1),nu_vals(i),3) ,linspace(theta_vals(i-1),theta_vals(i),3)...
                     ,linspace(lambda_vals(i-1),lambda_in,3),xi_in, y_in, tol,counter+1);
             end
         end
-        y_out = solN1.y;
-        xi_out = solN1.x;
+        y_out = y_in;
+        xi_out = xi_in;
         
         function guess = bvp_guess(xi)
             guess_ind = sum(xi_run<xi)+1;
@@ -112,7 +124,7 @@ function viscous_Iv_bvp_from_master
             n_coeff = 1-Q1^2.*Fr_in^2/h^3;
             Fr = Fr_in*abs(u)/h;
             Iv = crit_Iv*abs(u)/h^2;
-            n_eq = (tand(theta)-sign(u).*P*mu_Iv_fn(Iv))./n_coeff;
+            n_eq = (tand(theta_in)-sign(u).*P*mu_Iv_fn(Iv))./n_coeff;
             dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_in^2*R/Q1*n_coeff*(n-n_eq);
             dmdxi = h/lambda_in*u;
             dydxi = [0,0,dhdxi,dndxi,dmdxi]';
