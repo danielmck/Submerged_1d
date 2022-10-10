@@ -90,7 +90,7 @@ function fn_out = single_Fr_stab(Fr,crit_Iv,theta, rho_p, rho_f, d, eta_f, alpha
 %     f = figure;
 %     set(f, 'PaperUnits', 'centimeters');
 %     set(f, 'PaperSize', [10 10]);
-%     plot(k_val(1:45),sigma_mat(1:2,1:45))
+    plot(k_val(1:45),sigma_mat(1:2,1:45))
 %     xlabel('Wavenumber')
 %     ylabel('Eigenvalue Complex Part')
 %     title('$\theta = 18$, $d = 10^{-4}$, $\alpha = 10^{-4}$, $Fr = 5$, Phase = Air')

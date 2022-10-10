@@ -1,4 +1,20 @@
-function bvp_non_pe_to_full
+function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_init,master_xi,master_y)
+% Converts the wave with no excess pressure into a waveform that satisfies
+% the whole system. Achieves this by varying the paramter delta from 0 to 1
+% to change between systems.
+
+% Can be run with no inputs and just with the parameter values set in the
+% code
+
+% Can be run with custom_init set to true and with params as a 6 entry
+% list [Fr,theta,lambda,nu,alpha,d]. If it is run with provide_init set to
+% false then viscous_Iv_bvp_from_master is called to make input.
+
+% When run with provide_init, the input xi and y must be provided.
+
+% If reverse is set to true, a solution to the full system is converted to
+% a solution to the non-pe case by running in reverse. In this case the
+% initial y and xi must be provided.
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;
@@ -14,24 +30,38 @@ function bvp_non_pe_to_full
     
     rho_f = 1000;
     eta_f = 0.0010016; % Pa s
-    
-    alpha = 1e-5;
     rho_p = 2500;
-    d = 1e-4;
-    
-    master_file = load("master_wave_no_pe.txt");
-    master_xi = master_file(1,:);
-    master_y = master_file(2:end,:);
-    master_cond = readtable("master_wave_no_pe_cond.csv");
-    master_Fr = master_cond.Fr_eq;
-    master_nu = master_cond.nu;
-    master_theta = master_cond.theta;
-    master_lambda = master_cond.lambda;
-    
-    Fr = master_Fr; 
-    lambda = master_lambda;
-    theta = master_theta;
-    nu = master_nu;
+    if ~exist("custom_init","var")
+        custom_init = false;
+    end
+    if ~exist("reverse","var")
+        reverse = false;
+    end
+    if ~exist("provide_init","var")
+        provide_init = false;
+    end
+    % If there are custom initial parameters, the function may have to call
+    % viscous_Iv_bvp_from_master to make the input
+    if custom_init
+        param_cell = num2cell(params);
+        [Fr,lambda,theta,nu,alpha,d] = param_cell{:};
+        if ~provide_init
+            [master_xi,master_y] = viscous_Iv_bvp_from_master(true,params(1:4));
+        end
+    else
+        alpha = 1e-5;
+        d = 1e-4;
+        if ~provide_init
+            master_file = load("master_wave_no_pe.txt");
+            master_xi = master_file(1,:);
+            master_y = master_file(2:end,:);
+        end
+        master_cond = readtable("master_wave_no_pe_cond.csv");
+        Fr = master_cond.Fr_eq;
+        nu = master_cond.nu;
+        theta = master_cond.theta;
+        lambda = master_cond.lambda;
+    end
     
     rho = rho_p*phi_c+rho_f*(1-phi_c);
     P = (rho-rho_f)/rho;
@@ -54,7 +84,6 @@ function bvp_non_pe_to_full
     alpha_dl = alpha*p_scale;
     g_dl = g*t_scale/v_scale; 
     
-
     u_eq_dl = u_eq/v_scale;
     p_tot_grad_dl = p_tot/p_scale*z_scale;
     rho_f_dl = rho_f*v_scale^2/p_scale;
@@ -64,26 +93,34 @@ function bvp_non_pe_to_full
     
     beta_dl = 150*phi_c.^2.*eta_f_dl./((1-phi_c).^3.*d_dl^2);
     chi = (rho_f+3*rho)/(4*rho);
-    delta_vals = logspace(-6,0,100);
+    
+    delta_vals = logspace(-6,0,50);
     delta_vals = horzcat(0,delta_vals);
-    
-    y6_in = phi_eq*master_y(2,:);
-    y7_in = master_y(3,:) - rho_dl*g_dl*cosd(theta)*chi.*master_y(3,:);
-    
-    k = 2*pi/lambda;
-    
-    A_mat = make_A_mat(k,rho_p,rho_f,theta,eta_f,d,alpha,Fr,crit_Iv);
-    A_eig = eigs(A_mat);
-    [~, idx] = sort(imag(A_eig),'descend');
-    A_eig = A_eig(idx);
-    
-    if (imag(A_eig(1))<0)
-        error("Wave is not unstable, try a different value")
+    if reverse
+        delta_vals = delta_vals(end:1);
     end
-    y_in = vertcat(master_y,y6_in,y7_in);
-    [xi_out,y_out] = run_bvp_iter(delta_vals, master_xi, y_in);
-    out_vec = vertcat(xi_out,y_out);
-    save("master_wave_full.txt","out_vec","-ascii")
+    % Checks that the full case is unstable at the requested parameter
+    % values
+    if ~reverse
+        k = 2*pi/lambda;
+
+        A_mat = make_A_mat(k,rho_p,rho_f,theta,eta_f,d,alpha,Fr,crit_Iv);
+        A_eig = eigs(A_mat);
+        [~, idx] = sort(imag(A_eig),'descend');
+        A_eig = A_eig(idx);
+
+        if (imag(A_eig(1))<0)
+            error("Wave is not unstable, try a different value")
+        end
+        y6_in = phi_eq*master_y(2,:);
+        y7_in = master_y(3,:) - rho_dl*g_dl*cosd(theta)*chi.*master_y(3,:);
+        y_in = vertcat(master_y,y6_in,y7_in);
+    else
+        y_in = master_y;
+    end
+    [xi_out,y_out] = run_bvp_iter(delta_vals, master_xi,y_in);
+%     out_vec = vertcat(xi_out,y_out);
+%     save("master_wave_full.txt","out_vec","-ascii")
     u_w = y_out(1,1);
     Q1 = y_out(2,:);
     h = y_out(3,:);
@@ -92,10 +129,14 @@ function bvp_non_pe_to_full
     m = y_out(5,:);
     phi = y_out(6,:)./Q1;
     pb = y_out(7,:) + rho_dl*g_dl*cosd(theta)*chi.*h;
-    plot(xi_out,u)
-    hold on
-    plot(xi_out,h)
+    if ~custom_init
+        plot(xi_out,u)
+        hold on
+        plot(xi_out,h)
+    end
     
+    % Recursively runs if the solution does not converge or if it converges
+    % to the unpeturbed solution
     function [xi_in,y_in] = run_bvp_iter(delta_vals, xi_in, y_in, tol,counter)
         if ~exist('counter','var')
             counter = 1;
