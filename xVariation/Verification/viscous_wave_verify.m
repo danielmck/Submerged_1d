@@ -1,6 +1,8 @@
-function viscous_wave_replica
+function [xi_wave,out_wave,u_w_dl] = viscous_wave_verify(theta,Fr_eq,nu)
 %  A replica of the visous wave from the viroulet paper in order to get the
-%  process working.
+%  process working. Used for verifying against Gray and Edwards. Called by
+%  bvp_from_ode_verify.
+% Works as of 20/10/22. Don't change!
     mu1 = tand(20.9);
     mu2 = tand(32.76);
     beta = 0.136;
@@ -8,18 +10,17 @@ function viscous_wave_replica
     
 
     g=9.81; % m/s^2
-    theta = 29;
+%     theta = 29;
     gamma = (mu2-tand(theta))/(tand(theta)-mu1);
 %     eta_f = 1.18e-5;
 %     rho_f = 1;
     
 %    crit_Fr = get_critical_Fr(theta, rho_p, rho_f, d, eta_f, alpha);
-    Fr_eq = 1.02; 
-%     Fr_eq = h0*beta/gamma/L;
-    h0 = Fr_eq*L*gamma/beta;
+%     Fr_eq = 1.02; 
+%     nu = 1.13e-3;
     
+    h0 = Fr_eq*L*gamma/beta;
     u_eq = Fr_eq*sqrt(g*h0*cosd(theta));
-    nu = 1.13e-3;
     
     z_scale = h0;
     v_scale = u_eq;
@@ -30,27 +31,19 @@ function viscous_wave_replica
     L_dl = L/z_scale;
     R = u_eq*sqrt(h0)/nu;
     
-%     u_w = 1+sqrt(g_dl*cosd(theta));
-%     Q1 = u_w-1;
-    
-%     Q1 = sqrt(h0^3*g*cosd(theta));
     u_w_dl = 1+1/Fr_eq-1e-3;
-%     u_w_dl = 1.978613807;
     Q1_dl = u_w_dl-1;
     
     opts = odeset('Events',@WaveEndFn);
-    [xi_vals,out_vals]=ode15s(@full_system_orig_dl,[0, 50000],[1.001,0]);
+    [xi_vals,out_vals]=ode15s(@full_system_orig_dl,[0, 5000],[1.001,0]);
     final_y = out_vals(end,:);
     final_h = final_y(1);
     [xi_wave,out_wave,eq_val,~,~] = ode15s(@full_system_orig_dl,[0, 500],final_y,opts);
     non_zero_eq = eq_val(diff(vertcat([0],eq_val))>1e-6);
     eq_index = sum(xi_wave<non_zero_eq(2));
     plot(xi_wave(1:eq_index,1),out_wave(1:eq_index,1))
-%     max_h = (-min_h + sqrt(min_h.^2+8*Q1_dl^2.*Fr_eq.^2./min_h))/2;
-%     hold on
-%     opts_nv = odeset('Events',@NV_WaveEndFn);
-%     [xi_nv,out_nv] = ode15s(@non_viscous_system,[0, 50],min_h,opts_nv);
-%     plot(xi_nv(:,1),out_nv(:,1))
+    xi_wave = xi_wave(1:eq_index,1);
+    out_wave = out_wave(1:eq_index,:);
 
     function dhdx = non_viscous_system(x,y)
         h = y(1);

@@ -1,12 +1,12 @@
-function roll_waves_old
+function [xi_vals, h_vals] = roll_waves_old(theta,Fr,h_st)
     phi_c=0.585; % Volume fraction
     eta_f = 0.0010016; % Pa s
     g=9.81; % m/s^2
     rho_f = 1000; % kg/m^3
     rho_p = 2500; % kg/m^3
-    theta = 10; % deg
+%     theta = 10; % deg
     alpha = 1e-5; % 1/Pa
-
+%     Fr = 0.6;
     
 %     h_crit = 0.8; % layer height (m)
     d=1e-4; % grain diameter (m)
@@ -18,7 +18,7 @@ function roll_waves_old
 
     reg_param = 1*10^7;
     Fr_min = get_critical_Fr(theta, rho_p, rho_f, d, eta_f, alpha);
-
+    clf()
     
     % v_scale = sqrt(g.*h);
     % p_scale = rho_f.*g.*h;
@@ -27,7 +27,7 @@ function roll_waves_old
     rho = phi_c*rho_p+(1-phi_c)*rho_f;
 
     pp_grad = (rho_p-rho_f)*g*phi_c*cosd(theta);
-    Fr = 0.6;
+    
     
     crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f);
     u_const = crit_Iv.*pp_grad./eta_f./2;
@@ -53,19 +53,23 @@ function roll_waves_old
         p = h_crit*crit_u;
 %         fluxes = zeros(n_line,1);
 %         SetPaperSize(12,10)
-        for i = 1:n_line
-            h1 = h_low+(i-1)/n_line*(h_high-h_low);
-            h2 = get_h_plus(h1);
-            [xi_vals,h_vals]=ode15s(@h_deriv_fn,linspace(0,500,10001),h1);
-            u_vals = get_u(h_vals);
-            n_point = sum(h_vals<h2);
-            plot(xi_vals(h_vals<h2),h_vals(h_vals<h2),'r')
-%             flux = (h_vals(1).*u_vals(1)+h_vals(n_point).*u_vals(n_point) + 2*sum(h_vals(2:n_point-1).*u_vals(2:n_point-1)))./(2*n_point);
-%             fluxes(i) = flux;
-        end
-        xlabel('$\xi(m)$')
-        ylabel('h(m)')
-        title('Roll waves on a 15 degree slope')
+%         for i = 1:n_line
+%             h1 = h_low+(i-1)/n_line*(h_high-h_low);
+        h1 = h_st*h_crit;
+        h2 = get_h_plus(h1);
+%             [xi_vals,h_vals]=ode15s(@h_deriv_fn,linspace(0,500,10001),h1);
+%             u_vals = get_u(h_vals);
+%             n_point = sum(h_vals<h2);
+%             plot(xi_vals(h_vals<h2),h_vals(h_vals<h2),'r')
+% %             flux = (h_vals(1).*u_vals(1)+h_vals(n_point).*u_vals(n_point) + 2*sum(h_vals(2:n_point-1).*u_vals(2:n_point-1)))./(2*n_point);
+% %             fluxes(i) = flux;
+%         end
+        [xi_vals,h_vals]=ode15s(@h_deriv_fn,linspace(0,500,10001),h1);
+        xi_vals = xi_vals(h_vals<h2)/h_crit;
+        h_vals = h_vals(h_vals<h2)/h_crit;
+%         xlabel('$\xi(m)$')
+%         ylabel('h(m)')
+%         title('Roll waves on a 15 degree slope')
 %         PrintFig('Ive_15deg_roll_wave')
     end
 

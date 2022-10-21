@@ -1,79 +1,65 @@
 function viscous_Iv_bvp_from_ode
-% Converts ode solution from viscous_wave_replica_Iv into a solution to the
-% viscous two equation bvp.
-    mu1_Iv = 0.32;
-    mu2_Iv = 0.7;
-    Iv_0 = 0.005;
+% Converts ode solution from viscous_wave_verify into a solution to the
+% viscous two equation bvp. Verifies with the work from Gray and Edwards.
+% However, u_w and Q1 do not match up exactly as they are not linked by
+% Q1=u_w-1 but are independent.
+% Works as of 20/10/22. Don't change!
 
-    reg_param = 1*10^7;
-
-    phi_c=0.585; % Volume fraction
+    mu1 = tand(20.9);
+    mu2 = tand(32.76);
+    beta = 0.136;
+    L = 8.25e-4;
+    
 
     g=9.81; % m/s^2
-    theta = 12;
-
-%     eta_f = 1.18e-5;
-%     rho_f = 1;
+    theta = 29;
+    gamma = (mu2-tand(theta))/(tand(theta)-mu1);
+    Fr_eq = 1.02; 
+    nu = 1.13e-3;
     
-    rho_f = 1000;
-    eta_f = 0.0010016; % Pa s
+    lambda = 32;
     
-    rho_p = 2500;
-    
-    Fr_eq = 0.8; 
-    lambda = 12;
-    
-    rho = rho_p*phi_c+rho_f*(1-phi_c);
-    P = (rho-rho_f)/rho;
-    
-    crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f);
-    u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta);
-    
-%     Fr_eq = h0*beta/gamma/L;
-    h0 = ((Fr_eq*sqrt(g*cosd(theta)))./u_const)^(2/3);
-    
-    u_eq = u_const.*h0^2;
-    nu = 1.13e-4;
+    h0 = Fr_eq*L*gamma/beta;
+    u_eq = Fr_eq*sqrt(g*h0*cosd(theta));
     
     z_scale = h0;
     v_scale = u_eq;
     t_scale = z_scale/v_scale;
+    
 
+    g_dl = g*t_scale/v_scale; 
     nu_dl = nu/z_scale/v_scale;
-    R = u_eq*h0/nu;
+    L_dl = L/z_scale;
+    R = u_eq*sqrt(h0)/nu;
     
     % Gets the waveform from the ode solver
-    [xi_wave, y_wave, uw_wave] = viscous_wave_replica_Iv(theta, rho_f, rho_p, eta_f, nu, Fr_eq, lambda);
+    [xi_wave, y_wave, uw_wave] = viscous_wave_verify(theta, Fr_eq, nu);
     Q1_wave = uw_wave - 1;
     lambda_init = xi_wave(end);
     lambda_ratio = lambda/lambda_init;
     n_step = min(max(ceil(30*(lambda_ratio-1)),10),300);
-    lambda_med = linspace(lambda_init,lambda,n_step);
     
     uw_init_vec = uw_wave*ones(size(xi_wave));
     Q1_init_vec = Q1_wave*ones(size(xi_wave));
-    u_init = uw_wave - Q1_wave./y_wave(:,2);
+    u_init = uw_wave - Q1_wave./y_wave(:,1);
     m_init = zeros(size(xi_wave));
     m_val = 0;
     % Defines the average flux m that is needed to solve the bvp
     for j = 1:size(xi_wave,1)
         m_init(j) = m_val;
         if j < size(xi_wave,1)
-            m_val = m_val + 1/lambda_init* (y_wave(j,2)*u_init(j)+y_wave(j+1,2)*u_init(j))/2*(xi_wave(j+1)-xi_wave(j));
+            m_val = m_val + 1/lambda_init* (y_wave(j,1)*u_init(j)+y_wave(j+1,1)*u_init(j))/2*(xi_wave(j+1)-xi_wave(j));
         end
     end
     % Creates the initial vector including wave speed and the mass balance
-    % constant Q1
-    y_init = vertcat(uw_init_vec',Q1_init_vec',y_wave(:,2:3)',m_init');
+    % constant Q1 
+    y_init = vertcat(uw_init_vec',Q1_init_vec',y_wave',m_init');
     
     [xi_final,y_final] = run_bvp_step(lambda_init, lambda, n_step, xi_wave, y_init,1e-3);
     h_final = y_final(3,:);
     plot(xi_final,h_final)
     [~,mindex] = min(h_final);
-%     y_final = horzcat(y_final(:,mindex:end),y_final(:,1:mindex-1));
-%     xi_final = mod(horzcat(xi_final(mindex:end),xi_final(1:mindex-1))-xi_final(mindex),lambda);
     out_final = vertcat(xi_final,y_final);
-    save("master_wave_no_pe.txt","out_final","-ascii")
     
     function [xi_out, y_out] = run_bvp_step(lambda_init, lambda_fin, nstep, xi_in, y_in, tol)
         % Can account for a change in wavelength but should really use
@@ -84,17 +70,7 @@ function viscous_Iv_bvp_from_ode
             lambda_in = lambda_init + (lambda_fin-lambda_init)/n_step*i;
             xi_in = xi_in/lambda_old*lambda_in;
             solInit1=bvpinit(xi_in,@bvp_guess);
-            try
-                solN1 = bvp4c(@viscous_syst,@bc_vals,solInit1);
-            catch ME
-                switch ME.identifier
-                    case 'MATLAB:UndefinedFunction'
-                        warning('Function is undefined.  Assigning a value of NaN.');
-                    otherwise
-                        rethrow(ME)
-                end
-                
-            end
+            solN1 = bvp4c(@viscous_syst,@bc_vals,solInit1);
             % Solves the 5 value bvp for u_w, Q1, h, n and m.
             resid = solN1.stats.maxres;
             h_wave = solN1.y(3,:);
@@ -133,23 +109,22 @@ function viscous_Iv_bvp_from_ode
             u = u_w - Q1/h;
             n = y(4);
             m = y(5);
-
-            dhdxi = n;
+            
+            dy2dx = n;
             n_coeff = 1-Q1^2.*Fr_eq^2/h^3;
-            Fr = Fr_eq*abs(u)/h;
-            Iv = crit_Iv*abs(u)/h^2;
-            n_eq = (tand(theta)-sign(u).*P*mu_Iv_fn(Iv))./n_coeff;
-            dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_eq^2*R/Q1*n_coeff*(n-n_eq);
+
+            mu_b = mu1 + (mu2-mu1)*(1-u_w+u_w*h)/(1-u_w+u_w*h+h^(5/2)*gamma);
+            n_eq = (tand(theta)-mu_b)./n_coeff;
+
+            dy3dx = 1/(2*h)*n^2 + h^(3/2)/Fr_eq^2*R/Q1*n_coeff*(n-n_eq);
             dmdxi = h/lambda_in*u;
-            dydxi = [0,0,dhdxi,dndxi,dmdxi]';
+            dydxi = [0,0,dy2dx,dy3dx,dmdxi]';
         end
     end
     
     function resid = bc_vals(ya,yb)
-       resid = [ya(3)-yb(3), ya(4), yb(4), ya(5), yb(5)-1]; 
+       resid = [ya(3)-yb(3), ya(4), yb(4), ya(5), yb(5)-1];
     end
 
-    function mu_val = mu_Iv_fn(Iv)
-        mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
-    end
+    
 end

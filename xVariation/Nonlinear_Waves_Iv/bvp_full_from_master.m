@@ -1,5 +1,13 @@
 function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,master_params)
-
+    % Uses the master solution to parameter step to the desired values
+    % specified in params. If the params vector is not set then the default
+    % values specified are used.
+    
+    % The parameters that can be set are Fr, theta, lambda, alpha and d.
+    
+    % If desired, a different master wave can be specified in order to
+    % speed up computation. The master y, xi and parameter values must be
+    % specified.
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;
@@ -21,6 +29,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     chi = (rho_f+3*rho)/(4*rho);
     P = (rho-rho_f)/rho;
     
+    % Defines parameters if not specified
     if ~exist('params','var')
         Fr_eq = 0.8;
         theta = 14;
@@ -56,6 +65,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     [~, idx] = sort(imag(A_eig),'descend');
     A_eig = A_eig(idx);
     
+    % Checks that the parameters lead to linearly unstable wave perts
     if (imag(A_eig(1))<0)
         error("Wave is not unstable, try a different value")
     end
@@ -72,6 +82,8 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         n_steps=2;
     end
 
+    % Sets lists for parameter stepping between master and designated
+    % values
     Fr_list = linspace(master_Fr,Fr_eq,n_steps);
     nu_list = linspace(master_nu,nu,n_steps);
     theta_list = linspace(master_theta,theta,n_steps);
@@ -80,27 +92,33 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     d_list = logspace(log10(master_d),log10(d),n_steps);
     
     [xi_final,y_final] = run_bvp_step(Fr_list, theta_list, lambda_list, nu_list, alpha_list, d_list, master_xi, master_y);
-    a=1;
     
     function [xi_out, y_out] = run_bvp_step(Fr_vals, theta_vals, lambda_vals, nu_vals, alpha_vals, d_vals, xi_in, y_in, tol,counter)
+        % If not specified, the depth counter is set to 1.
         if ~exist('counter','var')
             counter = 1;
         end
+        % Tolerance default
         if ~exist('tol','var')
             tol = 1e-3;
         end
+        % If depth reaches 5, attempts to convert to non pe case and step
+        % that way.
         if counter > 5
             warning("Max iteration depth reached, non convergence. Trying no excess pressure method")
             y_in = -1;
             xi_in = -1;
         end             
         n_step = size(Fr_vals,2);
+        % Iterates over the number of steps
         for i = 2:n_step
+            % Only carries out if not at max depth
             if ~isequal(y_in,-1)
                 theta_in = theta_vals(i);
                 lambda_in = lambda_vals(i);
                 Fr_in = Fr_vals(i);
                 xi_run = xi_in/lambda_vals(i-1)*lambda_vals(i);
+%                 xi_run = horzcat(linspace(0,3*lambda_vals(i)/4,70),linspace(3*lambda_vals(i)/4, lambda_vals(i),70));
 
                 crit_Iv = newt_solve_crit_Iv(theta_in, rho_p, rho_f);
                 u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
@@ -129,14 +147,17 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
 
                 beta_dl = 150*phi_c.^2.*eta_f_dl./((1-phi_c).^3.*d_dl^2);
 
+                % Solves the stepped system
                 solInit1=bvpinit(xi_run,@bvp_guess);
                 solN1 = bvp4c(@full_syst,@bc_vals,solInit1);
                 resid = solN1.stats.maxres;
+                % Ensures the residual is below the tolerance
                 if resid < tol
                     h_wave = solN1.y(3,:);
                     h_diff = max(h_wave)-min(h_wave);
+                    % Ensures it is not the base state solution
                     if (h_diff>1e-4)
-                        xi_in = linspace(0,lambda_in);
+                        xi_in = horzcat(linspace(0,3*lambda_in/4,70),linspace(3*lambda_in/4+0.001, lambda_in,70));
                         y_in = interp1(solN1.x,solN1.y',xi_in)';
                     else
                         [xi_in,y_in,non_pe] = recurse_manage();
@@ -159,6 +180,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         
         
         function [xi_return,y_return,non_pe] = recurse_manage()
+            % Runs the recursive calling of the stepping function
             [xi_return,y_return] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
                          ,linspace(theta_vals(i-1),theta_vals(i),3),linspace(lambda_vals(i-1),lambda_in,3),...
                          linspace(nu_vals(i-1),nu_vals(i),3),linspace(alpha_vals(i-1)...
@@ -166,6 +188,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
             non_pe = false;
             if counter == 1
                 if isequal(y_return,-1)
+                    
                     curr_params = [Fr_in,theta_vals(i),lambda_in,nu_vals(i),alpha_vals(i),d_vals(i)];
                     [xi_no_pe,y_no_pe] = bvp_non_pe_to_full(true,true,curr_params,true,xi_in,y_in);
                     y_no_pe = y_no_pe(1:5,:);

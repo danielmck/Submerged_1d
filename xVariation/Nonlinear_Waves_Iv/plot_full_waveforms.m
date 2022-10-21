@@ -1,4 +1,7 @@
 function plot_full_waveforms
+% Plots waveforms for the variation of different parameters. Outputs pdfs of 
+% waves in h, u, phi, pb and pe. Parameters that can be varied are Fr,
+% theta, lambda, alpha and d.
     n=100;
     rho_f = 1000;
     rho_p = 2500;
@@ -7,13 +10,14 @@ function plot_full_waveforms
     rho = rho_p*phi_c+rho_f*(1-phi_c);
     chi = (rho_f+3*rho)/(4*rho);
     
+    % Default parameter values
     Fr_eq = 0.8;
     theta = 12;
     lambda = 13;
     nu = 1.13e-3;
     alpha = 1e-5;
     d = 1e-4; 
-    var_list = [10,13,16];
+    var_list = [8,13,18];
     n_vals = size(var_list,2);
     xi_out = zeros(n_vals,n);
     h_out = zeros(n_vals,n);
@@ -24,14 +28,17 @@ function plot_full_waveforms
     pe_out = zeros(n_vals,n);
     C = viridis(n_vals+1);
     
+    % Loads the master wave as the starter
     master_file = load("master_wave_full.txt");
     master_xi = master_file(1,:);
     master_y = master_file(2:end,:);
     master_cond = readtable("master_wave_full_cond.csv");
     master_param = [master_cond.Fr_eq,master_cond.theta,master_cond.lambda,master_cond.nu,master_cond.alpha,master_cond.d];
     
+    % Loops over parameter values
     for i = 1:n_vals
-        lambda = var_list(i);
+        lambda = var_list(i); % Set the parameter you want to vary here
+        % Solves for the waveform
         [xi_temp,y_out] = bvp_full_from_master([Fr_eq,theta,lambda,nu,alpha,d],master_y,master_xi,master_param);
         xi_out(i,:) = xi_temp;
         %         [xi_out(i,:),y_out] = bvp_non_pe_to_full(true,Fr_eq,nu,theta,lambda,alpha,d);
@@ -42,6 +49,7 @@ function plot_full_waveforms
         pb_out(i,:) = y_out(7,:) + rho/rho_f*chi.*h_out(i,:);
         pe_out(i,:) = pb_out(i,:) - h_out(i,:);
     end
+    % Makes all of the plots
     waveforms = {h_out,u_out,phi_out,pb_out,pe_out};
     names = ["h","u","phi","pb","pe"];
     ax_title = ["h","\bar{u}","\bar{\phi}","p_b","p_e"];
@@ -55,9 +63,9 @@ function plot_full_waveforms
         xlabel("$\xi$")
         ylabel("$"+ax_title(j)+"$")
         % $\lambda = "+num2str(lambda)
-        title("$Fr = "+num2str(Fr_eq)+"$, $\theta = "+num2str(theta)+"$, $\alpha ="+num2str(alpha)+"$, $d = "+num2str(d)+"$")
+        title("$Fr = "+num2str(Fr_eq)+"$, $\theta = "+num2str(theta)+"$, $\alpha ="+num2str(lambda)+"$, $d = "+num2str(d)+"$")
         legend("Location","best")
-        figname = "full_wave_"+names(j)+"_comp_lambda.pdf";
+        figname = "full_wave_"+names(j)+"_comp_lambda2.pdf";
         exp_graph(gcf,figname)
         movefile(figname,"../Figures/FullWaveforms")
         clf;

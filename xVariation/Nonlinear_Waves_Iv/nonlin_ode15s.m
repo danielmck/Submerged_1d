@@ -1,4 +1,6 @@
 function nonlin_ode15s
+% Tries to solve the full solution from the ode method, does not work as
+% there are two viable solns for h to the cubic equation.
     h_crit = 0.8; % layer height (m)
     d=1.43e-5; % grain diameter (m)
     d_dl = d/h_crit;

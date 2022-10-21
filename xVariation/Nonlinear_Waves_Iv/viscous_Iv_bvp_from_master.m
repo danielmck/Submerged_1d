@@ -31,6 +31,8 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
     eta_f = 0.0010016; % Pa s
     
     rho_p = 2500;
+    rho = rho_p*phi_c+rho_f*(1-phi_c);
+    P = (rho-rho_f)/rho;
     if ~exist("specify_param","var")
         specify_param = false;
     end
@@ -52,46 +54,51 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
     end
     
     if ~specify_param
-        Fr_eq = 1.0; 
-        lambda = 13;
-        theta = 14;
-        nu = 1.13e-3;
+        Fr_eq = 0.8; 
+        lambda = 11;
+        theta = 12;
+        nu = 1.13e-4;
     else
         param_cell = num2cell(params);
         [Fr_eq,theta,lambda,nu] = param_cell{:};  
     end
     
+    % Gets the waveform from the ode solver
+    master_file = load("master_wave_no_pe.txt");
+    xi_wave = master_file(1,:);
+    y_wave = master_file(2:end,:);
+%     [xi_wave, y_wave, uw_wave] = 
+%     Q1_wave = uw_wave - 1;
     Fr_ratio = max(Fr_eq/master_Fr,master_Fr/Fr_eq);
     nu_ratio = max(nu/master_nu,master_nu/nu);
     theta_ratio = max(theta/master_theta,master_theta/theta);
     lambda_ratio = max(lambda/master_lambda,master_lambda/lambda);
-    max_ratio = max([Fr_ratio,nu_ratio,theta_ratio,lambda_ratio]);
+
+    ratio_sum = Fr_ratio-1+nu_ratio-1+20*(theta_ratio-1)+(lambda_ratio-1);
+    if ratio_sum > 1e-6
+        n_step = max(min(ceil(30*ratio_sum),400),90);
+    else
+        n_step=2;
+    end
     % If the parameters are the same as the initial values run 2 steps, if
     % not, run more
-    if max_ratio > 1+1e-6
-        n_steps = max(min(ceil(40*(max_ratio-1)),500),20);
-    else
-        n_steps = 2;
-    end
     
-    Fr_list = linspace(master_Fr,Fr_eq,n_steps);
-    nu_list = linspace(master_nu,nu,n_steps);
-    theta_list = linspace(master_theta,theta,n_steps);
-    lambda_list = linspace(master_lambda,lambda,n_steps);
-    rho = rho_p*phi_c+rho_f*(1-phi_c);
-    P = (rho-rho_f)/rho;
-        
+    lambda_list = linspace(master_lambda, lambda, n_step);
+    Fr_list = linspace(master_Fr,Fr_eq,n_step);
+    nu_list = linspace(master_nu,nu,n_step);
+    theta_list = linspace(master_theta,theta,n_step);
     [xi_final,y_final] = run_bvp_step(Fr_list, nu_list, theta_list, lambda_list, master_xi, master_y);
     h_final = y_final(3,:);
-    u_final = y_final(1,1) - y_final(2,2)./h_final;
-    if ~specify_param
-        plot(xi_final,u_final)
-    end
-    out_final = vertcat(xi_final,y_final);
+    plot(xi_final,h_final)
+%     [~,mindex] = min(h_final);
+%     y_final = horzcat(y_final(:,mindex:end),y_final(:,1:mindex-1));
+%     xi_final = mod(horzcat(xi_final(mindex:end),xi_final(1:mindex-1))-xi_final(mindex),lambda);
+%     out_final = vertcat(xi_final,y_final);
 %     save("master_wave_no_pe.txt","out_final","-ascii")
     
-    % Function that runs the iterative process, if it fails to converge then it calls itself recursively up to a depth of 10. 
     function [xi_out, y_out] = run_bvp_step(Fr_vals, nu_vals, theta_vals, lambda_vals, xi_in, y_in, tol,counter)
+        % Can account for a change in wavelength but should really use
+        % viscous_Iv_bvp_from_master for that.
         if ~exist('counter','var')
             counter = 1;
         end
@@ -101,54 +108,68 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
         if counter > 10
             error("Max iteration depth reached, non convergence")
         end
-        n_step = size(Fr_vals,2);
-        for i = 2:n_step
+        
+        nstep = size(lambda_vals,2);
+        for i = 2:nstep
             theta_in = theta_vals(i);
-            lambda_in = lambda_vals(i);
             Fr_in = Fr_vals(i);
             crit_Iv = newt_solve_crit_Iv(theta_in, rho_p, rho_f);
             u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
             h0 = ((Fr_in*sqrt(g*cosd(theta_in)))./u_const)^(2/3);  
             u_eq = u_const.*h0^2;
-            R = u_eq*sqrt(h0)/nu_vals(i);
-            
-            xi_run = xi_in/lambda_vals(i-1)*lambda_vals(i);
-            solInit1=bvpinit(xi_run,@bvp_guess);
-            solN1 = bvp4c(@viscous_syst,@bc_vals,solInit1);
+            nu_dl = nu_vals(i)/(u_eq*h0);
+            lambda_old = lambda_vals(i-1);
+            lambda_in = lambda_vals(i);
+            xi_in = xi_in/lambda_old*lambda_in;
+            solInit1=bvpinit(xi_in,@bvp_guess);
+            opts = bvpset('RelTol',1e-4);
+%             try
+            solN1 = bvp4c(@viscous_syst,@bc_vals,solInit1,opts);
+%             catch ME
+%                 switch ME.identifier
+%                     case 'MATLAB:UndefinedFunction'
+%                         warning('Function is undefined.  Assigning a value of NaN.');
+%                     otherwise
+%                         rethrow(ME)
+%                 end
+%                 
+%             end
+            % Solves the 5 value bvp for u_w, Q1, h, n and m.
             resid = solN1.stats.maxres;
-            % Ensures that the wave is not to far from a solution
-            if resid < tol
-                h_wave = solN1.y(3,:);
-                h_diff = max(h_wave)-min(h_wave);
-                % Checks that the wave is not just the equilibrium solution
-                if (h_diff>1e-4)
-                    xi_in = linspace(0,lambda_in);
-                    y_in = interp1(solN1.x,solN1.y',xi_in)';
+            h_wave = solN1.y(3,:);
+            h_diff = max(h_wave)-min(h_wave);
+            if h_diff>1e-4
+                if resid < tol
+                    y_in = solN1.y;
+                    xi_in = solN1.x;
                 else
                     [xi_in,y_in] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
                     ,linspace(nu_vals(i-1),nu_vals(i),3) ,linspace(theta_vals(i-1),theta_vals(i),3)...
-                    ,linspace(lambda_vals(i-1),lambda_in,3),xi_in, y_in, tol,counter+1);
+                    ,linspace(lambda_vals(i-1),lambda_in,3), xi_in*lambda_old/lambda_in, y_in, tol,counter+1);
                 end
             else
                 [xi_in,y_in] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
                     ,linspace(nu_vals(i-1),nu_vals(i),3) ,linspace(theta_vals(i-1),theta_vals(i),3)...
-                    ,linspace(lambda_vals(i-1),lambda_in,3),xi_in, y_in, tol,counter+1);
+                    ,linspace(lambda_vals(i-1),lambda_in,3), xi_in*lambda_old/lambda_in, y_in, tol, counter+1);
             end
         end
-        y_out = y_in;
-        xi_out = xi_in;
+        y_out = solN1.y;
+        xi_out = solN1.x;
         
         function guess = bvp_guess(xi)
-            guess_ind = sum(xi_run<xi)+1;
-            if guess_ind == max(size(xi_run))
+            % Initial guess function from the ode soln
+            guess_ind = sum(xi_in<xi)+1;
+            if guess_ind == max(size(xi_in))
                 guess = y_in(:,end);
             else
-                gap = xi_run(guess_ind+1)-xi_run(guess_ind);
-                guess = y_in(:,guess_ind)*(xi-xi_run(guess_ind))/gap + y_in(:,guess_ind+1)*(xi_in(guess_ind+1)-xi)/gap;
-            end
+                gap = xi_in(guess_ind+1)-xi_in(guess_ind);
+                guess = y_in(:,guess_ind)*(xi-xi_in(guess_ind))/gap + y_in(:,guess_ind+1)*(xi_in(guess_ind+1)-xi)/gap;
+            end  
         end
-            
+        
         function dydxi = viscous_syst(xi,y)
+            % The system from the viroulet paper with a different friction
+            % law. Need to solve for u_w and Q1 too.
             u_w = y(1);
             Q1 = y(2);
             h = y(3);
@@ -157,15 +178,15 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             m = y(5);
 
             dhdxi = n;
-            n_coeff = 1-Q1^2.*Fr_in^2/h^3;
-            Fr = Fr_in*abs(u)/h;
+            n_coeff = 1-Q1^2.*Fr_eq^2/h^3;
+            Fr = Fr_eq*abs(u)/h;
             Iv = crit_Iv*abs(u)/h^2;
-            n_eq = (tand(theta_in)-sign(u).*P*mu_Iv_fn(Iv))./n_coeff;
-            dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_in^2*R/Q1*n_coeff*(n-n_eq);
+            n_eq = (tand(theta)-sign(u).*P*mu_Iv_fn(Iv))./n_coeff;
+            dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_eq^2/nu_dl/Q1*n_coeff*(n-n_eq);
             dmdxi = h/lambda_in*u;
             dydxi = [0,0,dhdxi,dndxi,dmdxi]';
         end
-    end      
+    end
     
     function resid = bc_vals(ya,yb)
        resid = [ya(3)-yb(3), ya(4), yb(4), ya(5), yb(5)-1]; 

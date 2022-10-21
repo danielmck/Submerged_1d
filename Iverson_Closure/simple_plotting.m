@@ -184,7 +184,6 @@ function simple_plotting
     t_init = 11000;
     t_step = 0.1;
     t_maxes = linspace(t_init,t_init+t_step*(nline-1),nline);
-    
 %     SetPaperSize(8,8)
     hold on
     for j=linspace(1,nline,nline)

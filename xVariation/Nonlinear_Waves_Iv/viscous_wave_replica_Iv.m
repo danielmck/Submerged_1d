@@ -31,7 +31,7 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, 
     t_scale = z_scale/v_scale;
 
     nu_dl = nu/z_scale/v_scale;
-    R = u_eq*sqrt(h0)/nu;
+    R = u_eq*h0/nu;
     
 %     u_w = 1+sqrt(g_dl*cosd(theta));
 %     Q1 = u_w-1;
@@ -41,7 +41,7 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, 
     uw_out = 0;
     xi_out = [];
     y_out = [];
-    del_uw = [1e-5,5e-5,1e-3,1.05e-3,1.1e-3];
+    del_uw = [1e-5,5e-5,1e-4,1.2e-3,1.1e-3];
     for i = 1:5
         u_w_dl = 1+1/Fr_eq-del_uw(i);
         Q1_dl = u_w_dl-1;
@@ -49,15 +49,15 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, 
     %     u_w = u_eq*u_w_dl;
     %     Q1 = h0*(u_w-u_eq);
 
+        opts1=odeset('AbsTol',1e-6,'RelTol',1e-6);
+        opts2 = odeset('AbsTol',1e-6,'RelTol',1e-6,'Events',@WaveEndFn);
 
-        opts = odeset('Events',@WaveEndFn);
-
-        [xi_vals,out_vals]=ode15s(@full_system_orig_dl,[0, 1000],[Q1_dl,1.001,0]);
+        [xi_vals,out_vals]=ode15s(@full_system_orig_dl,[0, 1000],[Q1_dl,1.001,0],opts1);
         y_end = out_vals(end,:);
-        [xi_wave,out_wave,eq_val,~,~] = ode15s(@full_system_orig_dl,[0, 50],out_vals(end,:),opts);
+        [xi_wave,out_wave,eq_val,~,~] = ode15s(@full_system_orig_dl,[0, 100],out_vals(end,:),opts2);
         non_zero_eq = eq_val(eq_val>1e-6);
         if size(non_zero_eq,1) > 2
-            lambda_i = non_zero_eq(1)
+            lambda_i = non_zero_eq(1);
             ratio = max(lambda/lambda_i,lambda_i/lambda);
             if ((lambda_ratio<0)||(ratio<lambda_ratio))
                 lambda_ratio = ratio;
