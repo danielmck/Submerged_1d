@@ -46,13 +46,13 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     end
     
     if ~exist('master_y','var')
-        master_file = 'master_wave_full.txt';
-        master_file = load(strcat('Results/',master_file));
+        master_name = "master_wave_full.txt";
+        master_file = load("Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
         record = readtable('Results/wave_record.csv');
 
-        in_table = strcmp(record.file_name, master_file);
+        in_table = strcmp(record.file_name, master_name);
         wave_type = record.wave_type(in_table);
         master_theta = record.theta(in_table); 
         master_lambda = record.lambda(in_table);
