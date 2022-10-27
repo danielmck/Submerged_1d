@@ -93,7 +93,7 @@ function dil_sim
         fname = "Ive_"+num2str(theta)+"deg_"+num2str(theta0)+"init_short_ts.txt";
         run_dil_sim()
         movefile(fname,'Results/');
-        write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,theta,eta_f_dl,t_step);
+        write_record('Results/result_record.csv',fname,'dil',{N,h,d,reg_param,density_ratio,alpha_dl,phi_c,theta,eta_f_dl,t_step});
 %     end
 
     % The function that defines the evolution of p_e, phihat, u_p and u_f

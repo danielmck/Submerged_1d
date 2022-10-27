@@ -55,46 +55,43 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
     
     if ~specify_param
         Fr_eq = 0.8; 
-        lambda = 11;
+        lambda = 250;
         theta = 12;
         nu = 1.13e-4;
     else
         param_cell = num2cell(params);
         [Fr_eq,theta,lambda,nu] = param_cell{:};  
     end
-    
-    % Gets the waveform from the ode solver
-    master_file = load("master_wave_no_pe.txt");
-    xi_wave = master_file(1,:);
-    y_wave = master_file(2:end,:);
-%     [xi_wave, y_wave, uw_wave] = 
-%     Q1_wave = uw_wave - 1;
-    Fr_ratio = max(Fr_eq/master_Fr,master_Fr/Fr_eq);
-    nu_ratio = max(nu/master_nu,master_nu/nu);
-    theta_ratio = max(theta/master_theta,master_theta/theta);
-    lambda_ratio = max(lambda/master_lambda,master_lambda/lambda);
+    stable = viscous_stability(theta,Fr_eq,nu,lambda);
+    if stable
+        error("Conditions are stable to perturbation so no waves will occur")
+    else 
+        Fr_ratio = max(Fr_eq/master_Fr,master_Fr/Fr_eq);
+        nu_ratio = max(nu/master_nu,master_nu/nu);
+        theta_ratio = max(theta/master_theta,master_theta/theta);
+        lambda_ratio = max(lambda/master_lambda,master_lambda/lambda);
 
-    ratio_sum = Fr_ratio-1+nu_ratio-1+20*(theta_ratio-1)+(lambda_ratio-1);
-    if ratio_sum > 1e-6
-        n_step = max(min(ceil(30*ratio_sum),400),90);
-    else
-        n_step=2;
+        ratio_sum = Fr_ratio-1+nu_ratio-1+20*(theta_ratio-1)+(lambda_ratio-1);
+        if ratio_sum > 1e-6
+            n_step = max(min(ceil(30*ratio_sum),400),90);
+        else
+            n_step=2;
+        end
+        % If the parameters are the same as the initial values run 2 steps, if
+        % not, run more
+
+        lambda_list = linspace(master_lambda, lambda, n_step);
+        Fr_list = linspace(master_Fr,Fr_eq,n_step);
+        nu_list = linspace(master_nu,nu,n_step);
+        theta_list = linspace(master_theta,theta,n_step);
+        end_diff = zeros(size(lambda_list));
+        [xi_final,y_final] = run_bvp_step(Fr_list, nu_list, theta_list, lambda_list, master_xi, master_y);
+        h_final = y_final(3,:);
+%         plot(xi_final,h_final)
+        filename = "master_wave_full.txt";
+%         save(filename,"out_vec","-ascii")
+        write_record("Results/wave_record.csv","filename",{"no_pe","water",Fr,theta,lambda,nu,alpha,d})
     end
-    % If the parameters are the same as the initial values run 2 steps, if
-    % not, run more
-    
-    lambda_list = linspace(master_lambda, lambda, n_step);
-    Fr_list = linspace(master_Fr,Fr_eq,n_step);
-    nu_list = linspace(master_nu,nu,n_step);
-    theta_list = linspace(master_theta,theta,n_step);
-    [xi_final,y_final] = run_bvp_step(Fr_list, nu_list, theta_list, lambda_list, master_xi, master_y);
-    h_final = y_final(3,:);
-    plot(xi_final,h_final)
-%     [~,mindex] = min(h_final);
-%     y_final = horzcat(y_final(:,mindex:end),y_final(:,1:mindex-1));
-%     xi_final = mod(horzcat(xi_final(mindex:end),xi_final(1:mindex-1))-xi_final(mindex),lambda);
-%     out_final = vertcat(xi_final,y_final);
-%     save("master_wave_no_pe.txt","out_final","-ascii")
     
     function [xi_out, y_out] = run_bvp_step(Fr_vals, nu_vals, theta_vals, lambda_vals, xi_in, y_in, tol,counter)
         % Can account for a change in wavelength but should really use
@@ -103,7 +100,7 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             counter = 1;
         end
         if ~exist('tol','var')
-            tol = 1e-3;
+            tol = 1e-6;
         end
         if counter > 10
             error("Max iteration depth reached, non convergence")
@@ -122,7 +119,7 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             lambda_in = lambda_vals(i);
             xi_in = xi_in/lambda_old*lambda_in;
             solInit1=bvpinit(xi_in,@bvp_guess);
-            opts = bvpset('RelTol',1e-4);
+            opts = bvpset('RelTol',tol);
 %             try
             solN1 = bvp4c(@viscous_syst,@bc_vals,solInit1,opts);
 %             catch ME
@@ -142,6 +139,9 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
                 if resid < tol
                     y_in = solN1.y;
                     xi_in = solN1.x;
+                    if counter == 1
+                        end_diff(i)=lambda_in-xi_in(end);
+                    end
                 else
                     [xi_in,y_in] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
                     ,linspace(nu_vals(i-1),nu_vals(i),3) ,linspace(theta_vals(i-1),theta_vals(i),3)...
@@ -178,11 +178,11 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             m = y(5);
 
             dhdxi = n;
-            n_coeff = 1-Q1^2.*Fr_eq^2/h^3;
-            Fr = Fr_eq*abs(u)/h;
+            n_coeff = 1-Q1^2.*Fr_in^2/h^3;
+%             Fr = Fr_eq*abs(u)/h;
             Iv = crit_Iv*abs(u)/h^2;
-            n_eq = (tand(theta)-sign(u).*P*mu_Iv_fn(Iv))./n_coeff;
-            dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_eq^2/nu_dl/Q1*n_coeff*(n-n_eq);
+            n_eq = (tand(theta_in)-sign(u).*P*mu_Iv_fn(Iv))./n_coeff;
+            dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_in^2/nu_dl/Q1*n_coeff*(n-n_eq);
             dmdxi = h/lambda_in*u;
             dydxi = [0,0,dhdxi,dndxi,dmdxi]';
         end

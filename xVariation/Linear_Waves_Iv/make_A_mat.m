@@ -1,4 +1,4 @@
-function A_mat = make_A_mat(k,rho_p,rho_f,theta,eta_f,d,alpha,Fr,crit_Iv)
+function A_mat = make_A_mat(k,rho_p,rho_f,theta,eta_f,d,alpha,Fr,crit_Iv,nu)
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;
@@ -18,6 +18,9 @@ function A_mat = make_A_mat(k,rho_p,rho_f,theta,eta_f,d,alpha,Fr,crit_Iv)
 
     if ~exist('crit_Iv','var')
         crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f);
+    end
+    if ~exist('nu','var')
+        nu=0;
     end
     
     crit_phi = phi_c./(1+sqrt(crit_Iv));
@@ -43,6 +46,7 @@ function A_mat = make_A_mat(k,rho_p,rho_f,theta,eta_f,d,alpha,Fr,crit_Iv)
     rho_p_dl = rho_p*v_scale^2/p_scale;
     rho_dl = rho_p_dl*phi_c+rho_f_dl*(1-phi_c);
     p_p_dl = p_p/p_scale;
+    nu_dl = nu/(v_scale*z_scale);
 
     chi_dl = (rho_f_dl+3*rho_dl)/(4*rho_dl);
     P = (rho_dl-rho_f_dl)/rho_dl;
@@ -64,7 +68,7 @@ function A_mat = make_A_mat(k,rho_p,rho_f,theta,eta_f,d,alpha,Fr,crit_Iv)
     A_mat(1,3) = -2*P*1i/beta_dl;
     
     A_mat(2,1) = g_dl*cosd(theta)*k-P*g_dl*cosd(theta)*dmudh*1i;
-    A_mat(2,2) = k - 1i*P*g_dl*cosd(theta)*dmudu; 
+    A_mat(2,2) = k - 1i*P*g_dl*cosd(theta)*dmudu-1i*k^2*nu_dl; 
     A_mat(2,3) = 1i*tand(theta)/(rho_dl-rho_f_dl) - 1i*P*g_dl*cosd(theta)*dmudp;
     
     A_mat(3,1) = -2*3*1i/alpha_dl*dpsidIv*dIvdh; %  - 1i*zeta*2/beta_dl-2/beta_dl*P*1i;
