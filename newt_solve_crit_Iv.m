@@ -1,4 +1,7 @@
-function crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f)
+function crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f, M)
+    if ~exist("M","var")
+        M = 0;
+    end
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;
@@ -8,14 +11,15 @@ function crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f)
     phi_c=0.585; % Volume fraction
     g=9.81; % m/s^2
     rho = phi_c*rho_p + (1-phi_c)*rho_f;
-
-    crit_mu = rho/(rho-rho_f)*tand(theta);
+    pp = (rho-rho_f)*(1-M);
+    
+    crit_mu = rho/pp*tand(theta);
     crit_Iv = 2e-6;
     resid = 1;
     max_tol = 1e-7;
     del_Iv = 1e-8;
     if (crit_mu < mu1_Iv)
-        "Slope is too shallow to sustain flow, try with a larger angle"
+        warning("Slope is too shallow to sustain flow, try with a larger angle");
         crit_Iv = -1;
     else
         while (abs(resid)>max_tol)

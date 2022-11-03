@@ -1,11 +1,11 @@
 function plot_waves
-    filename = "master_wave_full.txt";
+    filename = "high_pe_lambda_12.txt";
     master_file = load("Results/"+filename);
     xi = master_file(1,:);
     y = master_file(2:end,:);
     record = readtable('Results/wave_record.csv');
 
-    in_table = strcmp(record.file_name, filename);
+    in_table = strcmp(record.Name, filename);
     wave_type = record.wave_type(in_table);
     theta = record.theta(in_table); 
     lambda = record.lambda(in_table);
@@ -85,16 +85,16 @@ function plot_waves
     [phi_min,phi_min_ind] = min(phi);
     
     zeta = 3./(2*alpha_dl.*h) + P/4;
-    p_p = p_tot_grad_dl.*h-pb;
+    pp = p_tot_grad_dl.*h-pb;
     D = -2/beta_dl./h.*(pb-h);
-    Iv = abs(2*eta_f_dl.*u./h./p_p);
+    Iv = abs(2*eta_f_dl.*u./h./pp);
     R_w3 = -phi.*rho_f_dl/rho_dl.*D;
     R_w4 = (-P.*chi+zeta).*D - 2*3/alpha_dl./h.*u.*(phi - phi_c./(1+sqrt(Iv)));
 
     dhdxi = n;
     n_coeff = 1-Q1.^2.*Fr^2./h.^3;
-    Iv = 2*eta_f_dl.*abs(u)./h./p_p;
-    mu_val = p_p./(p_tot_grad_dl.*h).*mu_Iv_fn(Iv);
+    Iv = 2*eta_f_dl.*abs(u)./h./pp;
+    mu_val = pp./(p_tot_grad_dl.*h).*mu_Iv_fn(Iv);
     n_eq = (tand(theta)-sign(u).*mu_val)./n_coeff;
     dQdxi = -P.*D;
     dndxi = 1./(2.*h).*n.^2 + h.^(3/2)/Fr^2./nu_dl./Q1.*n_coeff.*(n-n_eq);
@@ -107,9 +107,9 @@ function plot_waves
     dpbdxi_scale = dpbdxi/(p_max-p_min);
     dhdxi_scale = n/(h_max-h_min);
     
-    plot(xi,h)
+    plot(xi,pp)
     hold on
-    plot(xi,pb)
+    plot(xi,pe)
     
     function mu_val = mu_Iv_fn(Iv)
         mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
