@@ -56,32 +56,29 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
         
         if ~provide_init
             if reverse
-                master_file = load("master_wave_full.txt");
-                master_xi = master_file(1,:);
-                master_y = master_file(2:end,:);
+                master_name="master_wave_full.txt";
+
             else
-                master_file = load("master_wave_no_pe.txt");
-                master_xi = master_file(1,:);
-                master_y = master_file(2:end,:);
+                master_name = "master_wave_no_pe.txt";
             end
+            master_file = load(strcat("Results/",master_name));
+            master_xi = master_file(1,:);
+            master_y = master_file(2:end,:);
         end
+        record = readtable('Results/wave_record.csv');
+        in_table = strcmp(record.Name, master_name);
+        theta = record.theta(in_table); 
+        lambda = record.lambda(in_table);
+        Fr = record.Fr(in_table);
+        nu = record.nu(in_table);
         if reverse
-            master_cond = readtable("master_wave_full_cond.csv");
-            Fr = master_cond.Fr_eq;
-            nu = master_cond.nu;
-            theta = master_cond.theta;
-            lambda = master_cond.lambda;
-            alpha = master_cond.alpha;
-            d = master_cond.d;
+            alpha = record.alpha(in_table);
+            d = record.d(in_table);
         else
-            master_cond = readtable("master_wave_no_pe_cond.csv");
-            Fr = master_cond.Fr_eq;
-            nu = master_cond.nu;
-            theta = master_cond.theta;
-            lambda = master_cond.lambda;
             alpha = 1e-5;
             d = 1e-4;
         end
+        
     end
     
     rho = rho_p*phi_c+rho_f*(1-phi_c);
@@ -145,9 +142,9 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
         no_pe_param = [Fr,theta,lambda,nu];
         [xi_out,y_out] = viscous_Iv_bvp_from_master(true,no_pe_param,true,xi_out,y_out(1:5,:),no_pe_param);
     end
-%     out_vec = vertcat(xi_out,y_out);
-    filename = "master_wave_full.txt";
-%     save(filename,"out_vec","-ascii")
+    out_vec = vertcat(xi_out,y_out);
+    filename = "Results/master_wave_full.txt";
+    save(filename,"out_vec","-ascii")
     write_record("Results/wave_record.csv",filename,{"full","water",Fr,theta,lambda,nu,alpha,d})
 
     u_w = y_out(1,1);

@@ -1,5 +1,5 @@
 function plot_waves
-    filename = "high_pe_lambda_12.txt";
+    filename = "lambda_50.txt";
     master_file = load("Results/"+filename);
     xi = master_file(1,:);
     y = master_file(2:end,:);
@@ -88,8 +88,9 @@ function plot_waves
     pp = p_tot_grad_dl.*h-pb;
     D = -2/beta_dl./h.*(pb-h);
     Iv = abs(2*eta_f_dl.*u./h./pp);
+    tan_psi = phi - phi_c./(1+sqrt(Iv));
     R_w3 = -phi.*rho_f_dl/rho_dl.*D;
-    R_w4 = (-P.*chi+zeta).*D - 2*3/alpha_dl./h.*u.*(phi - phi_c./(1+sqrt(Iv)));
+    R_w4 = (-P.*chi+zeta).*D - 2*3/alpha_dl./h.*u.*(tan_psi);
 
     dhdxi = n;
     n_coeff = 1-Q1.^2.*Fr^2./h.^3;
@@ -107,9 +108,9 @@ function plot_waves
     dpbdxi_scale = dpbdxi/(p_max-p_min);
     dhdxi_scale = n/(h_max-h_min);
     
-    plot(xi,pp)
+    plot(xi,h)
     hold on
-    plot(xi,pe)
+    plot(xi,u)
     
     function mu_val = mu_Iv_fn(Iv)
         mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
