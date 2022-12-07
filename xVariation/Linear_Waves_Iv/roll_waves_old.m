@@ -60,7 +60,7 @@ function [xi_vals, h_vals] = roll_waves_old(theta,Fr,h_st)
 %             [xi_vals,h_vals]=ode15s(@h_deriv_fn,linspace(0,500,10001),h1);
 %             u_vals = get_u(h_vals);
 %             n_point = sum(h_vals<h2);
-%             plot(xi_vals(h_vals<h2),h_vals(h_vals<h2),'r')
+            plot(xi_vals(h_vals<h2),h_vals(h_vals<h2),'r')
 % %             flux = (h_vals(1).*u_vals(1)+h_vals(n_point).*u_vals(n_point) + 2*sum(h_vals(2:n_point-1).*u_vals(2:n_point-1)))./(2*n_point);
 % %             fluxes(i) = flux;
 %         end

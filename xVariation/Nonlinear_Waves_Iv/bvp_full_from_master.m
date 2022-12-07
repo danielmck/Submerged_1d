@@ -34,11 +34,13 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         custom_init = false;
         Fr_eq = 0.8;
         theta = 12;
-        lambda = 12;
-        nu = 1.13e-4;
+        lambda = 20;
+        nu = 2e-4;
         alpha = 1e-5;
         d = 1e-4;
-        params = [Fr_eq,theta,lambda,nu,alpha,d];
+        tau0 = 20; % Pa
+        params = [Fr_eq,theta,lambda,nu,alpha,d,tau0];
+        filename = "lambda_20_tau0_20.txt";
     else
         custom_init = true;
         param_cell = num2cell(params);
@@ -46,7 +48,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     end
     
     if ~exist('master_y','var')
-        master_name = "master_wave_full.txt";
+        master_name = "lambda_12_tau0_20.txt";
         master_file = load("Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -58,6 +60,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         master_lambda = record.lambda(in_table);
         master_Fr = record.Fr(in_table);
         master_nu = record.nu(in_table);
+        master_tau0 = record.tau0(in_table);
         if strcmp(wave_type,'full')
             master_d = record.d(in_table);
             master_alpha = record.alpha(in_table);
@@ -92,7 +95,8 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     lambda_ratio = max(lambda/master_lambda,master_lambda/lambda);
     alpha_ratio = 1+max(log(alpha/master_alpha),log(master_alpha/alpha));
     d_ratio = 1+max(log(d/master_d),log(master_d/d));
-    ratio_sum = Fr_ratio-1+nu_ratio-1+50*(theta_ratio-1)+35*(lambda_ratio-1)+d_ratio-1+alpha_ratio-1;
+    tau0_ratio = abs(tau0-master_tau0)/(max(master_tau0,tau0)+1e-6);
+    ratio_sum = Fr_ratio-1+nu_ratio-1+50*(theta_ratio-1)+35*(lambda_ratio-1)+d_ratio-1+alpha_ratio-1+tau0_ratio;
     if ratio_sum > 1e-6
         n_steps = max(min(ceil(30*(ratio_sum-1)),400),90);
     else
@@ -107,8 +111,9 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     lambda_list = linspace(master_lambda,lambda,n_steps);
     alpha_list = logspace(log10(master_alpha),log10(alpha),n_steps);
     d_list = logspace(log10(master_d),log10(d),n_steps);
-    
-    [xi_final,y_final] = run_bvp_step(Fr_list, theta_list, lambda_list, nu_list, alpha_list, d_list, s_list, master_xi, master_y);
+    tau0_list = linspace(master_tau0,tau0,n_steps);
+
+    [xi_final,y_final] = run_bvp_step(Fr_list, theta_list, lambda_list, nu_list, alpha_list, d_list, tau0_list, master_xi, master_y);
 %     [xi_nope,y_nope] = viscous_Iv_bvp_from_master(true,[Fr_eq,theta,lambda,nu]);
     
     if ~custom_init
@@ -121,8 +126,8 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         phi = y_final(6,:)./Q1;
         pb = y_final(7,:) + rho/rho_f*chi.*h;
         out_vec = vertcat(xi_final,y_final);
-        filename = "lambda_12_s_min_point2.txt";
-        write_record("Results/wave_record.csv",filename,{"full","water",Fr_eq,theta,lambda,nu,alpha,d})
+        
+        write_record("Results/wave_record.csv",filename,{"full","water",Fr_eq,theta,lambda,nu,alpha,d,tau0})
         save("Results/"+filename,"out_vec","-ascii")
 %         plot(xi_out,u)
 
@@ -134,19 +139,23 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     hold on
 %     plot(xi_nope,y_nope(3,:))
     
-    function [xi_out, y_out] = run_bvp_step(Fr_vals, theta_vals, lambda_vals, nu_vals, alpha_vals, d_vals, s_vals, xi_in, y_in, tol,counter)
+    function [xi_out, y_out] = run_bvp_step(Fr_vals, theta_vals, lambda_vals, nu_vals, alpha_vals, d_vals, tau0_vals, xi_in, y_in, tol,counter)
         % If not specified, the depth counter is set to 1.
         if ~exist('counter','var')
             counter = 1;
         end
         % Tolerance default
         if ~exist('tol','var')
-            tol = 1e-4;
+            tol = 1e-3;
         end
         % If depth reaches 5, attempts to convert to non pe case and step
         % that way.
-        if counter > 5
-            warning("Max iteration depth reached, non convergence. Trying no excess pressure method")
+        if counter > 20
+            out_vec = vertcat(xi_in,y_in);
+            fail_name = "lambda_max_tau0_20.txt";
+            write_record("Results/wave_record.csv",fail_name,{"full","water",Fr_vals(1),theta_vals(1),lambda_vals(1),nu_vals(1),alpha_vals(1),d_vals(1),tau0_vals(1)})
+            save("Results/"+fail_name,"out_vec","-ascii")
+            error("Max iteration depth reached, non convergence. Trying no excess pressure method")
             y_in = -1;
             xi_in = -1;
         end             
@@ -158,19 +167,25 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
                 theta_in = theta_vals(i);
                 lambda_in = lambda_vals(i);
                 Fr_in = Fr_vals(i);
-                s_in = s_vals(i);
+                tau0_in = tau0_vals(i);
                 xi_run = xi_in/lambda_vals(i-1)*lambda_vals(i);
 %                 xi_run = horzcat(linspace(0,3*lambda_vals(i)/4,70),linspace(3*lambda_vals(i)/4, lambda_vals(i),70));
-
-                crit_Iv = newt_solve_crit_Iv(theta_in, rho_p, rho_f);
-                u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
-                h0 = ((Fr_in*sqrt(g*cosd(theta_in)))./u_const)^(2/3);  
-                u_eq = u_const.*h0^2;
+                if tau0_in == 0
+                    crit_Iv = newt_solve_crit_Iv(theta_in, rho_p, rho_f);
+                    u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
+                    h0 = ((Fr_in*sqrt(g*cosd(theta_in)))./u_const)^(2/3);  
+                else
+                    [h0, crit_Iv] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in);
+                    
+                end
+                u_eq = Fr_in*sqrt(g*cosd(theta_in)*h0);
                 phi_eq = phi_c/(1+sqrt(crit_Iv));
                 p_tot = rho*g*cosd(theta_in);
                 crit_pb = rho_f*g*cosd(theta_in)*h0;
                 nu_dl = nu_vals(i)/(u_eq*h0);
-
+                
+%                 h_stop = tau_0/rho*g*cosd(theta)/(rho/(rho-rho_f)-mu1_Iv);
+                
                 z_scale = h0;
                 v_scale = u_eq;
                 p_scale = crit_pb;
@@ -180,6 +195,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
                 alpha_dl = alpha_vals(i)*p_scale;
                 g_dl = g*t_scale/v_scale; 
 
+                tau0_dl = tau0_in/p_scale;
                 p_tot_grad_dl = p_tot/p_scale*z_scale;
                 rho_f_dl = rho_f*v_scale^2/p_scale;
                 rho_p_dl = rho_p*v_scale^2/p_scale; 
@@ -237,15 +253,15 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
             [xi_return,y_return] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
                          ,linspace(theta_vals(i-1),theta_vals(i),3),linspace(lambda_vals(i-1),lambda_in,3),...
                          linspace(nu_vals(i-1),nu_vals(i),3),linspace(alpha_vals(i-1)...
-                        ,alpha_vals(i),3),linspace(d_vals(i-1),d_vals(i),3),linspace(s_vals(i-1),s_vals(i),3),xi_in, y_in, tol,counter+1);
+                        ,alpha_vals(i),3),linspace(d_vals(i-1),d_vals(i),3),linspace(tau0_vals(i-1),tau0_in,3)...
+                        ,xi_in, y_in, tol,counter+1);
             non_pe = false;
             if counter == 1
-                if isequal(y_return,-1)
-                    
-                    curr_params = [Fr_vals(i-1),theta_vals(i),lambda_vals(i-1),nu_vals(i-1),alpha_vals(i-1),d_vals(i-1)];
+                if isequal(y_return,-1)                
+                    curr_params = [Fr_vals(i-1),theta_vals(i),lambda_vals(i-1),nu_vals(i-1),alpha_vals(i-1),d_vals(i-1),tau0_vals(i-1)];
                     [xi_no_pe,y_no_pe] = bvp_non_pe_to_full(true,true,curr_params,true,xi_in,y_in);
                     y_no_pe = y_no_pe(1:5,:);
-                    [xi_no_pe,y_no_pe] = viscous_Iv_bvp_from_master(true,params,true,xi_no_pe,y_no_pe,curr_params(1:4));
+                    [xi_no_pe,y_no_pe] = viscous_Iv_bvp_from_master(true,params,true,xi_no_pe,y_no_pe,[curr_params(1:4),curr_params(7)]);
                     [xi_return,y_return] = bvp_non_pe_to_full(true,false,params,true,xi_no_pe,y_no_pe);
                     non_pe = true;
                 end
@@ -275,7 +291,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
 
             zeta = 3/(2*alpha_dl*h) + P/4;
             p_p = p_tot_grad_dl*h-pb;
-            p_eq = h+s_in*(rho_dl-rho_f_dl)*g_dl*cosd(theta)*h;
+            p_eq = h;
             D = -2/beta_dl/h*(pb-p_eq);
             Iv = abs(2*eta_f_dl*u/h/p_p);
             R_w3 = -phi*rho_f_dl/rho_dl*D;
@@ -283,8 +299,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
 
             dhdxi = n;
             n_coeff = 1-Q1.^2.*Fr_in^2/h^3;
-            Iv = 2*eta_f_dl*abs(u)/h/p_p;
-            mu_val = p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv);
+            mu_val = p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv)+tau0_dl*rho_f/rho/h;
             n_eq = (tand(theta_in)-sign(u).*mu_val)./n_coeff;
             dQdxi = -P*D;
             dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_in^2/nu_dl/Q1*n_coeff*(n-n_eq);

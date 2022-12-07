@@ -1,6 +1,6 @@
-function crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f, M)
-    if ~exist("M","var")
-        M = 0;
+function crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f, s)
+    if ~exist("s","var")
+        s = 0;
     end
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
@@ -11,7 +11,7 @@ function crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f, M)
     phi_c=0.585; % Volume fraction
     g=9.81; % m/s^2
     rho = phi_c*rho_p + (1-phi_c)*rho_f;
-    pp = (rho-rho_f)*(1-M);
+    pp = (rho-rho_f)*(1-s);
     
     crit_mu = rho/pp*tand(theta);
     crit_Iv = 2e-6;
@@ -31,7 +31,7 @@ function crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f, M)
                 crit_Iv = crit_Iv - resid./dmudIv;
             end
             if (crit_Iv<0)
-                "Newton solver has failed to converge, try a larger initial value"
+                warning("Newton solver has failed to converge, try a larger initial value");
                 crit_Iv = -1;
                 break
             end

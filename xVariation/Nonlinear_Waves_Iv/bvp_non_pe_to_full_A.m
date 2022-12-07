@@ -1,4 +1,4 @@
-function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_init,master_xi,master_y)
+function [xi_out,y_out] = bvp_non_pe_to_full_A(custom_init,reverse,params,provide_init,master_xi,master_y)
 % Converts the wave with no excess pressure into a waveform that satisfies
 % the whole system. Achieves this by varying the paramter delta from 0 to 1
 % to change between systems.
@@ -59,12 +59,12 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
                 master_name="master_wave_full.txt";
 
             else
-                master_name = "no_pe_tau0_20_lambda_80.txt";
+                master_name = "master_wave_no_pe.txt";
             end
             master_file = load(strcat("Results/",master_name));
             master_xi = master_file(1,:);
             master_y = master_file(2:end,:);
-        end
+        end    
         record = readtable('Results/wave_record.csv');
         in_table = strcmp(record.Name, master_name);
         theta = record.theta(in_table); 
@@ -79,9 +79,14 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
             alpha = 1e-5;
             d = 1e-4;
         end
-        
     end
-    
+    master_A = zeros(size(master_xi));
+
+    master_xi = master_xi/lambda;
+    for k=2:size(master_xi,2)
+        master_A(k) = trapz(master_xi(1:k),master_y(4,1:k).^2);
+    end
+    final_A=master_A(end);
     rho = rho_p*phi_c+rho_f*(1-phi_c);
     P = (rho-rho_f)/rho;
     
@@ -138,10 +143,10 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
         end
         y6_in = phi_eq*master_y(2,:);
         y7_in = master_y(3,:) - rho_dl*g_dl*cosd(theta)*chi.*master_y(3,:);
-        y_in = vertcat(master_y,y6_in,y7_in);
+        y_in = vertcat(master_y(1,:),ones(size(master_xi))*lambda,master_y(2:5,:),master_A,y6_in,y7_in);
 %         y_in=master_y;
     else
-        y_in = master_y;
+        y_in = vertcat(master_y(1,:),ones(size(master_xi))*lambda,master_y(2:5,:),master_A,master_y(6:7,:));
     end
     [xi_out,y_out] = run_bvp_iter(delta_vals, master_xi,y_in);
     if reverse
@@ -219,13 +224,15 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
         
         function dydxi = viscous_syst(xi,y)
             u_w = y(1);
-            Q1 = y(2);
-            h = y(3);
+            lambda = y(2);
+            Q1 = y(3);
+            h = y(4);
             u = u_w - Q1/h;
-            n = y(4);
-            m = y(5);
-            phi = y(6)./Q1;
-            pb = y(7) + rho_dl*g_dl*cosd(theta)*chi.*h;
+            n = y(5);
+            m = y(6);
+            A = y(7);
+            phi = y(8)./Q1;
+            pb = y(9) + rho_dl*g_dl*cosd(theta)*chi.*h;
 
             zeta = 3/(2*alpha_dl*h) + P/4;
             p_p = p_tot_grad_dl*h-pb;
@@ -242,10 +249,11 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
             dQdxi = -delta_in*P*D;
             dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr^2/nu_dl/Q1*n_coeff*(n-n_eq);
             dmdxi = h/lambda*u;
+            dAdxi = n^2/lambda;
 
             dy6dxi = -delta_in*R_w3;
             dy7dxi = delta_in*R_w4/(u-u_w);
-            dydxi = [0,dQdxi,dhdxi,dndxi,dmdxi,dy6dxi,dy7dxi]';  
+            dydxi = [0,0,dQdxi,dhdxi,dndxi,dmdxi,dAdxi,dy6dxi,dy7dxi]'*lambda;
         end
         
         function guess = bvp_guess(xi)
@@ -260,7 +268,7 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
     end
     
     function resid = bc_vals(ya,yb)
-       resid = [ya(3)-yb(3), ya(4), yb(4), ya(5), yb(5)-1, ya(6)-yb(6), ya(7)-yb(7)]; 
+        resid = [ya(4)-yb(4), ya(5), yb(5), ya(6), yb(6)-1, ya(7), yb(7)-final_A, ya(8)-yb(8), ya(9)-yb(9)]; %
     end
 
     function mu_val = mu_Iv_fn(Iv)

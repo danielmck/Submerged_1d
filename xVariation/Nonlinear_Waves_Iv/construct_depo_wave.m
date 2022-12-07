@@ -1,4 +1,4 @@
-function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,provide_init,master_xi,master_y,master_params)
+function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_init,master_xi,master_y,master_params)
 % Converts the master wave stored in master_wave_no_pe.txt into a waveform
 % for the conditions specified. Allows change in theta, lambda, Froude
 % number and viscosity nu.
@@ -40,7 +40,7 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
         provide_init = false;
     end
     if ~provide_init
-        master_name = "no_pe_tau0_20.txt";
+        master_name = "no_pe_tau0_20_lambda_80.txt";
         master_file = load("Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -53,93 +53,89 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
         master_Fr = record.Fr(in_table);
         master_nu = record.nu(in_table);
         master_tau0 = record.tau0(in_table);
+        master_stat_len = 0;
+        master_xi=master_xi/master_lambda;
+        trim_xi=[true,diff(master_xi)>1e-8];
+        master_xi = master_xi(trim_xi);
+        master_y = vertcat(master_y(1:2,trim_xi),master_lambda*ones(size(master_xi)),master_y(3:end,trim_xi));
     else
         master_cell = num2cell(master_params);
-        [master_Fr,master_theta,master_lambda,master_nu,master_tau0] = master_cell{:};
+        [master_Fr,master_theta,master_stat_len,master_nu,master_tau0] = master_cell{:};
     end
     
     if ~specify_param
         Fr_eq = 0.8; 
-        lambda = 80;
         theta = 12;
-        nu = 5e-4;
+        nu = 1.13e-4;
         tau0 = 20;
-        filename = "no_pe_tau0_20_high_nu.txt";
+        stat_len=0;
+        filename = "no_pe_tau0_20_lambda_80.txt";
     else
         param_cell = num2cell(params);
-        [Fr_eq,theta,lambda,nu,tau0] = param_cell{:};  
+        [Fr_eq,theta,nu,tau0] = param_cell{:};  
     end
-    stable = viscous_stability(theta,Fr_eq,nu,lambda);
-    if stable
-        error("Conditions are stable to perturbation so no waves will occur")
-    else 
-        Fr_ratio = max(Fr_eq/master_Fr,master_Fr/Fr_eq);
-        nu_ratio = max(nu/master_nu,master_nu/nu);
-        theta_ratio = max(theta/master_theta,master_theta/theta);
-        lambda_ratio = max(lambda/master_lambda,master_lambda/lambda);
-        tau0_ratio = abs(tau0-master_tau0)/(max(master_tau0,tau0)+1e-6);
+%     stable = viscous_stability(theta,Fr_eq,nu,lambda);
 
-        ratio_sum = Fr_ratio-1+nu_ratio-1+20*(theta_ratio-1)+(lambda_ratio-1)+tau0_ratio;
-        if ratio_sum > 1e-6
-            n_step = max(min(ceil(30*ratio_sum),400),90);
-        else
-            n_step=2;
-        end
+    Fr_ratio = max(Fr_eq/master_Fr,master_Fr/Fr_eq);
+    nu_ratio = max(nu/master_nu,master_nu/nu);
+    theta_ratio = max(theta/master_theta,master_theta/theta);
+    tau0_ratio = abs(tau0-master_tau0)/(max(master_tau0,tau0)+1e-6);
+    sl_ratio = abs(stat_len-master_stat_len)/(max(stat_len,master_stat_len)+1e-6);
+
+    ratio_sum = Fr_ratio-1+nu_ratio-1+20*(theta_ratio-1)+tau0_ratio+sl_ratio;
+    if ratio_sum > 1e-6
+        n_step = max(min(ceil(30*ratio_sum),400),90);
+    else
+        n_step=2;
+    end
         % If the parameters are the same as the initial values run 2 steps, if
         % not, run more
+    Fr_list = linspace(master_Fr,Fr_eq,n_step);
+    nu_list = linspace(master_nu,nu,n_step);
+    theta_list = linspace(master_theta,theta,n_step);
+    tau0_list = linspace(master_tau0,tau0,n_step);
+    sl_list = linspace(master_stat_len,stat_len,n_step);
 
-        lambda_list = linspace(master_lambda, lambda, n_step);
-        Fr_list = linspace(master_Fr,Fr_eq,n_step);
-        nu_list = linspace(master_nu,nu,n_step);
-        theta_list = linspace(master_theta,theta,n_step);
-        tau0_list = linspace(master_tau0,tau0,n_step);
-        
-        end_diff = zeros(size(lambda_list));
-        [xi_final,y_final] = run_bvp_step(Fr_list, nu_list, theta_list, lambda_list, tau0_list, master_xi, master_y);
-        h_final = y_final(3,:);
+    [xi_final,y_final] = run_bvp_step(Fr_list, nu_list, theta_list, tau0_list, sl_list, master_xi, master_y);
 %         plot(xi_final,h_final)
         if ~specify_param
             out_vec = vertcat(xi_final,y_final);
-            save("Results/"+filename,"out_vec","-ascii")
-            write_record("Results/wave_record.csv",filename,{"no_pe","water",Fr_eq,theta,lambda,nu,0,0,tau0})
+%             save("Results/"+filename,"out_vec","-ascii")
+%             write_record("Results/wave_record.csv",filename,{"no_pe","water",Fr_eq,theta,lambda,nu,0,0,tau0})
         end
-    end
     
-    function [xi_out, y_out] = run_bvp_step(Fr_vals, nu_vals, theta_vals, lambda_vals, tau0_vals, xi_in, y_in, tol,counter)
+    function [xi_out, y_out] = run_bvp_step(Fr_vals, nu_vals, theta_vals, tau0_vals, sl_vals, xi_in, y_in, tol,counter)
         % Can account for a change in wavelength but should really use
         % viscous_Iv_bvp_from_master for that.
         if ~exist('counter','var')
             counter = 1;
         end
         if ~exist('tol','var')
-            tol = 1e-6;
+            tol = 1e-4;
         end
         if counter > 10
-            out_vec = vertcat(xi_in,y_in);
-            fail_name = filename;
-            save("Results/"+fail_name,"out_vec","-ascii")
-            write_record("Results/wave_record.csv",fail_name,{"no_pe","water",Fr_vals(1),theta_vals(1),lambda_vals(1),nu_vals(1),0,0,tau0_vals(1)})
+%             out_vec = vertcat(xi_in,y_in);
+%             fail_name = filename;
+%             save("Results/"+fail_name,"out_vec","-ascii")
+%             write_record("Results/wave_record.csv",fail_name,{"no_pe","water",Fr_vals(1),theta_vals(1),lambda_vals(1),nu_vals(1),0,0,tau0_vals(1)})
             error("Max iteration depth reached, non convergence")
         end
         
-        nstep = size(lambda_vals,2);
+        nstep = size(Fr_vals,2);
         for i = 2:nstep
             theta_in = theta_vals(i);
             Fr_in = Fr_vals(i);
             tau0_in = tau0_vals(i);
-            if tau0_in == 0
-                crit_Iv = newt_solve_crit_Iv(theta_in, rho_p, rho_f);
-                u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
-                h0 = ((Fr_in*sqrt(g*cosd(theta_in)))./u_const)^(2/3);  
-            else
-                [h0, crit_Iv] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in);
-            end
+            sl_in = sl_vals(i);
+            
+            crit_Iv = newt_solve_crit_Iv(theta_in, rho_p, rho_f);
+            u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
+            h0 = ((Fr_in*sqrt(g*cosd(theta_in)))./u_const)^(2/3);  
             u_eq = Fr_in*sqrt(g*cosd(theta_in)*h0);
+            
             nu_dl = nu_vals(i)/(u_eq*h0);
             tau0_dl = tau0_in/(rho_f*g*cosd(theta_in)*h0);
-            lambda_old = lambda_vals(i-1);
-            lambda_in = lambda_vals(i);
-            xi_in = xi_in/lambda_old*lambda_in;
+
             solInit1=bvpinit(xi_in,@bvp_guess);
             opts = bvpset('RelTol',tol);
             try
@@ -160,21 +156,21 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
                 h_diff = max(h_wave)-min(h_wave);
                 if h_diff>1e-4
                     y_in = solN1.y;
-                    xi_in = solN1.x;
+                    xi_in = solN1.x;m
                     if counter == 1
                         end_diff(i)=lambda_in-xi_in(end);
                     end
                 else
                     [xi_in,y_in] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
                     ,linspace(nu_vals(i-1),nu_vals(i),3) ,linspace(theta_vals(i-1),theta_vals(i),3)...
-                    ,linspace(lambda_vals(i-1),lambda_in,3), linspace(tau0_vals(i-1),tau0_in,3), ...
-                    xi_in*lambda_old/lambda_in, y_in, tol,counter+1);
+                    , linspace(tau0_vals(i-1),tau0_in,3), linspace(sl_vals(i-1),sl_in,3), ...
+                    xi_in, y_in, tol,counter+1);
                 end
             else
                 [xi_in,y_in] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
                     ,linspace(nu_vals(i-1),nu_vals(i),3) ,linspace(theta_vals(i-1),theta_vals(i),3)...
-                    ,linspace(lambda_vals(i-1),lambda_in,3), linspace(tau0_vals(i-1),tau0_in,3), ...
-                    xi_in*lambda_old/lambda_in, y_in, tol, counter+1);
+                    , linspace(tau0_vals(i-1),tau0_in,3), linspace(sl_vals(i-1),sl_in,3), ...
+                    xi_in, y_in, tol, counter+1);
             end
         end
         y_out = solN1.y;
@@ -196,6 +192,7 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             % law. Need to solve for u_w and Q1 too.
             u_w = y(1);
             Q1 = y(2);
+            lambda = y(3);
             h = y(3);
             u = u_w - Q1/h;
             n = y(4);
@@ -208,15 +205,15 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             force_bal = tand(theta_in)-sign(u).*P*mu_Iv_fn(Iv)-tau0_dl*rho_f/rho/h;
             n_eq = (force_bal)./n_coeff;
             dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_in^2/nu_dl/Q1*n_coeff*(n-n_eq);
-            dmdxi = h/lambda_in*u;
-            dydxi = [0,0,dhdxi,dndxi,dmdxi]';
+            dmdxi = h/(lambda+sl_in)*u;
+            dydxi = [0,0,0,dhdxi,dndxi,dmdxi]'*lambda;
+        end
+    
+        function resid = bc_vals(ya,yb)
+            resid = [ya(4)-ya(2)/ya(1), yb(4)-yb(2)/yb(1), ya(5), yb(5), ya(6), yb(6)-1]; 
         end
     end
     
-    function resid = bc_vals(ya,yb)
-       resid = [ya(3)-yb(3), ya(4), yb(4), ya(5), yb(5)-1]; 
-    end
-
     function mu_val = mu_Iv_fn(Iv)
         mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
     end

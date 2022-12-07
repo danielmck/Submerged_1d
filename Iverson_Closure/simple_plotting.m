@@ -1,5 +1,5 @@
 function simple_plotting
-    names = ["Ive_5deg_13init_deposit.txt"]; %"Ive_comp_4_deep_1_flux.txt"];%,"Ive_comp_4_deep_9_2_start.txt""Ive_comp_4_deep_9_1_start.txt","
+    names = ["Ive_comp_10_deep.txt"]; %"Ive_5deg_13init.txt""Ive_comp_4_deep_1_flux.txt"];%,"Ive_comp_4_deep_9_2_start.txt""Ive_comp_4_deep_9_1_start.txt","
     % names = ["Ive_comp_5_deep_custom_time_IC.txt"]; %,"Ive_comp_5_deep_custom_time_IC.txt"];%
     % Loads the data to compare and puts them in a list of simulations
 
@@ -180,11 +180,11 @@ function simple_plotting
     
     nline=1;
     C = viridis(4);
-    plot_vec = p_e{i,1};
-    t_init = 11000;
-    t_step = 0.1;
+    plot_vec = u_p{i,1};
+    t_init = 10000;
+    t_step = 50;
     t_maxes = linspace(t_init,t_init+t_step*(nline-1),nline);
-%     SetPaperSize(8,8)
+    SetPaperSize(8,8)
     hold on
     for j=linspace(1,nline,nline)
 %         t_vals{j,1}(t1(j))
@@ -195,21 +195,22 @@ function simple_plotting
 %         dil_smooth = smooth(dilatancy{i,1}(1:end,t1));
 %         plot(dil_smooth,z_pe{i,1}(1:end),'color',C(1,:),'DisplayName',"Dilatant Term")
 %         plot(diffusion_term{i,1}(1:end,t1),z_pe{i,1}(1:end),'color',C(2,:),'DisplayName',"Diffusive Term")
-        plot(plot_vec(1:end,t1),z_pe{i,1}(1:end),'color',C(j,:),'DisplayName',"t="+num2str(t_max))  
-%         plot(smooth(plot_vec(1:end,t1)),z_pe{i,1}(1:end),'color',C(3,:),'DisplayName',"Full Profile")
+%         plot(u_f{i,1}(1:end,t1),z_pe{i,1}(1:end),'color',C(3,:),'DisplayName',"t="+num2str(t_max))  
+        plot(plot_vec(1:end,t1),z_pe{i,1}(1:end),'color',C(1,:),'DisplayName',"Full Profile")
+%         plot(plot_vec(1,t1)*(1-z_pe{i,1}.^2),z_pe{i,1}(1:end),'color',C(3,:),'DisplayName',"DA Approximation")
 %         plot(pe_fast(1:end,t1),z_pe{i,1}(1:end),'LineStyle','--','color',C(j,:),'DisplayName',"Approximation")
 %         plot(dudz_medium(1:end,t1),z_pe{i,1}(1:end),'LineStyle','--','color',C(j,:),'DisplayName',"Approximation")
     end
 %     plot(crit_pe,z_pe{i,1}(1:end),'LineStyle','--','color','r','DisplayName',"$p_{crit}$")
-    legend('Location','northeast');
+%     legend('Location','best');
 %     xlabel('$\frac{\partial p_e}{\partial t}$')
-    xlabel('$\phi$')
+    xlabel('$u_p$')
     ylabel('$z$')
-    title("t="+num2str(t_max))
+%     title("t="+num2str(t_max))
 %     xlim([0,0.045]);
-    figname = "Ive_5deg_slow_cancelation.pdf";
-%     exp_graph(gcf,figname)
-%     movefile(figname,"Figures/SecondYearReport")
+    figname = "Ive_10deg_u_ss.pdf";
+    exp_graph(gcf,figname)
+    movefile(figname,"Figures/SecondYearReport")
     function beta_val=beta_fn(phi)
         beta_val = 150*phi.^2.*eta_f_dl./((1-phi).^3.*d_dl^2);
     end

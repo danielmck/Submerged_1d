@@ -40,7 +40,7 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
         provide_init = false;
     end
     if ~provide_init
-        master_name = "no_pe_tau0_20.txt";
+        master_name = "master_wave_yield.txt";
         master_file = load("Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -55,19 +55,19 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
         master_tau0 = record.tau0(in_table);
     else
         master_cell = num2cell(master_params);
-        [master_Fr,master_theta,master_lambda,master_nu,master_tau0] = master_cell{:};
+        [master_Fr,master_theta,master_lambda,master_nu] = master_cell{:};
     end
     
     if ~specify_param
         Fr_eq = 0.8; 
-        lambda = 80;
+        lambda = 12;
         theta = 12;
-        nu = 5e-4;
-        tau0 = 20;
-        filename = "no_pe_tau0_20_high_nu.txt";
+        nu = 1.13e-4;
+        tau0 = 5;
+        filename = "no_pe_tau0_5.txt";
     else
         param_cell = num2cell(params);
-        [Fr_eq,theta,lambda,nu,tau0] = param_cell{:};  
+        [Fr_eq,theta,lambda,nu] = param_cell{:};  
     end
     stable = viscous_stability(theta,Fr_eq,nu,lambda);
     if stable
@@ -99,9 +99,8 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
         h_final = y_final(3,:);
 %         plot(xi_final,h_final)
         if ~specify_param
-            out_vec = vertcat(xi_final,y_final);
-            save("Results/"+filename,"out_vec","-ascii")
-            write_record("Results/wave_record.csv",filename,{"no_pe","water",Fr_eq,theta,lambda,nu,0,0,tau0})
+            save(filename,"out_vec","-ascii")
+            write_record("Results/wave_record.csv","filename",{"no_pe","water",Fr_eq,theta,lambda,nu,0,0,tau0})
         end
     end
     
@@ -115,10 +114,6 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             tol = 1e-6;
         end
         if counter > 10
-            out_vec = vertcat(xi_in,y_in);
-            fail_name = filename;
-            save("Results/"+fail_name,"out_vec","-ascii")
-            write_record("Results/wave_record.csv",fail_name,{"no_pe","water",Fr_vals(1),theta_vals(1),lambda_vals(1),nu_vals(1),0,0,tau0_vals(1)})
             error("Max iteration depth reached, non convergence")
         end
         
@@ -167,8 +162,7 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
                 else
                     [xi_in,y_in] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
                     ,linspace(nu_vals(i-1),nu_vals(i),3) ,linspace(theta_vals(i-1),theta_vals(i),3)...
-                    ,linspace(lambda_vals(i-1),lambda_in,3), linspace(tau0_vals(i-1),tau0_in,3), ...
-                    xi_in*lambda_old/lambda_in, y_in, tol,counter+1);
+                    ,linspace(lambda_vals(i-1),lambda_in,3), xi_in*lambda_old/lambda_in, y_in, tol,counter+1);
                 end
             else
                 [xi_in,y_in] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
@@ -205,8 +199,7 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             n_coeff = 1-Q1^2.*Fr_in^2/h^3;
 %             Fr = Fr_eq*abs(u)/h;
             Iv = crit_Iv*abs(u)/h^2;
-            force_bal = tand(theta_in)-sign(u).*P*mu_Iv_fn(Iv)-tau0_dl*rho_f/rho/h;
-            n_eq = (force_bal)./n_coeff;
+            n_eq = (tand(theta_in)-sign(u).*P*mu_Iv_fn(Iv)-tau0_dl*rho_f/rho/h)./n_coeff;
             dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_in^2/nu_dl/Q1*n_coeff*(n-n_eq);
             dmdxi = h/lambda_in*u;
             dydxi = [0,0,dhdxi,dndxi,dmdxi]';

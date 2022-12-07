@@ -2,6 +2,14 @@ function [xi_vals,h_vals,u_vals,n_vals]=single_roll_wave(h1,theta,rho_dl,rho_f_d
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;
+    
+%     if ~exist("h1","var")
+%         h1 = 0.0023;
+%         theta=12;
+%         rho_f_dl = 1000;
+%         rho_dl = rho_f_dl*(1-0.585)+2500*0.585;
+%         
+%     end
 
     reg_param = 1*10^7;
     
