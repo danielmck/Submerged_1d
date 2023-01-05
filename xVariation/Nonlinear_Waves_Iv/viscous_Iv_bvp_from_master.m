@@ -40,7 +40,7 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
         provide_init = false;
     end
     if ~provide_init
-        master_name = "no_pe_tau0_20.txt";
+        master_name = "no_pe_tau0_20_lambda_80.txt";
         master_file = load("Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -60,11 +60,11 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
     
     if ~specify_param
         Fr_eq = 0.8; 
-        lambda = 80;
+        lambda = 100;
         theta = 12;
-        nu = 5e-4;
+        nu = 2e-4;
         tau0 = 20;
-        filename = "no_pe_tau0_20_high_nu.txt";
+        filename = "tau0_20_push_lambda.txt";
     else
         param_cell = num2cell(params);
         [Fr_eq,theta,lambda,nu,tau0] = param_cell{:};  
@@ -129,7 +129,7 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             tau0_in = tau0_vals(i);
             if tau0_in == 0
                 crit_Iv = newt_solve_crit_Iv(theta_in, rho_p, rho_f);
-                u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
+                u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
                 h0 = ((Fr_in*sqrt(g*cosd(theta_in)))./u_const)^(2/3);  
             else
                 [h0, crit_Iv] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in);

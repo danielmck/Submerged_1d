@@ -413,14 +413,6 @@ function simple_submerged_system
         deriv_val = 150*eta_f/d^2.*(phi_c + phihat).*(2+(phi_c + phihat))./(1-(phi_c + phihat)).^4;
     end
 
-    function mu_val = mu_I_fn(I)
-        mu_val = tanh(reg_param*I).*(mu1_I+(mu2_I-mu1_I)./(1+I_0./abs(I)));
-    end
-
-    function mu_val = mu_Iv_fn(Iv)
-        mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
-    end
-
     function mu_val = mu_K_fn(K,Iv)
         mu_val = tanh(reg_param*K).*(mu1_K+(mu2_K-mu1_K)./(1+K_0./abs(K))+5/2*phi_c/(a_K)*(Iv./(K+1e-8)));
     end

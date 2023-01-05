@@ -30,7 +30,7 @@ function viscous_Iv_bvp_from_ode_yield
 %     crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f);
     
     [h0, crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr_eq, tau0);
-    u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta);
+    u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
     u_eq = u_const.*h0^2;
     
     nu = 1.13e-4;

@@ -155,7 +155,7 @@ function [xi_final,y_final] = bvp_full_from_master_A(params,master_y,master_xi,m
 %                 xi_run = horzcat(linspace(0,3*lambda_vals(i)/4,70),linspace(3*lambda_vals(i)/4, lambda_vals(i),70));
 
                 crit_Iv = newt_solve_crit_Iv(theta_in, rho_p, rho_f);
-                u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
+                u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
                 h0 = ((Fr_in*sqrt(g*cosd(theta_in)))./u_const)^(2/3);  
                 u_eq = u_const.*h0^2;
                 phi_eq = phi_c/(1+sqrt(crit_Iv));
@@ -282,7 +282,7 @@ function [xi_final,y_final] = bvp_full_from_master_A(params,master_y,master_xi,m
 
             dhdxi = n;
             n_coeff = 1-Q1.^2.*Fr_in^2/h^3;
-            Iv = 2*eta_f_dl*abs(u)/h/p_p;
+            Iv = 3*eta_f_dl*abs(u)/h/p_p;
             mu_val = p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv);
             n_eq = (tand(theta_in)-sign(u).*mu_val)./n_coeff;
             dQdxi = -P*D;

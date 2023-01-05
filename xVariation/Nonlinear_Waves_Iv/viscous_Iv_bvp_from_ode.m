@@ -1,11 +1,6 @@
 function viscous_Iv_bvp_from_ode
 % Converts ode solution from viscous_wave_replica_Iv into a solution to the
 % viscous two equation bvp.
-    mu1_Iv = 0.32;
-    mu2_Iv = 0.7;
-    Iv_0 = 0.005;
-
-    reg_param = 1*10^7;
 
     phi_c=0.585; % Volume fraction
 
@@ -27,13 +22,13 @@ function viscous_Iv_bvp_from_ode
     P = (rho-rho_f)/rho;
     
     crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f);
-    u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta);
+    u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
     
 %     Fr_eq = h0*beta/gamma/L;
     h0 = ((Fr_eq*sqrt(g*cosd(theta)))./u_const)^(2/3);
     
     u_eq = u_const.*h0^2;
-    nu = 1.13e-4;
+    nu = 2e-4;
     
     z_scale = h0;
     v_scale = u_eq;
@@ -74,10 +69,14 @@ function viscous_Iv_bvp_from_ode
 %     xi_final = mod(horzcat(xi_final(mindex:end),xi_final(1:mindex-1))-xi_final(mindex),lambda);
     out_final = vertcat(xi_final,y_final);
     save("master_wave_no_pe.txt","out_final","-ascii")
+    write_record("Results/wave_record.csv","master_wave_no_pe.txt",{"no_pe","water",Fr_eq,theta,lambda,nu,0,0,0})
     
-    function [xi_out, y_out] = run_bvp_step(lambda_init, lambda_fin, nstep, xi_in, y_in, tol)
+    function [xi_out, y_out] = run_bvp_step(lambda_init, lambda_fin, nstep, xi_in, y_in, tol, count)
         % Can account for a change in wavelength but should really use
         % viscous_Iv_bvp_from_master for that.
+        if (~exist("count","var"))
+            count=0;
+        end
         lambda_in = lambda_init;
         for i = 1:nstep
             lambda_old = lambda_in;
@@ -104,10 +103,10 @@ function viscous_Iv_bvp_from_ode
                     y_in = solN1.y;
                     xi_in = solN1.x;
                 else
-                    [xi_in,y_in] = run_bvp_step(lambda_old, lambda_in, 2, xi_in*lambda_old/lambda_in, y_in, tol);
+                    [xi_in,y_in] = run_bvp_step(lambda_old, lambda_in, 2, xi_in*lambda_old/lambda_in, y_in, tol,count+1);
                 end
             else
-                [xi_in,y_in] = run_bvp_step(lambda_old, lambda_in, 2, xi_in*lambda_old/lambda_in, y_in, tol);
+                [xi_in,y_in] = run_bvp_step(lambda_old, lambda_in, 2, xi_in*lambda_old/lambda_in, y_in, tol, count+1);
             end
         end
         y_out = solN1.y;
@@ -147,9 +146,5 @@ function viscous_Iv_bvp_from_ode
     
     function resid = bc_vals(ya,yb)
        resid = [ya(3)-yb(3), ya(4), yb(4), ya(5), yb(5)-1]; 
-    end
-
-    function mu_val = mu_Iv_fn(Iv)
-        mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
     end
 end

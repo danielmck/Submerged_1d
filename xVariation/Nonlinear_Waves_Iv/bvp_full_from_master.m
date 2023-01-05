@@ -8,11 +8,6 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     % If desired, a different master wave can be specified in order to
     % speed up computation. The master y, xi and parameter values must be
     % specified.
-    mu1_Iv = 0.32;
-    mu2_Iv = 0.7;
-    Iv_0 = 0.005;
-
-    reg_param = 1*10^7;
 
     phi_c=0.585; % Volume fraction
 
@@ -34,21 +29,21 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         custom_init = false;
         Fr_eq = 0.8;
         theta = 12;
-        lambda = 20;
+        lambda = 100;
         nu = 2e-4;
         alpha = 1e-5;
         d = 1e-4;
         tau0 = 20; % Pa
         params = [Fr_eq,theta,lambda,nu,alpha,d,tau0];
-        filename = "lambda_20_tau0_20.txt";
+        filename = "lambda100_tau0_20.txt";
     else
         custom_init = true;
         param_cell = num2cell(params);
-        [Fr_eq,theta,lambda,nu,alpha,d] = param_cell{:};  
+        [Fr_eq,theta,lambda,nu,alpha,d,tau0] = param_cell{:};  
     end
     
     if ~exist('master_y','var')
-        master_name = "lambda_12_tau0_20.txt";
+        master_name = "lambda60_tau0_20.txt";
         master_file = load("Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -61,10 +56,11 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         master_Fr = record.Fr(in_table);
         master_nu = record.nu(in_table);
         master_tau0 = record.tau0(in_table);
-        if strcmp(wave_type,'full')
-            master_d = record.d(in_table);
-            master_alpha = record.alpha(in_table);
-        end
+%         if strcmp(wave_type,'full')
+        master_d = record.d(in_table);
+        master_alpha = record.alpha(in_table);
+%         end
+        master_params = [master_Fr,master_theta,master_lambda,master_nu,master_alpha,master_d,master_tau0];
     else
         master_temp = num2cell(master_params);
         [master_Fr,master_theta,master_lambda,master_nu,master_alpha,master_d] = master_temp{:};
@@ -96,24 +92,35 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     alpha_ratio = 1+max(log(alpha/master_alpha),log(master_alpha/alpha));
     d_ratio = 1+max(log(d/master_d),log(master_d/d));
     tau0_ratio = abs(tau0-master_tau0)/(max(master_tau0,tau0)+1e-6);
-    ratio_sum = Fr_ratio-1+nu_ratio-1+50*(theta_ratio-1)+35*(lambda_ratio-1)+d_ratio-1+alpha_ratio-1+tau0_ratio;
-    if ratio_sum > 1e-6
+    ratio_sum = Fr_ratio-1+nu_ratio-1+50*(theta_ratio-1)+d_ratio-1+alpha_ratio-1+tau0_ratio+35*(lambda_ratio-1);
+    if ratio_sum > 1e-6 %
         n_steps = max(min(ceil(30*(ratio_sum-1)),400),90);
     else
         n_steps=2;
     end
-
+    
+%     if lambda_ratio>1
+%         [xi_nope,y_nope] = bvp_non_pe_to_full(true,true,master_params,true,master_xi,master_y);
+%         y_nope = y_nope(1:5,:);
+%         new_params = [master_params(1:2),lambda,master_params(4),master_params(7)];
+%         [xi_nope,y_nope] = viscous_Iv_bvp_from_master(true,new_params,true,xi_nope,y_nope,master_params);
+%         [xi_lambda,y_lambda] = bvp_non_pe_to_full(true,false,[new_params(1:4),master_params(5:7)],true,xi_nope,y_nope);
+%     else
+        xi_lambda = master_xi;
+        y_lambda = master_y;
+%     end
     % Sets lists for parameter stepping between master and designated
     % values
     Fr_list = linspace(master_Fr,Fr_eq,n_steps);
     nu_list = linspace(master_nu,nu,n_steps);
     theta_list = linspace(master_theta,theta,n_steps);
     lambda_list = linspace(master_lambda,lambda,n_steps);
+%     lambda_list = lambda*ones(1,n_steps);
     alpha_list = logspace(log10(master_alpha),log10(alpha),n_steps);
     d_list = logspace(log10(master_d),log10(d),n_steps);
     tau0_list = linspace(master_tau0,tau0,n_steps);
 
-    [xi_final,y_final] = run_bvp_step(Fr_list, theta_list, lambda_list, nu_list, alpha_list, d_list, tau0_list, master_xi, master_y);
+    [xi_final,y_final] = run_bvp_step(Fr_list, theta_list, lambda_list, nu_list, alpha_list, d_list, tau0_list, xi_lambda, y_lambda);
 %     [xi_nope,y_nope] = viscous_Iv_bvp_from_master(true,[Fr_eq,theta,lambda,nu]);
     
     if ~custom_init
@@ -150,7 +157,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         end
         % If depth reaches 5, attempts to convert to non pe case and step
         % that way.
-        if counter > 20
+        if counter > 10
             out_vec = vertcat(xi_in,y_in);
             fail_name = "lambda_max_tau0_20.txt";
             write_record("Results/wave_record.csv",fail_name,{"full","water",Fr_vals(1),theta_vals(1),lambda_vals(1),nu_vals(1),alpha_vals(1),d_vals(1),tau0_vals(1)})
@@ -172,7 +179,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
 %                 xi_run = horzcat(linspace(0,3*lambda_vals(i)/4,70),linspace(3*lambda_vals(i)/4, lambda_vals(i),70));
                 if tau0_in == 0
                     crit_Iv = newt_solve_crit_Iv(theta_in, rho_p, rho_f);
-                    u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
+                    u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
                     h0 = ((Fr_in*sqrt(g*cosd(theta_in)))./u_const)^(2/3);  
                 else
                     [h0, crit_Iv] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in);
@@ -206,7 +213,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
 
                 % Solves the stepped system
                 solInit1=bvpinit(xi_run,@bvp_guess);
-                opts = bvpset('RelTol',tol,'NMax',200*counter);
+                opts = bvpset('RelTol',tol,'NMax',400*counter);
                 try
                     solN1 = bvp4c(@full_syst,@bc_vals,solInit1,opts);
                     resid = solN1.stats.maxres;
@@ -293,7 +300,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
             p_p = p_tot_grad_dl*h-pb;
             p_eq = h;
             D = -2/beta_dl/h*(pb-p_eq);
-            Iv = abs(2*eta_f_dl*u/h/p_p);
+            Iv = abs(3*eta_f_dl*u/h/p_p);
             R_w3 = -phi*rho_f_dl/rho_dl*D;
             R_w4 = (-P*chi+zeta)*D - 2*3/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
 
@@ -313,10 +320,5 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
             resid = [ya(3)-yb(3), ya(4), yb(4), ya(5), yb(5)-1, ya(6)-yb(6), ya(7)-yb(7)]; 
         end
     end      
-    
-    
 
-    function mu_val = mu_Iv_fn(Iv)
-        mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
-    end
 end

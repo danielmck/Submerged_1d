@@ -25,7 +25,7 @@ function nonlinear_syst
     
     crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f);
     crit_phi = phi_c./(1+sqrt(crit_Iv));
-    u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta);
+    u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
     
     crit_Fr = get_critical_Fr(theta, rho_p, rho_f, d, eta_f, alpha);
     Fr = 0.6;

@@ -1,5 +1,5 @@
 function plot_waves
-    filename = "master_wave_no_pe.txt"; %long_low_pe
+    filename = "lambda60_tau0_20.txt"; %long_low_pe
     master_file = load("Results/"+filename);
     xi = master_file(1,:);
     y = master_file(2:end,:);
@@ -129,12 +129,12 @@ function plot_waves
     Fr_equi = zeros(size(h));
     Iv_equi = zeros(size(h));
     for i=1:size(h,2)
-        [Fr_equi(i),Iv_equi(i)] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h(i)*h0, tau0);
+        [Fr_equi(i),Iv_equi(i)] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h(i)*h0, tau0,0);
     end
 
     dhdxi = n;
     n_coeff = 1-Q1.^2.*Fr^2./h.^3;
-    Iv = 2*eta_f_dl.*abs(u)./h./pp;
+    Iv = 3*eta_f_dl.*abs(u)./h./pp;
     mu_val = pp./(p_tot_grad_dl.*h).*mu_Iv_fn(Iv)+tau0_dl*rho_f/rho./h;
     force_bal = tand(theta)-sign(u).*mu_val;
     
@@ -162,18 +162,22 @@ function plot_waves
 %     SetPaperSize(10,10)
     hold on
 %     plot(linspace(0.5,1),get_force_bal(linspace(0.5,1)))
-    plot(xi(xi<5),h(xi<5)-Q1(xi<5)/u_w, "DisplayName", "Waveform","color",C(1,:))
+    plot(xi,pe, "DisplayName", "Waveform","color",C(1,:))
+%     plot(xi,Q1/u_w,"--","DisplayName","$Q_1/u_w$","color","r")
+%     plot(xi,ones(size(xi))*h_stop_dl,"--","DisplayName","$h_{stop}$","color","y")
+%     plot(xi(xi<5),n_eq(xi<5), "DisplayName", "Waveform","color",C(2,:))
 %     plot(Iv_equi,h, "DisplayName", "Equilibrium Curve","color",C(2,:))
 %     plot(xi,dn_term2, "DisplayName", "$\frac{d y_7}{d \xi}$","color",C(2,:))
 %     plot(xi,h_stop_dl*ones(size(xi)), "DisplayName", "Minimum $h$","color",C(3,:))
 %     plot(xi,dpbdxi(xi>20), "DisplayName", "$\frac{d p_b}{d \xi}$","color",C(3,:))
     
-    xlabel("$Fr$")
+    xlabel("$\xi$")
     ylabel("$h$")
-%     legend("Location","best")
-    title("$\theta="+num2str(theta)+"$, $\tau_0="+num2str(tau0)+"$, $s="+num2str(s)+"$, No $p_e$ case")
+    legend("Location","best")
+    title("$\theta="+num2str(theta)+"$, $\tau_0="+num2str(tau0)+"$, No $p_e$ case")
 %     plot(xi,force_bal)
-%     exp_graph(gcf,"no_pe_tau0_20_u_stop_h_Fr_zoom.pdf")
+%     xlim([0,0.1])
+%     exp_graph(gcf,"no_pe_tau0_20_u_stop_h_Iv.pdf")
       
     function mu_val = mu_Iv_fn(Iv)
         mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));

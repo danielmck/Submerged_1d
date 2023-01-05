@@ -31,7 +31,7 @@ A_mat = cell(2,1);
 for i = 1:n_cases
     crit_Iv(i) = newt_solve_crit_Iv(theta(i), rho_p, rho_f);
     crit_phi(i) = phi_c./(1+sqrt(crit_Iv(i)));
-    u_const(i) = crit_Iv(i)/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta(i));
+    u_const(i) = crit_Iv(i)/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta(i));
 
     h(i) = ((Fr(i)*sqrt(g*cosd(theta(i))))./u_const(i))^(2/3); % layer height (m)
 %     h = h.*ones(1,2);
@@ -124,24 +124,4 @@ function phase = get_phase(wave, x_val,k)
         phase = NaN;
         "No root found"
     end
-end
-
-    function mu_val = mu_Iv_fn(Iv)
-    mu1_Iv = 0.32;
-    mu2_Iv = 0.7;
-    Iv_0 = 0.005;
-    phi_c = 0.585;
-
-    reg_param = 1*10^7;
-    mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
-end
-
-function dmudIv = dmudIv_fn(Iv)
-    mu1_Iv = 0.32;
-    mu2_Iv = 0.7;
-    Iv_0 = 0.005;
-    phi_c = 0.585;
-
-    reg_param = 1*10^7;
-    dmudIv = (mu2_Iv-mu1_Iv)*Iv_0./(Iv_0+abs(Iv)).^2 + 1 + 5/4*phi_c./sqrt(Iv);
 end

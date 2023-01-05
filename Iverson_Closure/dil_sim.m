@@ -2,32 +2,10 @@ function dil_sim
     N = 200; % number of discretisation points in z for each of tau, u
     h = 4e-2; % layer height (m)
     d= 1e-5; % grain diameter (m)
-
-    mu1_I=0.342; % \frac{u+u_d}{\rho_f \phi_c}
-    mu2_I=0.557; % 
-    I_0 = 0.069;
     
-%     mu1_I=tand(20); 
-%     mu2_I=tand(33);  
-%     I_0 = 0.3;
-%     del_phi = 0.2;
+    [phi_c,rho_f,rho_p,rho,eta_f,g] = get_params_water();
+%     [phi_c,rho_f,rho_p,rho,eta_f,g] = get_params_air()
     
-    mu1_Iv = 0.32;
-    mu2_Iv = 0.7;
-    Iv_0 = 0.005;
-
-    reg_param = 1*10^7;
-
-    phi_c=0.585; % Volume fraction
-    
-    eta_f = 0.0010016; % Pa s
-    rho_f = 1000; % kg/m^3
-    
-%     eta_f = 1.18e-5; % Pa s
-%     rho_f = 1; % kg/m^3
-    
-    g=9.81; % m/s^2
-    rho_p = 2500; % kg/m^3
     theta = 5; % deg
     theta0 = 13;
 
@@ -42,7 +20,6 @@ function dil_sim
     t_scale = sqrt(h./g);
     z_scale = h;
     density_ratio = rho_p./rho_f;
-    rho = phi_c*density_ratio+1-phi_c;
 %     crit_grad = -(density_ratio*phi_c+(1-phi_c))*sind(theta)/mu1_I;
     
     p_b = (rho_p-rho_f)*g*phi_c*cosd(theta)*(h-z_pe);
@@ -192,11 +169,4 @@ function dil_sim
         beta_val = 150*phi.^2.*eta_f_dl./((1-phi).^3.*d_dl^2);
     end
 
-    function mu_val = mu_I_fn(I)
-        mu_val = tanh(reg_param*I).*(mu1_I+(mu2_I-mu1_I)./(1+I_0./abs(I)));
-    end
-
-    function mu_val = mu_Iv_fn(Iv)
-        mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
-    end
 end

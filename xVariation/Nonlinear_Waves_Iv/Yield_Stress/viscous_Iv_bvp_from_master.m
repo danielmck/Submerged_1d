@@ -124,7 +124,7 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             tau0_in = tau0_vals(i);
             if tau0_in == 0
                 crit_Iv = newt_solve_crit_Iv(theta_in, rho_p, rho_f);
-                u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
+                u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
                 h0 = ((Fr_in*sqrt(g*cosd(theta_in)))./u_const)^(2/3);  
             else
                 [h0, crit_Iv] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in);

@@ -39,7 +39,7 @@ function wave_stability_theta
             
             crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f);
             crit_phi = phi_c./(1+sqrt(crit_Iv));
-            u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta);
+            u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
 
             for l = 1:n_pts  
                 Fr = Fr_list(l);

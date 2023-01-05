@@ -19,7 +19,7 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_yield(theta, rho_f, rho_
     P = (rho-rho_f)/rho;
     
     [h0, crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr_eq, tau0);
-    u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta);
+    u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
 %     Fr_eq = h0*beta/gamma/L;
 %     h0 = ((Fr_eq*sqrt(g*cosd(theta)))./u_const)^(2/3);
     

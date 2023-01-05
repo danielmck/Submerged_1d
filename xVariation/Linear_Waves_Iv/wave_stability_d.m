@@ -37,7 +37,7 @@ function wave_stability_d
 
         for j = 1:n_pts
             Fr = Fr_list(j);
-            u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta);
+            u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
             h = ((Fr*sqrt(g*cosd(theta)))./u_const)^(2/3); % layer height (m)
             p_p = (rho_p-rho_f)*g*phi_c*cosd(theta)*h;
 

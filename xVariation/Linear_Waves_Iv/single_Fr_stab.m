@@ -10,7 +10,7 @@ function fn_out = single_Fr_stab(Fr,crit_Iv,theta, rho_p, rho_f, d, eta_f, alpha
     rho = phi_c*rho_p + (1-phi_c)*rho_f;
     
     crit_phi = phi_c./(1+sqrt(crit_Iv));
-    u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta);
+    u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
     
     h = ((Fr*sqrt(g*cosd(theta)))./u_const)^(2/3); % layer height (m)
     p_p = (rho_p-rho_f)*g*phi_c*cosd(theta)*h;

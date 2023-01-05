@@ -26,7 +26,7 @@ function eigfns
 
     crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f);
     phi0 = phi_c./(1+sqrt(crit_Iv));
-    u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta);
+    u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
     u0 = u_const*h0^2;
     pb0 = rho_f*g*cosd(theta)*h0;
     

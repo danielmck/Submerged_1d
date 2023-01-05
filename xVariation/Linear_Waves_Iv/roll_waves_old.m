@@ -95,7 +95,7 @@ function [xi_vals, h_vals] = roll_waves_old(theta,Fr,h_st)
 
     function num_val = force_bal(h)
         u = get_u(h);
-        Iv = 2.*u.*eta_f./(pp_grad.*h.^2);
+        Iv = 3.*u.*eta_f./(pp_grad.*h.^2);
         num_val = tand(theta)-mu_Iv_fn(Iv).*(rho-rho_f)/rho;
     end
 end

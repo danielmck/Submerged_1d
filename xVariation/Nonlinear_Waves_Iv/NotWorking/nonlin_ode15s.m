@@ -136,7 +136,7 @@ function nonlin_ode15s
         
         p_p = p_tot_grad_dl*h-pb;
         D = -2/beta_dl/h*(pb-rho_f_dl*g_dl*cosd(theta)*h);
-        Iv = 2*eta_f_dl*u/h/p_p;
+        Iv = 3*eta_f_dl*u/h/p_p;
         R_w1 = P*D;
         R_w2 = g_dl*sind(theta)*h - mu_Iv_fn(Iv)/rho_dl*p_p;
         R_w3 = -phi*rho_f_dl/rho_dl*D;
@@ -155,7 +155,7 @@ function nonlin_ode15s
 
     function num_val = force_bal(h)
         u = get_u(h);
-        Iv = 2.*u.*eta_f./(pb_grad.*h.^2);
+        Iv = 3.*u.*eta_f./(pb_grad.*h.^2);
         num_val = tand(theta)-mu_Iv_fn(Iv).*(rho-rho_f)/rho;
     end
 end

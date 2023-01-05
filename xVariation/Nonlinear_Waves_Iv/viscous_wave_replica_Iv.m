@@ -19,7 +19,7 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, 
     P = (rho-rho_f)/rho;
     
     crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f);
-    u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta);
+    u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
 %     Fr_eq = h0*beta/gamma/L;
     h0 = ((Fr_eq*sqrt(g*cosd(theta)))./u_const)^(2/3);
     

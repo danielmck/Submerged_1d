@@ -21,7 +21,7 @@ function theta_out = get_crit_wave_theta(h, rho_p, rho_f, d, eta_f, alpha)
         p_p = (rho_p-rho_f)*g*phi_c*cosd(theta_mid)*h;
 
         crit_pb = rho_f*g*cosd(theta_mid)*h;
-        crit_u = crit_Iv/eta_f/2*p_p*h;
+        crit_u = crit_Iv/eta_f/3*p_p*h;
         
         Fr = crit_u/sqrt(g*cosd(theta_mid)*h);
 

@@ -22,7 +22,7 @@ function solve_steady_state
         u_bar = 5/3*psi;
         theta = newton_raph(@mu_I_fn, 8.7,u_bar,1e-4,0,1000);
         p_grad = (rho_r-1)*phi_c*cosd(theta);
-        Iv = 2*u_bar.*eta_f_dl./p_grad;
+        Iv = 3*u_bar.*eta_f_dl./p_grad;
         I = 3*d_dl.*u_bar.*sqrt(rho_r)./sqrt(p_grad);
 %         phi = phi_c./(1+sqrt(abs(Iv)));
         phi = phi_c - del_phi_I*I;
@@ -56,7 +56,7 @@ function solve_steady_state
     end
 
     function mu_val = mu_Iv_fn(u_bar, p_grad)
-        Iv = -2*u_bar*eta_f_dl./p_grad;
+        Iv = -3*u_bar*eta_f_dl./p_grad;
         mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
     end
 end

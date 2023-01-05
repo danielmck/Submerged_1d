@@ -29,7 +29,7 @@ function stable = viscous_stability(theta,Fr,nu,lambda)
     
     rho = rho_p*phi_c+(1-phi_c)*rho_f;
     crit_Iv = newt_solve_crit_Iv(theta,rho_p,rho_f);
-    u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta);
+    u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
     h0 = ((Fr*sqrt(g*cosd(theta)))./u_const)^(2/3);  
     u_eq = u_const.*h0^2;
     nu_dl = nu/(u_eq*h0);

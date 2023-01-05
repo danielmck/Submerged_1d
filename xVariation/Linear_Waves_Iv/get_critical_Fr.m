@@ -3,7 +3,7 @@ function Fr_out = get_critical_Fr(theta, rho_p, rho_f, d, eta_f, alpha)
     phi_c = 0.585;
 
     crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f);
-    u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta);
+    u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
     if (crit_Iv > 0)
         
         Fr_min = 1e-4;

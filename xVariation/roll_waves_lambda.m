@@ -84,7 +84,7 @@ function [xi_vals, h_vals, u_vals, n_vals] = roll_waves_lambda(lambda,theta,rho_
 
     function num_val = force_bal(h)
         u = get_u(h);
-        Iv = 2.*u.*eta_f_dl./(pp_grad_dl.*h.^2);
+        Iv = 3.*u.*eta_f_dl./(pp_grad_dl.*h.^2);
         num_val = tand(theta)-mu_Iv_fn(Iv).*(rho_dl-rho_f_dl)/rho_dl;
     end
 end

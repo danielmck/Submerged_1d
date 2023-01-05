@@ -126,7 +126,7 @@ function [xi_vals, h_vals] = roll_waves_stop
 
     function num_val = force_bal(h)
         u = get_u(h);
-        Iv = 2.*abs(u).*eta_f_dl./(pp_grad_dl.*h.^2);
+        Iv = 3.*abs(u).*eta_f_dl./(pp_grad_dl.*h.^2);
         num_val = tand(theta)-sign(u)*mu_Iv_fn(Iv).*(rho-rho_f)/rho-sign(u)*tau0_dl*rho_f_dl/rho_dl/h;
     end
 end

@@ -92,7 +92,7 @@ function [xi_out,y_out] = bvp_non_pe_to_full_A(custom_init,reverse,params,provid
     
     if tau0 == 0
         crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f);
-        u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta);
+        u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
         h0 = ((Fr*sqrt(g*cosd(theta)))./u_const)^(2/3);  
     else
         [h0, crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, tau0);
@@ -243,7 +243,7 @@ function [xi_out,y_out] = bvp_non_pe_to_full_A(custom_init,reverse,params,provid
 
             dhdxi = n;
             n_coeff = 1-Q1.^2.*Fr^2/h^3;
-            Iv = 2*eta_f_dl*abs(u)/h/p_p;
+            Iv = 3*eta_f_dl*abs(u)/h/p_p;
             mu_val = delta_in*p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv)+(1-delta_in)*P*mu_Iv_fn(crit_Iv*abs(u)/h^2)+tau0_dl*rho_f/rho/h;
             n_eq = (tand(theta)-sign(u).*mu_val)./n_coeff;
             dQdxi = -delta_in*P*D;

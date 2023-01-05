@@ -24,7 +24,7 @@ function A_mat = make_A_mat(k,rho_p,rho_f,theta,eta_f,d,alpha,Fr,crit_Iv,nu)
     end
     
     crit_phi = phi_c./(1+sqrt(crit_Iv));
-    u_const = crit_Iv/eta_f/2*(rho_p-rho_f)*g*phi_c*cosd(theta);
+    u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
 
     h = ((Fr*sqrt(g*cosd(theta)))./u_const)^(2/3); % layer height (m)
 

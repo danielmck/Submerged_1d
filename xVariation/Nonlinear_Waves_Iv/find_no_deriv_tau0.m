@@ -1,31 +1,17 @@
 function find_no_deriv_tau0
     mu1_Iv = 0.32;
-    mu2_Iv = 0.7;
-    Iv_0 = 0.005;
+    [phi_c,rho_f,rho_p,rho,eta_f,g] = get_params_water();
 
-    reg_param = 1*10^7;
-
-    phi_c=0.585; % Volume fraction
-
-    g=9.81; % m/s^2
-    
-    eta_f = 0.0010016; % Pa s
-    rho_f = 1000; % kg/m^3
-    rho_p = 2500; % kg/m^
-
-%     eta_f = 1.18e-5;
-%     rho_f = 1;
-
-    Fr_eq = 0.8; 
-    theta = 12;
+    Fr_eq = 3; 
+    theta = 10;
     rho = rho_p*phi_c+rho_f*(1-phi_c);
     P = (rho-rho_f)/rho;
     
-    tau0=20;
+    tau0=100;
 %     h0=0.25;
-    npts = 1;
-    tau_min = 5;
-    tau_max = 20;
+    npts = 100;
+    tau_min = 0;
+    tau_max = 200;
     tau0_vals = linspace(tau_min,tau_max,npts);
     Fr_vals = linspace(0.5,4,npts);
     crit_h=zeros(1,npts);
@@ -72,25 +58,25 @@ function find_no_deriv_tau0
         for i=2:n_vals
             force=force_bal(h_vals(i));
             fb_vals(j,i) = force;
-            [~,Iv_alt] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h_vals(i)*h0, tau0);
-            u_eq_vals(i) = Iv_alt/eta_f/2*(g*cosd(theta)*(rho-rho_f))*(h_vals(i)*h0)^2;
+            [~,Iv_alt] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h_vals(i)*h0, tau0,0);
+            u_eq_vals(i) = Iv_alt/eta_f/3*(g*cosd(theta)*(rho-rho_f))*(h_vals(i)*h0)^2;
             
 %             if force>1e-8
 %                 break
 %             end
-%         if h_stop_dl<Q1/u_w
-%             step=0;
-%             h_newt = max(h_vals(i),Q1/u_w+1e-4);
-%             while force>1e-6
-%                 force=force_bal(h_newt);
-%                 fb_deriv = force_bal_deriv(h_newt);
-%                 h_newt = h_newt - force/fb_deriv;
-%                 step=step+1;
-%             end
-%             crit_h(j) = h_newt;
-%         else
-%             crit_h(j) = Q1/u_w;
-%         end
+        if h_stop_dl<Q1/u_w
+            step=0;
+            h_newt = max(h_vals(i),Q1/u_w+1e-4);
+            while force>1e-6
+                force=force_bal(h_newt);
+                fb_deriv = force_bal_deriv(h_newt);
+                h_newt = h_newt - force/fb_deriv;
+                step=step+1;
+            end
+            crit_h(j) = h_newt;
+        else
+            crit_h(j) = Q1/u_w;
+        end
 
         end
     end
@@ -98,18 +84,23 @@ function find_no_deriv_tau0
     C = viridis(4);
     SetPaperSize(8,8)
     
-    plot(h_vals*h0,u_eq*(u_w-Q1./h_vals(1,:)),"DisplayName","Wave Velocity","color",C(1,:))
-    plot(h_vals*h0,u_eq_vals(1,:),"DisplayName","Equilibrium Velocity","color",C(3,:))
-    plot([Q1/u_w*h0,Q1/u_w*h0],[0.0,0.4],"DisplayName","$Q_1/u_w$","color","k","LineStyle","--")
-%     plot(tau0_vals,crit_h.*h0_vals,"DisplayName","Minimum $h$","color",C(2,:))
-%     plot(tau0_vals,Q1_h0_vals.*h0_vals,"DisplayName","$Q_1/u_w$","color",C(3,:))
-%     plot(tau0_vals,h_stop_vals.*h0_vals,"DisplayName","$h_{stop}$","color",C(4,:))
-    legend("Location","best")
-    ylabel("$u$ ($ms^{-1}$)")
-    xlabel("$h$ ($m$)")
-%     ylim([0.05,0.25])
-    title("$\tau_0 = 20$ Pa, $\theta = 12^\circ$")
-    exp_graph(gcf,"tau0_20_h_vs_u_wave_eq.pdf")
+%     plot(h_vals*h0,(u_w-Q1./h_vals)*u_eq,"DisplayName","Wave Velocity","color",C(1,:))
+%     plot(h_vals*h0,u_eq_vals,"DisplayName","Equilibrium Velocity","color",C(3,:))
+% %     plot([Q1/u_w*h0,Q1/u_w*h0],[0,0.3],"DisplayName","$Q_1/u_w$","color","k","LineStyle","--")
+    plot(Fr_vals,h0_vals,"DisplayName","Equilibrium $h$","color",C(1,:))
+    plot(Fr_vals,crit_h.*h0_vals,"DisplayName","Minimum $h$","color",C(2,:))
+    plot(Fr_vals,Q1_h0_vals.*h0_vals,"DisplayName","$Q_1/u_w$","color",C(3,:))
+    plot(Fr_vals,h_stop_vals.*h0_vals,"DisplayName","$h_{stop}$","color",C(4,:))
+    plot([0.5,0.5],[0,0.3],"DisplayName","Stability Limit","color","k","LineStyle","--")
+    legend("Location","east")
+    ylabel("$h$ ($m$)")
+    xlabel("$Fr$")
+%     ylabel("Force Balance")
+%     xlabel("Fraction of $h_{eq}$")
+
+%     xlim([0,10])
+    title("$\tau_0 = 20$Pa, $\theta = 10^\circ$")
+    exp_graph(gcf,"tau0_Fr_h_stop_vs_min_h_phys.pdf")
     
     function fb = force_bal(h)
         u = -Q1/h + u_w;
@@ -124,13 +115,5 @@ function find_no_deriv_tau0
         Iv = crit_Iv*u/h^2;
         Iv_dash = -2*crit_Iv*u/h^3 + u_dash*crit_Iv/h^2;
         fb_dash = -P*dmudIv_fn(Iv)*Iv_dash + tau0_dl*rho_f/rho/h^2;
-    end
-    
-    function mu_val = mu_Iv_fn(Iv)
-        mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
-    end
-
-    function dmudIv = dmudIv_fn(Iv)
-        dmudIv = (mu2_Iv-mu1_Iv)*Iv_0./(Iv_0+abs(Iv)).^2 + 1 + 5/4*phi_c./sqrt(Iv);
     end
 end
