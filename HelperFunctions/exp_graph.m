@@ -3,7 +3,7 @@ function exp_graph(fig, fname)
     xlab=get(get(a,'xlabel'),'string');
     ylab=get(get(a,'ylabel'),'string');
     figtitle = get(get(a,'title'),'string');
-    fs = 8;
+    fs = 10;
     H = get(a,'Children');
     if size(xlab,2)
         xlabel(xlab,'Interpreter','latex','FontSize', fs)

@@ -1,5 +1,5 @@
 function simple_plotting
-    names = ["Ive_comp_10_deep.txt"]; %"Ive_5deg_13init.txt""Ive_comp_4_deep_1_flux.txt"];%,"Ive_comp_4_deep_9_2_start.txt""Ive_comp_4_deep_9_1_start.txt","
+    names = ["Ive_5deg_13init.txt"]; %Ive_5deg_13initIve_5deg_13init.txt"Ive_comp_4_deep_1_flux.txt"];%,"Ive_comp_4_deep_9_2_start.txt""Ive_comp_4_deep_9_1_start.txt","
     % names = ["Ive_comp_5_deep_custom_time_IC.txt"]; %,"Ive_comp_5_deep_custom_time_IC.txt"];%
     % Loads the data to compare and puts them in a list of simulations
 
@@ -120,97 +120,118 @@ function simple_plotting
         u_f{i,1} = vec(:,2*N(i)+1:3*N(i))';
         u_p{i,1} = vec(:,3*N(i)+1:end)';
 
-%         flow_depth{i,1} = sum(u_p{i,1} > 1e-3,1)/N(i);
-%         beta_pe{i,1} = 150*(phi{i,1}).^2.*eta_f_dl(i)./((1-phi{i,1}).^3.*d_dl(i)^2);
-%         beta_u{i,1} = interp1(z_pe{i,1},beta_pe{i,1},z_u{i,1},'linear','extrap');
-%         % If the velocity evolves we need to define these quantities
-%         dpdz{i,1} = vertcat(zeros(1,n_times(i)),diff(p_e{i,1}.*ones(N(i),n_times(i)),1,1))./dz_dl(i);
-%         dufdz{i,1} = vertcat(diff(u_f{i,1},1,1),zeros(1,n_times(i)))./dz_dl(i);
-%         d2ufdz2{i,1} = vertcat(zeros(1,n_times(i)),diff(dufdz{i,1},1,1))./dz_dl(i);
-% 
-%         dupdz{i,1} = vertcat(diff(u_p{i,1},1,1),zeros(1,n_times(i)))./dz_dl(i);
-%         Iv{i,1} = eta_f_dl(i).*abs(dupdz{i,1})./(p_p{i,1}+1e-8);
-%         tau_f{i,1} = eta_f_dl(i).*d2ufdz2{i,1}./(1-phi_c(i));
-% 
-%         mu_Iv{i,1} = mu_Iv_fn(Iv{i,1});
-%         tau_p{i,1} = 1/(phi_c(i).*density_ratio(i)).*sign(dupdz{i,1}).*vertcat(zeros(1,n_times(i)),diff(mu_Iv{i,1}.*(p_p{i,1}.*ones(1,n_times(i))),1,1)./dz_dl(i));
-%         drag_term_p{i,1} = (1-phi_c(i))^2.*beta_u{i,1}./(density_ratio(i)*phi_c(i)).*(u_f{i,1}-u_p{i,1});
-%         drag_term_f{i,1} = (1-phi_c(i)).*beta_u{i,1}.*(u_f{i,1}-u_p{i,1});
-%         dupdt{i,1} = vertcat(zeros(1,n_times(i)),tau_p{i,1}(2:end,:)+sind(theta(i))+drag_term_p{i,1}(2:end,:));
-%         dufdt{i,1} = vertcat(zeros(1,n_times(i)),tau_f{i,1}(2:end,:)+sind(theta(i))-drag_term_f{i,1}(2:end,:));
-% 
-%         dpdt{i,1} = 1./(alpha_dl(i)).*vertcat(diff(1./beta_pe{i,1}.*dpdz{i,1}),zeros(1,n_times(i)))./dz_dl(i);
-%         phi_Iv{i,1} = phi_c(i)./(1+sqrt(abs(Iv{i,1})));
-%         Iv_phi{i,1} = (phi{i,1}-phi_c(i)).^2./phi{i,1}.^2;
-%         tan_psi{i,1} = phi{i,1}-phi_Iv{i,1};
-%         dilatancy{i,1} = -1./(alpha_dl(i)).*dupdz{i,1}.*(phi{i,1}-phi_Iv{i,1});
-%         diffusion_term{i,1} = dpdt{i,1};
-%         dphidt{i,1} = -dpdt{i,1}.*alpha_dl(i).*phi_c(i);
-%         dpdt{i,1} = dpdt{i,1} + dilatancy{i,1};
+        flow_depth{i,1} = sum(u_p{i,1} > 1e-3,1)/N(i);
+        beta_pe{i,1} = 150*(phi{i,1}).^2.*eta_f_dl(i)./((1-phi{i,1}).^3.*d_dl(i)^2);
+        beta_u{i,1} = interp1(z_pe{i,1},beta_pe{i,1},z_u{i,1},'linear','extrap');
+        % If the velocity evolves we need to define these quantities
+        dpdz{i,1} = vertcat(zeros(1,n_times(i)),diff(p_e{i,1}.*ones(N(i),n_times(i)),1,1))./dz_dl(i);
+        dufdz{i,1} = vertcat(diff(u_f{i,1},1,1),zeros(1,n_times(i)))./dz_dl(i);
+        d2ufdz2{i,1} = vertcat(zeros(1,n_times(i)),diff(dufdz{i,1},1,1))./dz_dl(i);
+
+        dupdz{i,1} = vertcat(diff(u_p{i,1},1,1),zeros(1,n_times(i)))./dz_dl(i);
+        Iv{i,1} = eta_f_dl(i).*abs(dupdz{i,1})./(p_p{i,1}+1e-8);
+        tau_f{i,1} = eta_f_dl(i).*d2ufdz2{i,1}./(1-phi_c(i));
+
+        mu_Iv{i,1} = mu_Iv_fn(Iv{i,1});
+        tau_p{i,1} = 1/(phi_c(i).*density_ratio(i)).*sign(dupdz{i,1}).*vertcat(zeros(1,n_times(i)),diff(mu_Iv{i,1}.*(p_p{i,1}.*ones(1,n_times(i))),1,1)./dz_dl(i));
+        drag_term_p{i,1} = (1-phi_c(i))^2.*beta_u{i,1}./(density_ratio(i)*phi_c(i)).*(u_f{i,1}-u_p{i,1});
+        drag_term_f{i,1} = (1-phi_c(i)).*beta_u{i,1}.*(u_f{i,1}-u_p{i,1});
+        dupdt{i,1} = vertcat(zeros(1,n_times(i)),tau_p{i,1}(2:end,:)+sind(theta(i))+drag_term_p{i,1}(2:end,:));
+        dufdt{i,1} = vertcat(zeros(1,n_times(i)),tau_f{i,1}(2:end,:)+sind(theta(i))-drag_term_f{i,1}(2:end,:));
+
+        dpdt{i,1} = 1./(alpha_dl(i)).*vertcat(diff(1./beta_pe{i,1}.*dpdz{i,1}),zeros(1,n_times(i)))./dz_dl(i);
+        phi_Iv{i,1} = phi_c(i)./(1+sqrt(abs(Iv{i,1})));
+        Iv_phi{i,1} = (phi{i,1}-phi_c(i)).^2./phi{i,1}.^2;
+        tan_psi{i,1} = phi{i,1}-phi_Iv{i,1};
+        dilatancy{i,1} = -1./(alpha_dl(i)).*dupdz{i,1}.*(phi{i,1}-phi_Iv{i,1});
+        diffusion_term{i,1} = dpdt{i,1};
+        dphidt{i,1} = -dpdt{i,1}.*alpha_dl(i).*phi_c(i);
+        dpdt{i,1} = dpdt{i,1} + dilatancy{i,1};
     end
 %% 
-%     theta0 = 13;
-%     % Fast Timescale
-%     Iv_theta0 = newt_solve_crit_Iv(theta0,density_ratio,1);
-%     pp_theta0 = (rho-1)*cosd(theta0)*(1-z_pe{i,1});
-%     pp0 = (rho*cosd(theta)-cosd(theta0))*(1-z_pe{i,1});
-%     Iv0 = Iv_theta0./pp0.*pp_theta0;
-%     tanpsi0 = phi{i,1}(:,1)-phi_c./(1+sqrt(Iv0));
-%     tau_s = phi{i,1}(:,1).*Iv_theta0^(3/2)./(2*eta_f_dl*alpha_dl);
-%     tan_psi_fast = tanpsi0.*exp(-tau_s.*t_vals{i,1}');
-%     pp_fast = (rho-1)*cosd(theta0).*(phi{i,1}(:,1)-phi_c(1)).^2./(tan_psi_fast-(phi{i,1}(:,1)-phi_c(1))).^2.*(1-z_pe{i,1});
-%     pe_fast = p_b{i,1}-pp_fast;
-%         
-%     % Medium Timescale
-%     dudz_ss_grad = rho(i).*sind(theta(i))./mu_Iv{i,1}.*(1-z_pe{i,1});
-%     dudz_ss = rho(i).*sind(theta(i).*(phi{i,1}(100,1)-phi_c(i)).^2)./(phi{i,1}(100,1).^2.*eta_f_dl(i).*mu_Iv{i,1}(100,1)).*(1-z_pe{i,1});
-%     fric_mult = (phi{i,1}(100,1).^2.*eta_f_dl(i).*mu_Iv{i,1}(100,1))./(phi{i,1}(100,1)-phi_c(i)).^2;
-%     dudz_init = (rho(i)-1).*cosd(theta0).*(phi{i,1}(100,1)-phi_c(i)).^2./(phi{i,1}(100,1).^2.*eta_f_dl(i));
-%     cos_const_term = (phi{i,1}(100,1)-phi_c(i)).^2./(phi{i,1}(100,1).^2.*eta_f_dl(i)).*((rho(i)-1).*cosd(theta0)-rho(i).*sind(theta(i))./mu_Iv{i,1}(100,1));
-%     dudz_medium = dudz_ss;
-%     for k =1:10
-%         dudz_medium = dudz_medium + 8./(2*k-1).^2./pi.^2.*cos_const_term.*exp(-fric_mult(:,1)./rho(i).*pi^2/4.*(2*k-1).^2.*t_vals{i,1}').*cos(pi/2.*(2*k-1).*z_pe{i,1});
-%     end
-%     pp_medium = dudz_medium.*eta_f_dl.*phi{i,1}(1,100)^2./(phi{i,1}(1,100)-phi_c(i))^2;
-%     pe_medium = p_b{i,1} - pp_medium;
-%     
-%     % Critical Pressure
-%     crit_grad = -(density_ratio(i)*phi_c(i)+(1-phi_c(i)))*sind(theta(i))/0.32;
-%     crit_pe = p_b{i,1}+crit_grad*(1-z_pe{i,1});
+    theta0 = 13;
+    % Fast Timescale
+    Iv_theta0 = newt_solve_crit_Iv(theta0,density_ratio,1);
+    pp_theta0 = (rho-1)*cosd(theta0)*(1-z_pe{i,1});
+    pp0 = (rho*cosd(theta)-cosd(theta0))*(1-z_pe{i,1});
+    Iv0 = Iv_theta0./pp0.*pp_theta0;
+    tanpsi0 = phi{i,1}(:,1)-phi_c./(1+sqrt(Iv0));
+    tau_s = phi{i,1}(:,1).*Iv_theta0^(3/2)./(2*eta_f_dl*alpha_dl);
+    tan_psi_fast = tanpsi0.*exp(-tau_s.*t_vals{i,1}');
+    pp_fast = (rho-1)*cosd(theta0).*(phi{i,1}(:,1)-phi_c(1)).^2./(tan_psi_fast-(phi{i,1}(:,1)-phi_c(1))).^2.*(1-z_pe{i,1});
+    pe_fast = p_b{i,1}-pp_fast;
+        
+    % Medium Timescale
+    dudz_ss_grad = rho(i).*sind(theta(i))./mu_Iv{i,1}.*(1-z_pe{i,1});
+    dudz_ss = rho(i).*sind(theta(i).*(phi{i,1}(100,1)-phi_c(i)).^2)./(phi{i,1}(100,1).^2.*eta_f_dl(i).*mu_Iv{i,1}(100,1)).*(1-z_pe{i,1});
+    fric_mult = (phi{i,1}(100,1).^2.*eta_f_dl(i).*mu_Iv{i,1}(100,1))./(phi{i,1}(100,1)-phi_c(i)).^2;
+    dudz_init = (rho(i)-1).*cosd(theta0).*(phi{i,1}(100,1)-phi_c(i)).^2./(phi{i,1}(100,1).^2.*eta_f_dl(i));
+    cos_const_term = (phi{i,1}(100,1)-phi_c(i)).^2./(phi{i,1}(100,1).^2.*eta_f_dl(i)).*((rho(i)-1).*cosd(theta0)-rho(i).*sind(theta(i))./mu_Iv{i,1}(100,1));
+    dudz_medium = dudz_ss;
+    for k =1:10
+        dudz_medium = dudz_medium + 8./(2*k-1).^2./pi.^2.*cos_const_term.*exp(-fric_mult(:,1)./rho(i).*pi^2/4.*(2*k-1).^2.*t_vals{i,1}').*cos(pi/2.*(2*k-1).*z_pe{i,1});
+    end
+    pp_medium = dudz_medium.*eta_f_dl.*phi{i,1}(1,100)^2./(phi{i,1}(1,100)-phi_c(i))^2;
+    pe_medium = p_b{i,1} - pp_medium;
     
-    nline=1;
-    C = viridis(4);
-    plot_vec = u_p{i,1};
-    t_init = 10000;
-    t_step = 50;
+    % Critical Pressure
+    crit_grad = -(density_ratio(i)*phi_c(i)+(1-phi_c(i)))*sind(theta(i))/0.32;
+    crit_pe = p_b{i,1}+crit_grad*(1-z_pe{i,1});
+    
+    nline=4;
+    n_subs = 2;
+    C = viridis(7);
+    plot_vec = p_e{i,1};
+    plot_cell = {p_e{i,1},phi{i,1}};
+    t_init = 500;
+    t_step = 500;
     t_maxes = linspace(t_init,t_init+t_step*(nline-1),nline);
-    SetPaperSize(8,8)
-    hold on
-    for j=linspace(1,nline,nline)
-%         t_vals{j,1}(t1(j))
-        t_max = t_maxes(j);
-%         t_max = [50000,100000];
-%         t_val = (k-1)*t_step(i);
-        t1=[sum(t_vals{i,1}<t_max)+1];
-%         dil_smooth = smooth(dilatancy{i,1}(1:end,t1));
-%         plot(dil_smooth,z_pe{i,1}(1:end),'color',C(1,:),'DisplayName',"Dilatant Term")
-%         plot(diffusion_term{i,1}(1:end,t1),z_pe{i,1}(1:end),'color',C(2,:),'DisplayName',"Diffusive Term")
-%         plot(u_f{i,1}(1:end,t1),z_pe{i,1}(1:end),'color',C(3,:),'DisplayName',"t="+num2str(t_max))  
-        plot(plot_vec(1:end,t1),z_pe{i,1}(1:end),'color',C(1,:),'DisplayName',"Full Profile")
-%         plot(plot_vec(1,t1)*(1-z_pe{i,1}.^2),z_pe{i,1}(1:end),'color',C(3,:),'DisplayName',"DA Approximation")
-%         plot(pe_fast(1:end,t1),z_pe{i,1}(1:end),'LineStyle','--','color',C(j,:),'DisplayName',"Approximation")
-%         plot(dudz_medium(1:end,t1),z_pe{i,1}(1:end),'LineStyle','--','color',C(j,:),'DisplayName',"Approximation")
+    SetPaperSize(10,5)
+    
+    f = zeros(1,nline);
+%     a = zeros(1,2);
+%     a(1) = plot([NaN],[NaN],'color','k','DisplayName',"Full");
+%     a(2) = plot([NaN],[NaN],'color','k','LineStyle','--','DisplayName',"Approx.");
+    for k = 1:n_subs
+        subplot(1,n_subs,k);
+        hold on
+        plot_vec = plot_cell{1,k};
+        for j=linspace(1,nline,nline)
+    %         t_vals{j,1}(t1(j))
+            t_max = t_maxes(j);
+    %         t_max = [50000,100000];
+    %         t_val = (k-1)*t_step(i);
+            t1=[sum(t_vals{i,1}<t_max)+1];
+            f(j) = plot(plot_vec(1:end,t1),z_pe{i,1}(1:end),'color',C(j,:),'DisplayName',"t="+num2str(t_max));
+    %         plot(pe_fast(:,t1),z_pe{i,1},'LineStyle','--','color',C(j,:),'DisplayName',"Approximation");
+    %         plot(dudz_medium(1:end,t1),z_pe{i,1}(1:end),'LineStyle','--','color',C(j,:),'DisplayName',"Approximation")
+        end
+        if k == 1
+            ylabel('$z$','Interpreter','latex')
+            xlabel('$p_e$','Interpreter','latex')
+        else
+            xlabel('$\phi$','Interpreter','latex')
+        end
     end
 %     plot(crit_pe,z_pe{i,1}(1:end),'LineStyle','--','color','r','DisplayName',"$p_{crit}$")
-%     legend('Location','best');
-%     xlabel('$\frac{\partial p_e}{\partial t}$')
-    xlabel('$u_p$')
-    ylabel('$z$')
+%     legend([a,f],'Location','eastoutside'); %["Full Profile","Approximation","t=1","t=2"]
+%     legend([f(1),f(2)],{"Full Profile","Approximation"},'Location','east');
+    legend('Interpreter','latex');
+%     xlabel('$\frac{\partial u}{\partial z}$')
+%     xlabel('$p_e$')
+%     ylabel('$z$')
+%     annotation('arrow',[0.25 0.45],...
+%     [0.3 0.3]);
+%     annotation('textbox',...
+%     [0.477793248945147 0.245454545454545 0.387185654008439 0.168181818181818],...
+%     'String',{'Increasing $t$'},...
+%     'FitBoxToText','off');
 %     title("t="+num2str(t_max))
 %     xlim([0,0.045]);
-    figname = "Ive_10deg_u_ss.pdf";
-    exp_graph(gcf,figname)
-    movefile(figname,"Figures/SecondYearReport")
+    figname = "Ive_5deg_slow_pe_phi.pdf";
+    exportgraphics(gcf,figname,"Resolution",300)
+%     exp_graph(gcf,figname)
+    movefile(figname,"Figures/BAMC_Talk")
     function beta_val=beta_fn(phi)
         beta_val = 150*phi.^2.*eta_f_dl./((1-phi).^3.*d_dl^2);
     end

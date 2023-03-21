@@ -39,7 +39,13 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
     % viscous_Iv_bvp_from_master to make the input
     if custom_init
         param_cell = num2cell(params);
-        [Fr,theta,lambda,nu,alpha,d,tau0] = param_cell{:};
+        if (size(param_cell,2) == 7)
+            [Fr,theta,lambda,nu,alpha,d,tau0] = param_cell{:};
+            rel_flux = 1;
+            pres_h = 0;
+        elseif (size(param_cell,2) == 9)
+            [Fr,theta,lambda,nu,alpha,d,tau0,rel_flux,pres_h] = param_cell{:};
+        end
         if ~provide_init
             if reverse
                 [master_xi,master_y] = bvp_full_from_master(true,params(1:4));
@@ -52,9 +58,9 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
         if ~provide_init
             if reverse
                 master_name="master_wave_full.txt";
-
             else
                 master_name = "master_wave_no_pe.txt";
+%                 master_name = "time_d_comp_vvshort.txt";
             end
             master_file = load(strcat("Results/",master_name));
             master_xi = master_file(1,:);
@@ -62,11 +68,13 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
         end
         record = readtable('Results/wave_record.csv');
         in_table = strcmp(record.Name, master_name);
+        wave_type = record.wave_type(in_table);
         theta = record.theta(in_table); 
         lambda = record.lambda(in_table);
         Fr = record.Fr(in_table);
         nu = record.nu(in_table);
         tau0 = record.tau0(in_table);
+        rel_flux = master_y(5,end);
         if reverse
             alpha = record.alpha(in_table);
             d = record.d(in_table);
@@ -74,7 +82,7 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
             alpha = 1e-5;
             d = 1e-4;
         end
-        
+        pres_h=strcmp(wave_type(max(end-7,1):end),"_pres_h");
     end
     
     rho = rho_p*phi_c+rho_f*(1-phi_c);
@@ -147,7 +155,7 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
         out_vec = vertcat(xi_out,y_out);
         filename = "master_wave_full.txt";
         save("Results/"+filename,"out_vec","-ascii")
-        write_record("Results/wave_record.csv",filename,{"full","water",Fr,theta,lambda,nu,alpha,d,0})
+        write_record("Results/wave_record.csv",filename,{"full","water",Fr,theta,lambda,nu,alpha,d,tau0})
     end
 
     u_w = y_out(1,1);
@@ -232,11 +240,11 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
             dhdxi = n;
             n_coeff = 1-Q1.^2.*Fr^2/h^3;
             Iv = 3*eta_f_dl*abs(u)/h/p_p;
-            mu_val = delta_in*p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv)+(1-delta_in)*P*mu_Iv_fn(crit_Iv*abs(u)/h^2)+tau0_dl*rho_f/rho/h;
-            n_eq = (tand(theta)-sign(u).*mu_val)./n_coeff;
+            mu_val = delta_in*p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv)+(1-delta_in)*P*mu_Iv_fn(crit_Iv*abs(u)/h^2)+tau0_dl*rho_f/rho/h; 
+            n_eq = (tand(theta)-sign(u).*mu_val+delta_in*P*D)./n_coeff;
             dQdxi = -delta_in*P*D;
             dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr^2/nu_dl/Q1*n_coeff*(n-n_eq);
-            dmdxi = h/lambda*u;
+            dmdxi = h/lambda*u^(1-pres_h);
 
             dy6dxi = -delta_in*R_w3;
             dy7dxi = delta_in*R_w4/(u-u_w);
@@ -255,6 +263,6 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
     end
     
     function resid = bc_vals(ya,yb)
-       resid = [ya(3)-yb(3), ya(4), yb(4), ya(5), yb(5)-1, ya(6)-yb(6), ya(7)-yb(7)]; 
+       resid = [ya(3)-yb(3), ya(4), yb(4), ya(5), yb(5)-rel_flux, ya(6)-yb(6), ya(7)-yb(7)]; 
     end
 end

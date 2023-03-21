@@ -1,4 +1,7 @@
 function [crit_Fr, Iv] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h, tau0, dl)
+    if ~exist('dl','var')
+        dl=false;
+    end
     mu1_Iv = 0.32;
 
     count = 0;

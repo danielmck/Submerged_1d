@@ -1,4 +1,4 @@
-function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_init,master_xi,master_y,master_params)
+function [xi_final,y_final] = alter_wave_flux(h0_dim,theta,lambda_dim,tau0,rel_flux)
 % Converts the master wave stored in no_pe_no_vis_master.txt into a 
 % waveform that maintains the flux of the conditions specified. Allows 
 % change in theta, Froude number and yield stress.
@@ -17,77 +17,37 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
     [phi_c,rho_f,rho_p,rho,eta_f,g] = get_params_water();
     P = (rho-rho_f)/rho;
     
-    if ~exist("specify_param","var")
-        specify_param = false;
-    end
-    if ~exist("provide_init","var")
-        provide_init = false;
-    end
-    if ~provide_init
-        Res_dir = "~/Documents/MATLAB/1D_System/xVariation/Nonlinear_Waves_Iv/NonViscous_bvp/";
-        master_name = "no_pe_no_vis_master.txt";
-        master_file = load(Res_dir+"Results/"+master_name);
-        master_xi = master_file(1,:);
-        master_y = master_file(2:end,:);
-        record = readtable(Res_dir+"Results/wave_record.csv");
-
-        in_table = strcmp(record.Name, master_name);
-        wave_type = record.wave_type(in_table);
-        master_theta = record.theta(in_table);
-        master_Fr = record.Fr(in_table);
-        master_tau0 = record.tau0(in_table);
-        master_stat_len = 0;
-        
-        if (master_y(3,1)-master_y(2,1)/master_y(1,1)<1e-2)
-            master_h_min = -1;
-        else
-            master_h_min = master_y(3,1);
-        end
-    else
-        master_cell = num2cell(master_params);
-        [master_Fr,master_theta,master_stat_len,~,master_tau0] = master_cell{:};
-    end
+    [Fr_eq,~] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h0_dim, tau0,0);
+    lambda = lambda_dim/h0_dim;
+    u_eq_dim = Fr_eq*sqrt(g*cosd(theta)*h0_dim);
     
-    if ~specify_param
-        Fr_eq = 1; 
-        theta = 10;
-        tau0 = 0;
-        stat_len=0;
-        h_min = 0.8;
-        % h_alt specifies the distance from the static minimum that the
-        % wave must begin at.
-        filename = "no_pe_no_vis_master.txt";
-
-%       A wave close to the conditions can be constructed from
-%       depo_wave_ode in order to provide easier adaptation to the bvp.
-%         [master_xi, h_init, Q1_in, u_w_in,flux] = depo_wave_ode(theta, Fr_eq, tau0);
-%        u_init = (-Q1_in + h_init.*u_w_in)./h_init;
-%     lambda_init = master_xi(end);
-%     m_init = zeros(size(master_xi));
-%     m_val = 0;
-%     % Defines the average flux m that is needed to solve the bvp
-%     for j = 2:size(master_xi,1)
-%         m_init(j) = get_flux(master_xi(1:j),h_init(1:j),u_init(1:j));
-%     end
-%     bv = ones(size(master_xi));
-%     master_xi=master_xi/lambda_init;
-%     master_y = horzcat(bv*u_w_in,bv*Q1_in,bv*lambda_init,h_init,m_init);
-        
-    else
-        param_cell = num2cell(params);
-        [Fr_eq,theta,tau0] = param_cell{:};  
-    end
+    stat_len=0;
     
+    Res_dir = "~/Documents/MATLAB/1D_System/xVariation/Nonlinear_Waves_Iv/NonViscous_bvp/";
+    master_name = "no_pe_no_vis_master.txt";
+    master_file = load(Res_dir+"Results/"+master_name);
+    master_xi = master_file(1,:);
+    master_y = master_file(2:end,:);
+    record = readtable(Res_dir+"Results/wave_record.csv");
 
-%     stable = viscous_stability(theta,Fr_eq,nu,lambda);
+    in_table = strcmp(record.Name, master_name);
+    wave_type = record.wave_type(in_table);
+    master_theta = record.theta(in_table);
+    master_Fr = record.Fr(in_table);
+    master_tau0 = record.tau0(in_table);
+    master_lambda = master_y(3,1);
+    master_stat_len = 0;
+    master_rf = 1;
+    
+    master_y = vertcat(master_y(1:2,:),master_y(4:end,:));
 
     Fr_ratio = max(Fr_eq/master_Fr,master_Fr/Fr_eq);
     theta_ratio = max(theta/master_theta,master_theta/theta);
     tau0_ratio = abs(tau0-master_tau0)/(max(master_tau0,tau0)+1e-6);
     sl_ratio = abs(stat_len-master_stat_len)/(max(stat_len,master_stat_len)+1e-6);
-    hm_ratio = max(h_min/master_h_min,h_min/master_h_min);
-
-    ratio_sum = Fr_ratio-1+20*(theta_ratio-1)+tau0_ratio+sl_ratio+hm_ratio;
+    lambda_ratio = max(lambda/master_lambda,master_lambda/lambda);
+    rf_ratio = abs(rel_flux - master_rf);
+    ratio_sum = Fr_ratio-1+20*(theta_ratio-1)+tau0_ratio+sl_ratio+lambda_ratio+rf_ratio;
     if ratio_sum > 1e-6
         n_step = max(min(ceil(30*ratio_sum),400),90);
     else
@@ -98,25 +58,22 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
     Fr_list = linspace(master_Fr,Fr_eq,n_step);
     theta_list = linspace(master_theta,theta,n_step);
     tau0_list = linspace(master_tau0,tau0,n_step);
-    sl_list = linspace(master_stat_len,stat_len,n_step);
-    if master_h_min>0 && h_min<0
-        hm_list = linspace(master_h_min,0,n_step);
-    else
-        hm_list = linspace(max(master_h_min,master_y(2,1)/master_y(1,1)),h_min,n_step);
-    end
-    
-    h_b_pert = 2e-3;
+    lambda_list = linspace(master_lambda, lambda, n_step);
+    rf_list = linspace(master_rf, rel_flux, n_step);
 
-    [xi_final,y_final] = run_bvp_step(Fr_list, theta_list, tau0_list, sl_list, hm_list, master_xi, master_y);
-%         plot(xi_final,h_final)
-        if ~specify_param
-            out_vec = vertcat(xi_final,y_final);
-            lambda = y_final(3,1);
-            save("Results/"+filename,"out_vec","-ascii")
-            write_record("Results/wave_record.csv",filename,{"no_pe_no_vis","water",Fr_eq,theta,h_alt,0,0,tau0})
-        end
+    [xi_final,y_final] = run_bvp_step(Fr_list, theta_list, tau0_list, lambda_list, rf_list, master_xi, master_y);
+
+%     y_final = vertcat(y_final(1:2,:),lambda.*ones(size(xi_final)),y_final(3:end,:));
+    out_vec = vertcat(xi_final,y_final);
     
-    function [xi_out, y_out] = run_bvp_step(Fr_vals, theta_vals, tau0_vals, sl_vals, hm_vals, xi_in, y_in, tol,counter)
+%     filename = "flux_1point1.txt";
+%     save("Results/"+filename,"out_vec","-ascii")
+%     write_record("Results/wave_record.csv",filename,{"no_pe_no_vis","water",Fr_eq,theta,y_final(4,1),0,0,tau0})
+    
+    xi_final = xi_final*lambda_dim;
+    y_final = [u_eq_dim,u_eq_dim*h0_dim,h0_dim,u_eq_dim*h0_dim]'.*y_final;
+    
+    function [xi_out, y_out] = run_bvp_step(Fr_vals, theta_vals, tau0_vals, lambda_vals, rf_vals, xi_in, y_in, tol,counter)
         % Can account for a change in wavelength but should really use
         % viscous_Iv_bvp_from_master for that.
         if ~exist('counter','var')
@@ -138,8 +95,9 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
             theta_in = theta_vals(i);
             Fr_in = Fr_vals(i);
             tau0_in = tau0_vals(i);
-            sl_in = sl_vals(i);
-            h_min_in = hm_vals(i);
+            lambda_in = lambda_vals(i);
+            rel_flux_in = rf_vals(i);
+            sl_in=0;
             
             [h0,eq_Iv] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in,0);
 %             u_const = eq_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
@@ -172,14 +130,14 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
                 else
                     [xi_in,y_in] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
                     ,linspace(theta_vals(i-1),theta_vals(i),3)...
-                    , linspace(tau0_vals(i-1),tau0_in,3), linspace(sl_vals(i-1),sl_in,3), ...
-                    xi_in, y_in, tol,counter+1);
+                    , linspace(tau0_vals(i-1),tau0_in,3), linspace(lambda_vals(i-1),lambda_in,3), ...
+                    linspace(rf_vals(i-1),rel_flux_in,3), xi_in, y_in, tol,counter+1);
                 end
             else
                 [xi_in,y_in] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
                     ,linspace(theta_vals(i-1),theta_vals(i),3)...
-                    , linspace(tau0_vals(i-1),tau0_in,3), linspace(sl_vals(i-1),sl_in,3), ...
-                    xi_in, y_in, tol, counter+1);
+                    , linspace(tau0_vals(i-1),tau0_in,3), linspace(lambda_vals(i-1),lambda_in,3), ...
+                linspace(rf_vals(i-1),rel_flux_in,3), xi_in, y_in, tol, counter+1);
             end
         end
         y_out = solN1.y;
@@ -201,10 +159,9 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
             % law. Need to solve for u_w and Q1 too.
             u_w = y(1);
             Q1 = y(2);
-            lambda = y(3);
-            h = y(4);
+            h = y(3);
             u = (-Q1 + h.*u_w)./h;
-            m = y(5);
+            m = y(4);
             
             Iv = eq_Iv.*u/h.^2;
             
@@ -217,21 +174,18 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
                 Iv_deriv = eq_Iv.*2.*ud./h.^2-2.*Iv/h;
                 fb_deriv = -dmudIv_fn(Iv).*Iv_deriv.*(rho-rho_f)/rho+tau0_dl*rho_f/rho./h.^2;
                 dhdxi = 1/Fr_in^2.*h.^3.*fb_deriv/(3*h.^2/Fr_in^2);
-                
             end
 
-            dmdxi = h/(lambda+sl_in)*u;
-            dydxi = [0,0,0,dhdxi,dmdxi]'*lambda;
+            dmdxi = h/(lambda_in+sl_in)*u;
+            dydxi = [0,0,dhdxi,dmdxi]'*lambda_in;
         end
-        
-    
+
         function resid = bc_vals(ya,yb)
             h_crit = (ya(2)*Fr_in)^(2/3);
-            h_start = max(ya(2)/ya(1)+h_b_pert,h_min_in);
-            h_stop = (-h_start + sqrt(h_start.^2+8*ya(2)^2./(h_start/Fr_in^2)))/2;
+            h_stop = (-ya(3) + sqrt(ya(3).^2+8*ya(2)^2./(ya(3)/Fr_in^2)))/2;
             [~, crit_Iv] = crit_Iv_tau0_h(theta_in, rho_p, rho_f, eta_f, h_crit*h0, tau0_in,0);
             u_crit = crit_Iv/eq_Iv*h_crit^2; 
-            resid = [ya(1)-(u_crit*h_crit + ya(2))/h_crit, ya(4)-h_start, yb(4)-h_stop, ya(5), yb(5)-1]; 
+            resid = [ya(1)-(u_crit*h_crit + ya(2))/h_crit, yb(3)-h_stop, ya(4), yb(4)-rel_flux_in]; 
         end
     end
 end

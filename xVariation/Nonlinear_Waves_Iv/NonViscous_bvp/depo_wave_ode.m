@@ -64,11 +64,11 @@ function [xi_vals, h_vals, Q1, u_w,flux] = depo_wave_ode(theta, Fr, tau0)
         end
     
         function dhdxi = h_deriv_fn(xi,h)
-            if (abs(h-h_crit)>1e-6)
-                dhdxi = 1/Fr^2.*h.^3.*force_bal(h)./(h.^3/Fr^2-Q1.^2);
-            else
-                dhdxi = 1/Fr^2.*h.^3.*(force_bal_deriv(h))/(3*h.^2/Fr^2);
-            end
+%             if (abs(h-h_crit)>1e-6)
+            dhdxi = 1/Fr^2.*h.^3.*force_bal(h)./(h.^3/Fr^2-Q1.^2);
+%             else
+%                 dhdxi = 1/Fr^2.*h.^3.*(force_bal_deriv(h))/(3*h.^2/Fr^2);
+%             end
         end
 
         function num_val = force_bal_deriv(h)

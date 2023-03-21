@@ -40,35 +40,69 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
         provide_init = false;
     end
     if ~provide_init
-        master_name = "no_pe_tau0_20_lambda_80.txt";
+        master_name = "master_wave_no_pe.txt";
         master_file = load("Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
         record = readtable('Results/wave_record.csv');
 
         in_table = strcmp(record.Name, master_name);
-        wave_type = record.wave_type(in_table);
+        master_wave_type = record.wave_type(in_table);
         master_theta = record.theta(in_table); 
         master_lambda = record.lambda(in_table);
         master_Fr = record.Fr(in_table);
         master_nu = record.nu(in_table);
         master_tau0 = record.tau0(in_table);
+        master_rf = 1;
+        master_pres_h = strcmp(master_wave_type,"no_pe_pres_h");
+            
     else
         master_cell = num2cell(master_params);
-        [master_Fr,master_theta,master_lambda,master_nu,master_tau0] = master_cell{:};
+        if (size(master_cell,2) == 5)
+            [master_Fr,master_theta,master_lambda,master_nu,master_tau0] = master_cell{:};
+            master_rf = 1;
+            master_pres_h = 0;
+        elseif (size(master_cell,2) == 7)
+            [master_Fr,master_theta,master_lambda,master_nu,master_tau0,master_rf,master_pres_h] = master_cell{:};
+        end
     end
     
     if ~specify_param
-        Fr_eq = 0.8; 
-        lambda = 100;
-        theta = 12;
+%         Fr_eq = 1.5; 
+        lambda = 10;
+        theta = 10;
         nu = 2e-4;
-        tau0 = 20;
-        filename = "tau0_20_push_lambda.txt";
+        tau0 = 40;
+        rel_flux = 1;
+        pres_h = 0;
+        h0 = 0.1;
+        [Fr_eq, ~] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h0, tau0);
+        filename = "time_d_comp_vvshort.txt";
     else
         param_cell = num2cell(params);
-        [Fr_eq,theta,lambda,nu,tau0] = param_cell{:};  
+        if (size(param_cell,2) == 5)
+            [Fr_eq,theta,lambda,nu,tau0] = param_cell{:};
+            rel_flux = 1;
+            pres_h = 0;
+        elseif (size(param_cell,2) == 7)
+            [Fr_eq,theta,lambda,nu,tau0,rel_flux,pres_h] = param_cell{:};
+        end
     end
+    
+    if (pres_h ~= master_pres_h)
+        m_init = zeros(size(master_xi));
+        m_val = 0;
+        u_flux = (master_y(1,1) - master_y(2,:)./master_y(3,:)).^(1-pres_h);
+        for j = 1:size(master_xi,1)
+            m_init(j) = m_val;
+            if j < size(master_xi,1)
+                m_val = m_val + 1/lambda_init* (master_y(3,:)*u_flux(j)+y_wave(j+1,2)*u_init(j))/2*(xi_master(j+1)-xi_master(j));
+            end
+        end
+        master_y = vertcat(master_y(1:4,:),m_init);
+        master_rf = m_val;
+    end
+    
     stable = viscous_stability(theta,Fr_eq,nu,lambda);
     if stable
         error("Conditions are stable to perturbation so no waves will occur")
@@ -78,8 +112,8 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
         theta_ratio = max(theta/master_theta,master_theta/theta);
         lambda_ratio = max(lambda/master_lambda,master_lambda/lambda);
         tau0_ratio = abs(tau0-master_tau0)/(max(master_tau0,tau0)+1e-6);
-
-        ratio_sum = Fr_ratio-1+nu_ratio-1+20*(theta_ratio-1)+(lambda_ratio-1)+tau0_ratio;
+        rf_ratio = abs(rel_flux - master_rf);
+        ratio_sum = Fr_ratio-1+nu_ratio-1+20*(theta_ratio-1)+(lambda_ratio-1)+tau0_ratio+rf_ratio;
         if ratio_sum > 1e-6
             n_step = max(min(ceil(30*ratio_sum),400),90);
         else
@@ -93,9 +127,10 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
         nu_list = linspace(master_nu,nu,n_step);
         theta_list = linspace(master_theta,theta,n_step);
         tau0_list = linspace(master_tau0,tau0,n_step);
+        rf_list = linspace(master_rf, rel_flux, n_step);
         
         end_diff = zeros(size(lambda_list));
-        [xi_final,y_final] = run_bvp_step(Fr_list, nu_list, theta_list, lambda_list, tau0_list, master_xi, master_y);
+        [xi_final,y_final] = run_bvp_step(Fr_list, nu_list, theta_list, lambda_list, tau0_list, rf_list, master_xi, master_y);
         h_final = y_final(3,:);
 %         plot(xi_final,h_final)
         if ~specify_param
@@ -105,7 +140,7 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
         end
     end
     
-    function [xi_out, y_out] = run_bvp_step(Fr_vals, nu_vals, theta_vals, lambda_vals, tau0_vals, xi_in, y_in, tol,counter)
+    function [xi_out, y_out] = run_bvp_step(Fr_vals, nu_vals, theta_vals, lambda_vals, tau0_vals, rf_vals, xi_in, y_in, tol,counter)
         % Can account for a change in wavelength but should really use
         % viscous_Iv_bvp_from_master for that.
         if ~exist('counter','var')
@@ -127,6 +162,7 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             theta_in = theta_vals(i);
             Fr_in = Fr_vals(i);
             tau0_in = tau0_vals(i);
+            rf_in = rf_vals(i);
             if tau0_in == 0
                 crit_Iv = newt_solve_crit_Iv(theta_in, rho_p, rho_f);
                 u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
@@ -208,13 +244,13 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             force_bal = tand(theta_in)-sign(u).*P*mu_Iv_fn(Iv)-tau0_dl*rho_f/rho/h;
             n_eq = (force_bal)./n_coeff;
             dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_in^2/nu_dl/Q1*n_coeff*(n-n_eq);
-            dmdxi = h/lambda_in*u;
+            dmdxi = h*u^(1-pres_h)/lambda_in;
             dydxi = [0,0,dhdxi,dndxi,dmdxi]';
         end
-    end
-    
-    function resid = bc_vals(ya,yb)
-       resid = [ya(3)-yb(3), ya(4), yb(4), ya(5), yb(5)-1]; 
+        
+        function resid = bc_vals(ya,yb)
+           resid = [ya(3)-yb(3), ya(4), yb(4), ya(5), yb(5)-rf_in]; 
+        end
     end
 
     function mu_val = mu_Iv_fn(Iv)

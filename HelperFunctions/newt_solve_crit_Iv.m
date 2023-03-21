@@ -1,17 +1,15 @@
-function crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f, s)
-    if ~exist("s","var")
-        s = 0;
-    end
+function crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f, var_rho)
     mu1_Iv = 0.32;
-    mu2_Iv = 0.7;
-    Iv_0 = 0.005;
-
-    reg_param = 1*10^7;
+    if ~exist("var_rho","var")
+        var_rho = false;
+    end
 
     phi_c=0.585; % Volume fraction
     g=9.81; % m/s^2
-    rho = phi_c*rho_p + (1-phi_c)*rho_f;
-    pp = (rho-rho_f)*(1-s);
+    if ~var_rho
+        rho = phi_c*rho_p + (1-phi_c)*rho_f;
+        pp = (rho-rho_f);
+    end
     
     crit_mu = rho/pp*tand(theta);
     crit_Iv = 2e-6;
@@ -23,12 +21,23 @@ function crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f, s)
         crit_Iv = -1;
     else
         while (abs(resid)>max_tol)
+            if var_rho
+                phi = phi_c/(1+sqrt(crit_Iv));
+                rho = phi*rho_p + (1-phi)*rho_f;
+                phi_deriv = -phi_c/2/(1+sqrt(Iv))^2/sqrt(Iv);
+                rho_deriv = (rho_p-rho_f)*phi_deriv;
+                pp = (rho-rho_f);
+                crit_mu = rho/pp*tand(theta);
+                mu_deriv = rho_f/(rho-rho_f)^2*tand(theta)*rho_deriv;
+            else
+                mu_deriv = 0;
+            end
             resid = mu_Iv_fn(crit_Iv)-crit_mu;
             if (crit_Iv>1e-6)
-                crit_Iv = crit_Iv - resid./dmudIv_fn(crit_Iv);
+                crit_Iv = crit_Iv - resid./(dmudIv_fn(crit_Iv)+mu_deriv);
             else
                 dmudIv = (mu_Iv_fn(crit_Iv+del_Iv) - mu_Iv_fn(crit_Iv))/del_Iv;
-                crit_Iv = crit_Iv - resid./dmudIv;
+                crit_Iv = crit_Iv - resid./(dmudIv+mu_deriv);
             end
             if (crit_Iv<0)
                 warning("Newton solver has failed to converge, try a larger initial value");
@@ -36,13 +45,5 @@ function crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f, s)
                 break
             end
         end
-    end
-        
-    function mu_val = mu_Iv_fn(Iv)
-        mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
-    end
-    
-    function dmudIv = dmudIv_fn(Iv)
-        dmudIv = (mu2_Iv-mu1_Iv)*Iv_0./(Iv_0+abs(Iv)).^2 + 1 + 5/4*phi_c./sqrt(Iv);
     end
 end

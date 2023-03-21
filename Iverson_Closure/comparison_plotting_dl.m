@@ -1,5 +1,5 @@
 % opengl firmware
-names = ["Ive_mu_I_phi_I_13deg_water.txt"]; %"Ive_comp_4_deep_1_flux.txt"];%,"Ive_comp_4_deep_9_2_start.txt""Ive_comp_4_deep_9_1_start.txt","
+names = ["Ive_5deg_13init.txt"]; %"Ive_comp_4_deep_1_flux.txt"];%,"Ive_comp_4_deep_9_2_start.txt""Ive_comp_4_deep_9_1_start.txt","
 % names = ["Ive_comp_5_deep_custom_time_IC.txt"]; %,"Ive_comp_5_deep_custom_time_IC.txt"];%
 % Loads the data to compare and puts them in a list of simulations
 
@@ -282,7 +282,7 @@ for i=1:sim_num
         t1=[sum(t_vals{i,1}<t_max)+1];
         hold on
         C = brewermap(nfig+2, colour);
-        plot(plot_vec(1:end,t1),z_pe{i,1}(1:end),'DisplayName','Full Profile')%,'color',C(j+2,:)"t="+num2str(t_max))
+%         plot(plot_vec(1:end,t1),z_pe{i,1}(1:end),'DisplayName','Full Profile')%,'color',C(j+2,:)"t="+num2str(t_max))
 %         plot(plot_vec(end,t1)*(1-(1-z_u{i,1}).^2),z_pe{i,1}(1:end),'color','green','DisplayName',"t="+num2str(t_max))
 %         plot(da_phi_Iv(t1)*ones(N(i),1),z_pe{i,1}(1:end),'DisplayName','Depth Averaged Value')
 %         plot((phi_c/(1+sqrt(da_Iv(t1))))*ones(N(i),1),z_pe{i,1}(1:end),'DisplayName','Value with DA $I_v$')
@@ -425,9 +425,10 @@ end
 % ylabel('stuff','Position',[x y]) 
 
 ani_num = 1;
-make_avi=false;
+make_avi=true;
+C = viridis(4);
 if (make_avi) 
-    nframes=1000;
+    nframes=100;
 %     t_vals = ((0:nframes))*10;
 %     Frames=moviein(nframes);
 %     figure
@@ -439,30 +440,36 @@ if (make_avi)
 %     mkdir(workingDir)
 %     mkdir(workingDir,'images')
     cd fluxvids/images
-    for i=1:nframes
-        f = figure;
+    width = 12;
+    height = 7;
+    width_p = ceil(width*37.7952755906);
+    height_p = ceil(height*37.7952755906);
+    f = figure;
+%     set(f,'Position',[15 15 1200 700])
+    for i=1:1
+        clf;
         % Set a size if desired
-        width = 1000;
-        height = 600;
-        set(f,'Position',[15 15 width height])
-        t_max = 0.0+(i-1)*0.3;
-%         subplot(2,1,1)
-%         for j=1:sim_num
-%             t_index = sum(t_vals{j,1}<t_max)+1;
-%             plot(p_e{j,1}(:,t_index), z_pe{ani_num,1});
-%             if (j==1) 
-%                 hold on 
-%             end
-%         end
+        
+%         SetPaperSize(12,7);
+        t_max = 0.0+(i-1)*5;
+        
+        subplot(1,2,2)
+        for j=1:sim_num
+            t_index = sum(t_vals{j,1}<t_max)+1;
+            plot(p_e{j,1}(:,t_index), z_pe{ani_num,1},'color',C(1,:));
+            if (j==1) 
+                hold on 
+            end
+        end
 %         plot(crit_pe, z_pe{1,1},"--");
-%         hold off
+        hold off
 %         legend("Initial Flux = 0.6","Initial Flux = 0.7","Initial Flux = 0.8","Critical $p_e$","Location",'northeast','Interpreter','latex');
-% %         legend();
+%         legend();
 %         text(0.225,0.9, {"t="+num2str(t_max,'%11.1f'),"Rate = $\times 10$"},'Interpreter','latex')
-% %         annotation('textbox', [0.9, 0.7, 0.15, 0.1], 'String', "t="+num2str(t_max))
-%         xlim([0 0.5]);
-%         ylim([0 1]);
-%         xlabel("$p_e$",'Interpreter','latex');
+%         annotation('textbox', [0.9, 0.7, 0.15, 0.1], 'String', "t="+num2str(t_max))
+        xlim([0 0.5]);
+        ylim([0 1]);
+        xlabel("$p_e$",'Interpreter','latex','FontSize',12);
 %         ylabel("$z$",'Interpreter','latex');
 
 %         subplot(2,2,2)
@@ -475,39 +482,39 @@ if (make_avi)
 %         xlabel('$\phi$','Interpreter','latex');
 %         ylabel("$z$",'Interpreter','latex');
 
-        subplot(2,1,1)
+        subplot(1,2,1)
         col = [0.9 0.1 0.1];
-        for j=1:sim_num
+        for j=1:ani_num
             t_index = sum(t_vals{j,1}<t_max)+1;
-            plot(u_p{j,1}(:,t_index), z_pe{ani_num,1},'LineWidth',2, 'Color', col);
+            plot(u_p{j,1}(:,t_index), z_pe{ani_num,1},'color',C(1,:));
             if (j==1) 
                 hold on
                 col = [0.1 0.1 0.9];
             end
         end
-        xlim([0 1.5])
+        xlim([0 15])
         ylim([0 1])
-        xlabel("$u$",'Interpreter','latex','FontSize',16);
-        ylabel("$z$",'Interpreter','latex','FontSize',16);
-            
-        subplot(2,1,2)
-        col = [0.9 0.1 0.1];
-        for j=1:sim_num
-            t_index = sum(t_vals{j,1}<t_max)+1;
-            plot(t_vals{j,1}(1:t_index), flow_depth{j,1}(1:t_index),'LineWidth',2, 'Color', col);
-            if (j==1) 
-                hold on 
-            end
-            plot(t_vals{j,1}(t_index), flow_depth{j,1}(t_index),'.','MarkerSize',15, 'Color', col)
-            if (j==1) 
-%                 hold on
-                col = [0.1 0.1 0.9];
-            end
-            xlim([0 300])
-            ylim([0 1])
-        end
-        xlabel("$t$",'Interpreter','latex','FontSize',16);
-        ylabel("Flow Height",'Interpreter','latex','FontSize',16);
+        xlabel("$u$",'Interpreter','latex','FontSize',12);
+        ylabel("$z$",'Interpreter','latex','FontSize',12);
+        sgtitle("t="+num2str(t_max))      
+%         subplot(2,1,2)
+%         col = [0.9 0.1 0.1];
+%         for j=1:sim_num
+%             t_index = sum(t_vals{j,1}<t_max)+1;
+%             plot(t_vals{j,1}(1:t_index), flow_depth{j,1}(1:t_index),'LineWidth',2, 'Color', col);
+%             if (j==1) 
+%                 hold on 
+%             end
+%             plot(t_vals{j,1}(t_index), flow_depth{j,1}(t_index),'.','MarkerSize',15, 'Color', col)
+%             if (j==1) 
+% %                 hold on
+%                 col = [0.1 0.1 0.9];
+%             end
+%             xlim([0 300])
+%             ylim([0 1])
+%         end
+%         xlabel("$t$",'Interpreter','latex','FontSize',16);
+%         ylabel("Flow Height",'Interpreter','latex','FontSize',16);
 %         hold on
 %         plot(u_f{2,1}(:,i+29), z_u{2,1});
         hold off
@@ -527,27 +534,29 @@ if (make_avi)
 %         sgtitle("Slowing of Small Flux Flows on 4 degree Slope",'Interpreter','latex')
 %         drawnow();
 %         writeVideo(v,getframe(gcf))
-        exportgraphics(f,"img"+num2str(i,'%04d')+".jpg","Resolution",300)
-        close(f)
+%         set(f,'Position',[15 15 1200 700])
+%         exportgraphics(f,"img"+num2str(i,'%04d')+".jpg","Resolution",300)
+        figsave(f,"img"+num2str(i,'%04d')+".jpg",[1200 700])
+        
     end
-    
+    close(f)
 %     close all
 %     close(v)
     cd ../../
 end
 
 %%
-% imageNames = dir(fullfile(workingDir,'images','*.jpg'));
-% imageNames = {imageNames.name}';
-% 
-% outputVideo = VideoWriter(fullfile(workingDir,'shuttle_out.avi'));
-% outputVideo.FrameRate = 30;
-% open(outputVideo)
-% for ii = 1:length(imageNames)
-%    img = imread(fullfile(workingDir,'images',imageNames{ii}));
-%    writeVideo(outputVideo,img)
-% end
-% close(outputVideo)
+imageNames = dir(fullfile(workingDir,'images','*.jpg'));
+imageNames = {imageNames.name}';
+
+outputVideo = VideoWriter(fullfile(workingDir,'shuttle_out.avi'));
+outputVideo.FrameRate = 30;
+open(outputVideo)
+for ii = 1:length(imageNames)
+   img = imread(fullfile(workingDir,'images',imageNames{ii}));
+   writeVideo(outputVideo,img)
+end
+close(outputVideo)
 
 function beta_val=dimless_beta_fn(phi)
     phi_c=0.6;
@@ -567,4 +576,23 @@ function mu_val = mu_Iv_fn(Iv)
     Iv_0 = 0.005;
     phi_c=0.6;
     mu_val = tanh(1e8*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(abs(Iv)));
+end
+
+function figsave(fig,file,rez,txt,bak)
+    %Save figure as image, with custom resolutions and text scaling.
+    % figsave(fig,file,rez,txt,bak)
+    %
+    %Example:
+    % clf,text(0.1,0.5,{'This text should be';'50 pixels high';'and the image';'900W x 600H pix'},'FontSize',50)
+    % figsave(gcf,'Figure.jpg',[900 600])
+    if nargin<1 || isempty(fig),  fig  = gcf; end          %figure handle
+    if nargin<2 || isempty(file), file = 'Figure.jpg'; end %output file name
+    if nargin<3 || isempty(rez),  rez  = [900 600]; end    %resolution [horizontal vertical]
+    if nargin<4 || isempty(txt),  txt  = 1; end            %text scale factor
+    if nargin<5 || isempty(bak),  bak  = 1; end            %preserve background colour
+    set(fig,'PaperPosition',[0 0 rez/(100*txt)],'PaperUnits','inches'); %set paper size (does not affect display)
+    if bak
+        set(fig,'InvertHardcopy','off'); %preserve background colour
+    end
+    imwrite(print(gcf,'-RGBImage',['-r' num2str(100*txt,'%f')]),file) %print RGB image to file (slow)
 end
