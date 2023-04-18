@@ -179,23 +179,24 @@ function simple_plotting
     crit_pe = p_b{i,1}+crit_grad*(1-z_pe{i,1});
     
     nline=4;
-    n_subs = 2;
-    C = viridis(7);
-    plot_vec = p_e{i,1};
-    plot_cell = {p_e{i,1},phi{i,1}};
-    t_init = 500;
-    t_step = 500;
+    n_subs = 1;
+    C = viridis(4);
+    plot_vec = dupdz{i,1};
+%     plot_cell = {p_e{i,1},phi{i,1}};
+    t_init = 50;
+    t_step = 50;
     t_maxes = linspace(t_init,t_init+t_step*(nline-1),nline);
-    SetPaperSize(10,5)
+    SetPaperSize(6,9)
     
     f = zeros(1,nline);
-%     a = zeros(1,2);
-%     a(1) = plot([NaN],[NaN],'color','k','DisplayName',"Full");
-%     a(2) = plot([NaN],[NaN],'color','k','LineStyle','--','DisplayName',"Approx.");
+    a = zeros(1,2);
+    hold on
+    a(1) = plot([NaN],[NaN],'color','k','DisplayName',"Full");
+    a(2) = plot([NaN],[NaN],'color','k','LineStyle','--','DisplayName',"Approx.");
     for k = 1:n_subs
         subplot(1,n_subs,k);
-        hold on
-        plot_vec = plot_cell{1,k};
+%         hold on
+%         plot_vec = plot_cell{1,k};
         for j=linspace(1,nline,nline)
     %         t_vals{j,1}(t1(j))
             t_max = t_maxes(j);
@@ -204,7 +205,7 @@ function simple_plotting
             t1=[sum(t_vals{i,1}<t_max)+1];
             f(j) = plot(plot_vec(1:end,t1),z_pe{i,1}(1:end),'color',C(j,:),'DisplayName',"t="+num2str(t_max));
     %         plot(pe_fast(:,t1),z_pe{i,1},'LineStyle','--','color',C(j,:),'DisplayName',"Approximation");
-    %         plot(dudz_medium(1:end,t1),z_pe{i,1}(1:end),'LineStyle','--','color',C(j,:),'DisplayName',"Approximation")
+            plot(dudz_medium(1:end,t1),z_pe{i,1}(1:end),'LineStyle','--','color',C(j,:),'DisplayName',"Approximation")
         end
         if k == 1
             ylabel('$z$','Interpreter','latex')
@@ -214,10 +215,10 @@ function simple_plotting
         end
     end
 %     plot(crit_pe,z_pe{i,1}(1:end),'LineStyle','--','color','r','DisplayName',"$p_{crit}$")
-%     legend([a,f],'Location','eastoutside'); %["Full Profile","Approximation","t=1","t=2"]
+    legend([a,f],'Location','southoutside'); %["Full Profile","Approximation","t=1","t=2"]
 %     legend([f(1),f(2)],{"Full Profile","Approximation"},'Location','east');
-    legend('Interpreter','latex');
-%     xlabel('$\frac{\partial u}{\partial z}$')
+%     legend('Location','southoutside','Interpreter','latex');
+    xlabel('$\frac{\partial u}{\partial z}$')
 %     xlabel('$p_e$')
 %     ylabel('$z$')
 %     annotation('arrow',[0.25 0.45],...
@@ -228,9 +229,9 @@ function simple_plotting
 %     'FitBoxToText','off');
 %     title("t="+num2str(t_max))
 %     xlim([0,0.045]);
-    figname = "Ive_5deg_slow_pe_phi.pdf";
-    exportgraphics(gcf,figname,"Resolution",300)
-%     exp_graph(gcf,figname)
+    figname = "Ive_5deg_medium_gd_match.pdf";
+%     exportgraphics(gcf,figname,"Resolution",300)
+    exp_graph(gcf,figname)
     movefile(figname,"Figures/BAMC_Talk")
     function beta_val=beta_fn(phi)
         beta_val = 150*phi.^2.*eta_f_dl./((1-phi).^3.*d_dl^2);

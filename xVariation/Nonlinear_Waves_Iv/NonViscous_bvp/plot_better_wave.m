@@ -2,22 +2,19 @@ filename = "no_vis_better_master.txt"; %long_low_pe
 master_file = load("Results/"+filename);
 xi = master_file(1,:);
 y = master_file(2:end,:);
-record = readtable('Results/wave_record.csv');
+record = readtable('Results/full_record.csv');
 
 in_table = strcmp(record.Name, filename);
 wave_type = record.wave_type(in_table);
 theta = record.theta(in_table); 
 Fr = record.Fr(in_table);
 tau0 = record.tau0(in_table);
-if strcmp(wave_type,"full")
-    full_model=true;
-    d = record.d(in_table);
-    alpha = record.alpha(in_table);
-else
-    full_model=false;
-    alpha=0;
-    d=0;
-end
+full_model=true;
+d = record.d(in_table);
+alpha = record.alpha(in_table);
+u_w = record.u_w(in_table);
+lambda = record.lambda(in_table);
+h_crit_xi = record.crit_xi(in_table);
 
 mu1_Iv = 0.32;
 mu2_Iv = 0.7;
@@ -78,19 +75,20 @@ h_stop_dl = h_stop/z_scale;
 
 beta_dl = 150*phi_c.^2.*eta_f_dl./((1-phi_c).^3.*d_dl^2);
 
-u_w = y(1,1);
-lambda = y(2,1);
-h_crit_xi = y(3,1);
-Q1 = y(4,:);
-h = y(5,:);
+% u_w = y(1,1);
+% lambda = y(2,1);
+% h_crit_xi = y(3,1);
+Q1 = y(1,:);
+h = y(2,:);
 u = u_w - Q1./h;
-m = y(6,:);
+m = y(3,:);
 
 xi = horzcat(xi(xi<1)*h_crit_xi,h_crit_xi+(xi(xi>=1)-1)*(lambda-h_crit_xi));
 
 if full_model
-    phi = y(7,:)./Q1;
-    pb = y(8,:) + rho_dl*g_dl*cosd(theta)*chi.*h;
+    phi = y(4,:)./Q1;
+    y5 = y(5,:);
+    pb = y(5,:) + rho_dl*g_dl*cosd(theta)*chi.*h;
     pe = pb-h;
 else
     pb=h;
@@ -116,13 +114,16 @@ end
 
 pp = p_tot_grad_dl.*h-pb;
 D = -2/beta_dl./h.*(pb-h);
-Iv = abs(2*eta_f_dl.*u./h./pp);
+Iv = abs(3*eta_f_dl.*abs(u)./h./pp);
 
 if full_model
     zeta = 3./(2*alpha_dl.*h) + P/4;
-    tan_psi = phi - phi_c./(1+sqrt(Iv));
+    phi_Iv = phi_c./(1+sqrt(Iv));
+    tan_psi = phi - phi_Iv;
     R_w3 = -phi.*rho_f_dl/rho_dl.*D;
-    R_w4 = (-P.*chi+zeta).*D - 2*3/alpha_dl./h.*u.*(tan_psi);
+    diffusion = (-P.*chi+zeta).*D;
+    dilatancy = 2*3/alpha_dl./h.*u.*(tan_psi);
+    R_w4 = diffusion - dilatancy;
 end
 
 Fr_equi = zeros(size(h));
@@ -132,7 +133,7 @@ for i=1:size(h,2)
 end
 
 n_coeff = 1-Q1.^2.*Fr^2./h.^3;
-Iv = 3*eta_f_dl.*abs(u)./h./pp;
+% Iv = 3*eta_f_dl.*abs(u)./h./pp;
 mu_val = pp./(p_tot_grad_dl.*h).*mu_Iv_fn(Iv)+tau0_dl*rho_f/rho./h;
 force_bal = tand(theta)-sign(u).*mu_val;
 dhdxi = force_bal./n_coeff;
@@ -144,9 +145,9 @@ dQdxi = -P.*D;
 dmdxi = h./lambda.*u;
 
 if full_model
-    dy6dxi = -R_w3;
-    dy7dxi = R_w4./(u-u_w);
-    dpbdxi = dy7dxi + rho_dl*g_dl*cosd(theta)*chi.*dhdxi;
+    dy4dxi = -R_w3;
+    dy5dxi = R_w4./(u-u_w);
+    dpbdxi = dy5dxi + rho_dl*g_dl*cosd(theta)*chi.*dhdxi;
 
     dpbdxi_scale = dpbdxi/(p_max-p_min);
     dhdxi_scale = dhdxi/(h_max-h_min);
@@ -154,7 +155,7 @@ end
 
 %%
 
-C = viridis(3);
+% C = viridis(3);
 hold on
 % plot(xi,2*Q1./Fr.^2.*dQdxi./(3.*h.^3), "DisplayName", "Waveform","color",C(1,:))
-plot(xi(1:end-1),h_grad, "DisplayName", "Waveform","color",C(2,:))
+plot(xi(1:end),pb, "DisplayName", "Waveform"), %"color",C(2,:)

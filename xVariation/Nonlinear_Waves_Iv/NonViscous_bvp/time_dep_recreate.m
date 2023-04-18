@@ -1,4 +1,4 @@
-function [xi_final,y_final] = time_dep_recreate(h0_dim,theta,lambda_dim,tau0,rel_flux,pres_h)
+ function [xi_final,y_final] = time_dep_recreate(h0_dim,theta,lambda_dim,tau0,rel_flux,pres_h)
 % Converts the master wave stored in no_pe_no_vis_master.txt into a 
 % waveform that maintains the flux of the conditions specified. Allows 
 % change in theta, Froude number and yield stress.

@@ -76,18 +76,14 @@ workingDir = 'fluxvids';
 cd fluxvids/images
 width = 12;
 height = 7;
-width_p = ceil(width*37.7952755906);
-height_p = ceil(height*37.7952755906);
+% width_p = ceil(width*37.7952755906);
+% height_p = ceil(height*37.7952755906);
 f = figure;
-figsave(f,"img.jpg",[1400 700])
-delete img.jpg
 for i=1:1000
     fig_name = "img"+num2str(i,'%04d')+".jpg";
     
     % Set a size if desired
     set(f,'Position',[15 15 1000 500])
-%     hold on
-%         SetPaperSize(12,7);
     if i<500
         t_max = 0.0+(i-1);
         rate = 1;
@@ -114,7 +110,6 @@ for i=1:1000
 
     sgtitle("$\theta = "+num2str(theta)+"^{\circ}$, $t="+num2str(t_max)+"$, Rate = $\times"+num2str(rate)+"$",'Interpreter','latex')      
 
-%     set(f,'Position',[15 15 1200 700])
     im_len = 0;
     im_hgt = 0;
     if (i == 1)
@@ -123,7 +118,7 @@ for i=1:1000
         req_len = size(im,1);
         req_hgt = size(im,2);
     else
-        while (im_len~=req_len) || (im_hgt~=req_hgt)
+        while (im_len~=req_len) || (im_hgt~=req_hgt) % Saves it repeatedly until the right size
             exportgraphics(f,fig_name,"Resolution",300)
             im = imread(fig_name);
             im_len = size(im,1);
@@ -138,7 +133,7 @@ close(f)
 %     close(v)
 cd ../../
 
-%%
+%% This knits all the frames together into a video
 imageNames = dir(fullfile(workingDir,'images','*.jpg'));
 imageNames = {imageNames.name}';
 
@@ -150,22 +145,3 @@ for ii = 1:length(imageNames)
    writeVideo(outputVideo,img)
 end
 close(outputVideo)
-
-function figsave(fig,file,rez,txt,bak)
-    %Save figure as image, with custom resolutions and text scaling.
-    % figsave(fig,file,rez,txt,bak)
-    %
-    %Example:
-    % clf,text(0.1,0.5,{'This text should be';'50 pixels high';'and the image';'900W x 600H pix'},'FontSize',50)
-    % figsave(gcf,'Figure.jpg',[900 600])
-    if nargin<1 || isempty(fig),  fig  = gcf; end          %figure handle
-    if nargin<2 || isempty(file), file = 'Figure.jpg'; end %output file name
-    if nargin<3 || isempty(rez),  rez  = [900 600]; end    %resolution [horizontal vertical]
-    if nargin<4 || isempty(txt),  txt  = 1; end            %text scale factor
-    if nargin<5 || isempty(bak),  bak  = 1; end            %preserve background colour
-    set(fig,'PaperPosition',[0 0 rez/(100*txt)],'PaperUnits','inches'); %set paper size (does not affect display)
-    if bak
-        set(fig,'InvertHardcopy','off'); %preserve background colour
-    end
-    imwrite(print(gcf,'-RGBImage',['-r' num2str(100*txt,'%f')]),file) %print RGB image to file (slow)
-end
