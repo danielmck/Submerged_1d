@@ -26,7 +26,7 @@ function [xi_final,y_final] = full_depo_wave_better(specify_param,params,provide
     end
     if ~provide_init
         Res_dir = "~/Documents/MATLAB/1D_System/xVariation/Nonlinear_Waves_Iv/NonViscous_bvp/";
-        master_name = "no_vis_better_master.txt"; %no_vis_better_master
+        master_name = "lambda_20_h.txt"; %no_vis_better_master
         master_file = load(Res_dir+"Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -72,14 +72,14 @@ function [xi_final,y_final] = full_depo_wave_better(specify_param,params,provide
         
         set_h_min = false;
         h_min = master_h_min;
-        lambda_final = 12;
+        lambda_final = 20;
         
-        pres_h = false;
+        pres_h = true;
         rel_flux = 1;
 
         % h_alt specifies the distance from the static minimum that the
         % wave must begin at.
-        filename = "no_vis_better_master.txt";      
+        filename = "no_vis_better_pres_h.txt";      
     else
         param_cell = num2cell(params);
         [Fr_eq,theta,wlen_val,set_h_min,tau0,alpha,d,pres_h,rel_flux] = param_cell{:};
@@ -147,7 +147,7 @@ function [xi_final,y_final] = full_depo_wave_better(specify_param,params,provide
 % %     master_p(4) = 0.05;
 %     master_y = master_y(4:8,:);
     
-    [xi_final,y_final,p_final] = run_bvp_step(Fr_list, theta_list, tau0_list, wlen_list, alpha_list, d_list, rf_list, master_xi, master_y, master_p);
+    [xi_final,y_final,p_final] = run_bvp_step(Fr_list, theta_list, tau0_list, wlen_list, alpha_list, d_list, rf_list, master_xi, master_y, master_p,1e-6);
     if ~specify_param
         out_vec = vertcat(xi_final,y_final);
         save("Results/"+filename,"out_vec","-ascii")
@@ -166,7 +166,7 @@ function [xi_final,y_final] = full_depo_wave_better(specify_param,params,provide
         xi_eps = 1e-3;
         if counter > 10
             out_vec = vertcat(xi_in,y_in);
-            fail_name = "lambda_limit_small_tol.txt";
+            fail_name = "no_vis_better_pres_h.txt";
             save("Results/"+fail_name,"out_vec","-ascii")
             write_record("Results/full_record.csv",fail_name,{"full","water",Fr_vals(1),theta_vals(1),alpha_vals(1),d_vals(1),tau0_vals(1),p_in(1),p_in(2),p_in(3)})
             error("Max iteration depth reached, non convergence")

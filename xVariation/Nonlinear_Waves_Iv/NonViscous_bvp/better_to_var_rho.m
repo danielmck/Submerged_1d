@@ -44,43 +44,11 @@ function [xi_final,y_final] = better_to_var_rho(custom_init,reverse,params,provi
     filename = "var_rho_master.txt";
     master_p = [master_u_w,master_lambda,master_crit_xi];
 
-    
-    
-    [h0, crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, tau0);
-    u_eq = Fr*sqrt(g*cosd(theta)*h0);
-    phi_eq = phi_c/(1+sqrt(crit_Iv));
-    
-    crit_pb = rho_f*g*cosd(theta)*h0;
-    
-%     p_tot = rho*g*cosd(theta);
-    
-    z_scale = h0;
-    v_scale = u_eq;
-    p_scale = crit_pb;
-    t_scale = z_scale/v_scale;
-
-    tau0_dl = tau0/p_scale;
-    eta_f_dl = eta_f/(p_scale*t_scale);
-    alpha_dl = alpha*p_scale;
-    g_dl = g*t_scale/v_scale; 
-    
-    u_eq_dl = u_eq/v_scale;
-    
-    rho_f_dl = rho_f*v_scale^2/p_scale;
-    rho_p_dl = rho_p*v_scale^2/p_scale;
-    d_dl = d/z_scale;
-    
-%     p_tot_grad_dl = p_tot/p_scale*z_scale;
-%     rho_dl = rho_p_dl*phi_c+rho_f_dl*(1-phi_c);
-    
-    
-    beta_dl = 150*phi_c.^2.*eta_f_dl./((1-phi_c).^3.*d_dl^2);
-    
     h_alt = master_y(2,1);
     y_in = master_y;
     xi_in=master_xi;
     
-    tol=1e-4;
+    tol=1e-3;
     denom_eps = 1e-4;
     
     nstep=100;
@@ -109,9 +77,38 @@ function [xi_final,y_final] = better_to_var_rho(custom_init,reverse,params,provi
         end
         n_min = 2-(counter==1);
         for i=n_min:nstep
-            phi_param = phi_param_list(i);
+            phi_param = phi_param_list(i);    
+            [h0, crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, tau0,false,true,phi_param);
+            u_eq = Fr*sqrt(g*cosd(theta)*h0);
+            phi_eq = phi_c/(1+sqrt(crit_Iv));
+
+            crit_pb = rho_f*g*cosd(theta)*h0;
+    
+%     p_tot = rho*g*cosd(theta);
+    
+            z_scale = h0;
+            v_scale = u_eq;
+            p_scale = crit_pb;
+            t_scale = z_scale/v_scale;
+
+            tau0_dl = tau0/p_scale;
+            eta_f_dl = eta_f/(p_scale*t_scale);
+            alpha_dl = alpha*p_scale;
+            g_dl = g*t_scale/v_scale; 
+
+            u_eq_dl = u_eq/v_scale;
+
+            rho_f_dl = rho_f*v_scale^2/p_scale;
+            rho_p_dl = rho_p*v_scale^2/p_scale;
+            d_dl = d/z_scale;
+
+        %     p_tot_grad_dl = p_tot/p_scale*z_scale;
+        %     rho_dl = rho_p_dl*phi_c+rho_f_dl*(1-phi_c);
+
+
+            beta_dl = 150*phi_c.^2.*eta_f_dl./((1-phi_c).^3.*d_dl^2);
             solInit1=bvpinit(xi_in,@bvp_guess,p_in);
-            opts = bvpset('RelTol',tol,'NMax',2000);
+            opts = bvpset('RelTol',tol,'NMax',2000*counter);
             solN1 = bvp4c(@(x,y,r,p) viscous_syst(x,y,r,p),@bc_vals,solInit1,opts);
             resid = solN1.stats.maxres;
             if (resid>tol)
@@ -187,10 +184,14 @@ function [xi_final,y_final] = better_to_var_rho(custom_init,reverse,params,provi
                 A_pp_coeff = -mu_Iv_fn(Iv)./(p_tot_grad_dl.*h)+p_p./(p_tot_grad_dl.*h).*dmudIv_fn(Iv).*Iv./p_p;
                 A_pb_coeff = -P.*2./beta_dl-A_pp_coeff;
                 A_h_coeff = p_p./(p_tot_grad_dl.*h.^2).*mu_Iv_fn(Iv)+p_p./(p_tot_grad_dl.*h).*dmudIv_fn(Iv).*3*eta_f_dl.*abs(u)./h.^2./p_p+tau0_dl.*rho_f_dl./rho_dl./h.^2-P.*2./beta_dl+A_pp_coeff.*rho_dl.*g_dl.*cosd(theta);
-
+                A_rho_coeff = -1/rho_dl*(-p_p./(p_tot_grad_dl.*h).*mu_Iv_fn(Iv)-tau0_dl*rho_f_dl/rho_dl/h-rho_f_dl/rho_dl*D*h);
+                A_phi_coeff = (rho_p_dl-rho_f_dl)*g_dl*cosd(theta)*h*A_pp_coeff+3/4*(rho_p_dl-rho_f_dl)*g_dl*cosd(theta)*h*A_pb_coeff+A_rho_coeff*(rho_p_dl-rho_f_dl);
+                
+                dphidxi = (dy6dxi-phi*dQdxi)/Q1;
+                
                 full_h_coeff = (h.^3./Fr^2.*(g_dl*cosd(theta)*rho_dl.*chi.*A_pb_coeff+A_h_coeff-p_p./(p_tot_grad_dl.*h).*dmudIv_fn(Iv).*Iv./u.*Q1./h.^2)+3.*h.^2./Fr^2.*(fb_val+P.*D.*h));
                 numer_h_term = full_h_coeff.*dhdxi;
-                numer_other_term = h.^3./Fr^2.*(dy7dxi.*A_pb_coeff+p_p./(p_tot_grad_dl.*h).*dmudIv_fn(Iv).*Iv./u.*dQdxi./h.^2);
+                numer_other_term = h.^3./Fr^2.*(dy7dxi.*A_pb_coeff+p_p./(p_tot_grad_dl.*h).*dmudIv_fn(Iv).*Iv./u.*dQdxi./h.^2+phi_param*A_phi_coeff*dphidxi);
 
                 h_quad_roots = roots([3*h.^2./Fr^2, -full_h_coeff-2.*Q1.*dQdxi, -numer_other_term]);
                 if imag(h_quad_roots(1))==0

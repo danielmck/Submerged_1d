@@ -1,4 +1,4 @@
- function [crit_h, Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr_eq, tau0, dl, rho_var)
+ function [crit_h, Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr_eq, tau0, dl, rho_var, phi_param)
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;
@@ -9,7 +9,10 @@
     if ~exist("rho_var","var")
         rho_var = false;
     end
-
+    if ~exist("phi_param","var")
+        phi_param = 1-rho_var;
+    end
+    
     reg_param = 1*10^7;
     count = 0;
     phi_c=0.585; % Volume fraction
@@ -41,20 +44,24 @@
             else
                 Iv = Iv-resid/force_deriv;
             end
-            crit_h = get_h(Iv);
+            crit_h = (3*Fr_eq*eta_f/(Iv*(rho-rho_f)*sqrt(g*cosd(theta))))^(2/3);
             count=count+1;
         end
     else
-        Iv = newt_solve_crit_Iv(theta,rho_p,rho_f);
-        crit_h = get_h(Iv);
+        Iv = newt_solve_crit_Iv(theta,rho_p,rho_f,rho_var,phi_param);
+        if rho_var
+            phi = phi_c/(1+sqrt(Iv));
+            rho = phi_param*(phi*rho_p + (1-phi)*rho_f)+(1-phi_param)*(phi_c*rho_p + (1-phi_c)*rho_f);
+        end
+        crit_h = (3*Fr_eq*eta_f/(Iv*(rho-rho_f)*sqrt(g*cosd(theta))))^(2/3);
     end
     
     function fb = force_bal_fn(Iv)
-        h=get_h(Iv);
         if rho_var
             phi = phi_c/(1+sqrt(Iv));
-            rho = phi*rho_p + (1-phi)*rho_f;
+            rho = phi_param*(phi*rho_p + (1-phi)*rho_f)+(1-phi_param)*(phi_c*rho_p + (1-phi_c)*rho_f);
         end
+        h=(3*Fr_eq*eta_f/(Iv*(rho-rho_f)*sqrt(g*cosd(theta))))^(2/3);
         pp = (rho-rho_f)*g*cosd(theta)*(h*(1-dl)+dl/(rho_f*g*cosd(theta)));
         crit_mu = rho/(rho-rho_f)*tand(theta)-tau0/pp;
         fb = mu_Iv_fn(Iv)-crit_mu;
@@ -77,8 +84,8 @@
         h=get_h(Iv);
         if rho_var
             phi = phi_c/(1+sqrt(Iv));
-            rho = phi*rho_p + (1-phi)*rho_f;
-            rho_deriv = get_rho_deriv(Iv);
+            rho=phi_param*(phi*rho_p + (1-phi)*rho_f)+(1-phi_param)*(phi_c*rho_p + (1-phi_c)*rho_f);
+            rho_deriv = phi_param*get_rho_deriv(Iv);
         else
             rho_deriv = 0;
         end

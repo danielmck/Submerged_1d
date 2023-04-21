@@ -20,7 +20,7 @@ function [xi_final,y_final] = convert_to_better(custom_init,reverse,params,provi
         param_cell = num2cell(params);
         [Fr,theta,h_alt,alpha,d,tau0] = param_cell{:};
     else
-        master_name = "non_vis_convert.txt";
+        master_name = "nv_convert_pres_h.txt";
         master_file = load("../Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -28,6 +28,7 @@ function [xi_final,y_final] = convert_to_better(custom_init,reverse,params,provi
 
         in_table = strcmp(record.Name, master_name);
         wave_type = record.wave_type(in_table);
+        pres_h = 1; %(wave_type=="full_pres_h");
         theta = record.theta(in_table);
 %         lambda = record.lambda(in_table);
         Fr = record.Fr(in_table);
@@ -91,6 +92,7 @@ function [xi_final,y_final] = convert_to_better(custom_init,reverse,params,provi
     y_in = horzcat(master_y(2:end,1:crit_ind),crit_y,crit_y,master_y(2:end,crit_ind+1:end));
     xi_in = horzcat(master_xi(:,1:crit_ind)/exact,1,1,1+(master_xi(:,crit_ind+1:end)-exact)/(lambda-exact));
     p_in = [master_y(1,1),lambda,exact];
+    rf_in = 1; %y_in(3,end);
 %     h_crit = (master_y(5,end)+master_y(10,1))/2;
 %     master_y(5,end) = h_crit;
 %     master_y(10,1) = h_crit;
@@ -121,7 +123,7 @@ function [xi_final,y_final] = convert_to_better(custom_init,reverse,params,provi
     xi_out = solN1.x;
     p_out = solN1.parameters;
     out_vec = vertcat(xi_out,y_out);
-    filename = "from_non_vis.txt";
+    filename = "from_non_vis_pres_h.txt";
     save("Results/"+filename,"out_vec","-ascii")
     write_record("Results/full_record.csv",filename,{"full","water",Fr,theta,alpha,d,tau0,p_out(1),p_out(2),p_out(3)})
         
@@ -168,7 +170,7 @@ function [xi_final,y_final] = convert_to_better(custom_init,reverse,params,provi
         R_w4 = (-P*chi+zeta)*D - 2*3/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
 
         dQdxi = -P*D;
-        dmdxi = h/(lambda+stat_len)*u;
+        dmdxi = h/(lambda+stat_len)*u^(1-pres_h);
         dy6dxi = -R_w3;
         dy7dxi = R_w4/(u-u_w);
         dydxi = [dQdxi,dhdxi,dmdxi,dy6dxi,dy7dxi];
@@ -214,7 +216,7 @@ function [xi_final,y_final] = convert_to_better(custom_init,reverse,params,provi
         
         cont_resid = (ya(:,2) - yb(:,1))';  %[ya(1,2)-yb(1,1),ya(2,2)-yb(2,1),ya(3,2)-yb(3,1),ya(4,2)-yb(4,1), ...
              %ya(8,2)-yb(8,1),ya(8,2)-yb(8,1),ya(8,2)-yb(8,1),ya(8,2)-yb(8,1)]
-        resid = [ya(1,1)-yb(1,2), ya(2,1)-h_start, yb(2,2)-h_stop, ya(3,1), yb(3,2)-1,...
+        resid = [ya(1,1)-yb(1,2), ya(2,1)-h_start, yb(2,2)-h_stop, ya(3,1), yb(3,2)-rf_in,...
             (ya(5,1)-yb(5,2)), denom_mid, fb_val_mid, cont_resid]; 
     end
 end
