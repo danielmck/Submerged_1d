@@ -10,7 +10,7 @@
         rho_var = false;
     end
     if ~exist("phi_param","var")
-        phi_param = 1-rho_var;
+        phi_param = rho_var;
     end
     
     reg_param = 1*10^7;
@@ -26,7 +26,7 @@
         del_Iv = 1e-8;
         max_Iv = 1e-2;
         min_Iv = 1e-8;
-        Iv = newt_solve_crit_Iv(theta,rho_p,rho_f);
+        Iv = newt_solve_crit_Iv(theta,rho_p,rho_f,rho_var,phi_param);
         while (abs(resid)>max_tol)
             resid = force_bal_fn(Iv);
             if Iv > 1e-7

@@ -4,7 +4,7 @@ function crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f, var_rho, phi_param)
         var_rho = false;
     end
     if ~exist("phi_param","var")
-        phi_param = 1-var_rho;
+        phi_param = var_rho;
     end
 
     phi_c=0.585; % Volume fraction

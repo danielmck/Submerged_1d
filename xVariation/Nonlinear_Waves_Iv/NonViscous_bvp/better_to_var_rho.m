@@ -71,7 +71,7 @@ function [xi_final,y_final] = better_to_var_rho(custom_init,reverse,params,provi
             error("Max iteration depth reached")
         end
         if (counter == 1)
-            phi_param_list = [0,logspace(-6,0,nstep-1)];
+            phi_param_list = linspace(0,1,nstep);
         else
             phi_param_list = linspace(curr,target,nstep);
         end
@@ -215,7 +215,7 @@ function [xi_final,y_final] = better_to_var_rho(custom_init,reverse,params,provi
 
             h_mid = ya(2,2);
             u_mid = (-ya(1,2) + h_mid.*p(1))./h_mid;
-            phi_mid = ya(4,2);
+            phi_mid = ya(4,2)./ya(1,2);
             denom_mid = (h_mid.^3/Fr^2-ya(1,2).^2);
             rho_mid = phi_param*(rho_p_dl*phi_mid+rho_f_dl*(1-phi_mid))+(1-phi_param)*(rho_p_dl*phi_c+rho_f_dl*(1-phi_c));
             P_mid = (rho_mid-rho_f_dl)/rho_mid;

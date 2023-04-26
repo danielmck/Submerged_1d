@@ -1,4 +1,4 @@
-filelist = ["from_non_vis_pres_h_pt2.txt"]; %long_low_pe
+filelist = ["lambda_19_pres_h.txt"]; %long_low_pe
 n_files = size(filelist,2);
 
 mu1_Iv = 0.32;
@@ -18,10 +18,7 @@ rho_f = 1000;
 eta_f = 0.0010016; % Pa s
 
 rho_p = 2500;
-rho = rho_p*phi_c+rho_f*(1-phi_c);
 
-chi = (rho_f+3*rho)/(4*rho);
-P = (rho-rho_f)/rho;
 
 theta = zeros(n_files,1);
 Fr = zeros(n_files,1);
@@ -65,6 +62,9 @@ u = cell([n_files,1]);
 m = cell([n_files,1]);
 xi = cell([n_files,1]);
 phi = cell([n_files,1]);
+rho = cell([n_files,1]);
+P = cell([n_files,1]);
+chi = cell([n_files,1]);
 y5 = cell([n_files,1]);
 pb = cell([n_files,1]);
 pe = cell([n_files,1]);
@@ -134,19 +134,19 @@ for i=1:n_files
 % s_c = 1-rho/(rho-rho_f)*tand(theta)/mu1_Iv;
 
     if tau0(i) == 0
-        crit_Iv(i) = newt_solve_crit_Iv(theta(i), rho_p, rho_f);
+        crit_Iv(i) = newt_solve_crit_Iv(theta(i), rho_p, rho_f,true);
         pp_eq_grad(i) = (rho_p-rho_f)*g*phi_c*cosd(theta(i));
         u_const(i) = crit_Iv(i)/eta_f/3*pp_eq_grad(i);
         h0(i) = ((Fr(i)*sqrt(g*cosd(theta(i))))./u_const(i))^(2/3);  
     else
-        [h0(i), crit_Iv(i)] = crit_Iv_tau0(theta(i), rho_p, rho_f, eta_f, Fr(i), tau0(i));
+        [h0(i), crit_Iv(i)] = crit_Iv_tau0(theta(i), rho_p, rho_f, eta_f, Fr(i), tau0(i),false,true);
     end
     u_eq(i) = Fr(i)*sqrt(g*cosd(theta(i))*h0(i));
     phi_eq(i) = phi_c/(1+sqrt(crit_Iv(i)));
-    p_tot(i) = rho*g*cosd(theta(i));
+%     p_tot(i) = rho*g*cosd(theta(i));
     crit_pb(i) = rho_f*g*cosd(theta(i))*h0(i);
 
-    h_stop(i) = tau0(i)/(rho*g*cosd(theta(i)))/(tand(theta(i))-(rho-rho_f)/rho*mu1_Iv);
+%     h_stop(i) = tau0(i)/(rho*g*cosd(theta(i)))/(tand(theta(i))-(rho-rho_f)/rho*mu1_Iv);
 
 
     z_scale(i) = h0(i);
@@ -162,7 +162,7 @@ for i=1:n_files
     p_tot_grad_dl(i) = p_tot(i)/p_scale(i)*z_scale(i);
     rho_f_dl(i) = rho_f*v_scale(i)^2/p_scale(i);
     rho_p_dl(i) = rho_p*v_scale(i)^2/p_scale(i); 
-    rho_dl(i) = rho_p_dl(i)*phi_c+rho_f_dl(i)*(1-phi_c);
+%     rho_dl(i) = rho_p_dl(i)*phi_c+rho_f_dl(i)*(1-phi_c);
     d_dl(i) = d(i)/z_scale(i);
     tau0_dl(i) = tau0(i)/p_scale(i);
     h_stop_dl(i) = h_stop(i)/z_scale(i);
@@ -181,8 +181,11 @@ for i=1:n_files
 
     if full_model
         phi{i,1} = y_temp(4,:)./Q1{i,1};
+        rho{i,1} = rho_p_dl*phi{i,1}+rho_f_dl*(1-phi{i,1});
+        chi{i,1} = (rho_f_dl+3*rho{i,1})/(4*rho{i,1});
+        P{i,1} = (rho{i,1}-rho_f_dl)/rho{i,1};
         y5{i,1} = y_temp(5,:);
-        pb{i,1} = y_temp(5,:) + rho_dl(i)*g_dl(i)*cosd(theta(i))*chi.*h{i,1};
+        pb{i,1} = y_temp(5,:) + rho{i,1}.*g_dl(i)*cosd(theta(i)).*chi{i,1}.*h{i,1};
         pe{i,1} = pb{i,1}-h{i,1};
     else
         pb{i,1} = h{i,1};
@@ -211,11 +214,11 @@ for i=1:n_files
     Iv{i,1} = abs(3*eta_f_dl(i).*abs(u{i,1})./h{i,1}./pp{i,1});
 
     if full_model
-        zeta{i,1} = 3./(2*alpha_dl(i).*h{i,1}) + P/4;
+        zeta{i,1} = 3./(2*alpha_dl(i).*h{i,1}) + P{i,1}/4;
         phi_Iv{i,1} = phi_c./(1+sqrt(Iv{i,1}));
         tan_psi{i,1} = phi{i,1} - phi_Iv{i,1};
-        R_w3{i,1} = -phi{i,1}.*rho_f_dl(i)./rho_dl(i).*D{i,1};
-        diffusion{i,1} = (-P.*chi+zeta{i,1}).*D{i,1};
+        R_w3{i,1} = -phi{i,1}.*rho_f_dl(i)./rho{i,1}.*D{i,1};
+        diffusion{i,1} = (-P{i,1}.*chi{i,1}+zeta{i,1}).*D{i,1};
         dilatancy{i,1} = 2*3/alpha_dl(i)./h{i,1}.*u{i,1}.*(tan_psi{i,1});
         R_w4{i,1} = diffusion{i,1} - dilatancy{i,1};
     end
@@ -228,20 +231,20 @@ for i=1:n_files
 
     n_coeff{i,1} = 1-Q1{i,1}.^2.*Fr(i)^2./h{i,1}.^3;
     % Iv = 3*eta_f_dl(i).*abs(u)./h./pp;
-    mu_val{i,1} = pp{i,1}./(p_tot_grad_dl(i).*h{i,1}).*mu_Iv_fn(Iv{i,1})+tau0_dl(i)*rho_f/rho./h{i,1};
+    mu_val{i,1} = pp{i,1}./(p_tot_grad_dl(i).*h{i,1}).*mu_Iv_fn(Iv{i,1})+tau0_dl(i)*rho_f_dl(i)./rho{i,1}./h{i,1};
     force_bal{i,1} = tand(theta(i))-sign(u{i,1}).*mu_val{i,1};
     dhdxi{i,1} = force_bal{i,1}./n_coeff{i,1};
 
-    mu_val_min{i,1} = P.*mu1_Iv+tau0_dl(i)*rho_f/rho./h{i,1};
+    mu_val_min{i,1} = P{i,1}.*mu1_Iv+tau0_dl(i)*rho_f_dl./rho{i,1}./h{i,1};
     force_bal_max{i,1} = tand(theta(i))-sign(u{i,1}).*mu_val_min{i,1};
 
-    dQdxi{i,1} = -P.*D{i,1};
+    dQdxi{i,1} = -P{i,1}.*D{i,1};
     dmdxi{i,1} = h{i,1}./lambda(i).*u{i,1};
 
     if full_model
         dy4dxi{i,1} = -R_w3{i,1};
         dy5dxi{i,1} = R_w4{i,1}./(u{i,1}-u_w(i));
-        dpbdxi{i,1} = dy5dxi{i,1} + rho_dl(i)*g_dl(i)*cosd(theta(i))*chi.*dhdxi{i,1};
+        dpbdxi{i,1} = dy5dxi{i,1} + rho{i,1}.*g_dl(i)*cosd(theta(i)).*chi{i,1}.*dhdxi{i,1};
 
         dpbdxi_scale{i,1} = dpbdxi{i,1}/(p_max(i)-p_min(i));
         dhdxi_scale{i,1} = dhdxi{i,1}/(h_max(i)-h_min(i));
@@ -265,7 +268,7 @@ tan_psi_app = tan_psi_e*exp(app_rate*(xi_app-lambda));
 hold on
 % plot(xi,2*Q1./Fr(i).^2.*dQdxi./(3.*h.^3), "DisplayName", "Waveform","color",C(1,:))
 for i=1:n_files
-    plot(xi{i,1}(1:end),h{i,1}, "DisplayName", "Waveform"), %"color",C(2,:)
+    plot(xi{i,1}(1:end),pb{i,1}, "DisplayName", "Waveform"), %"color",C(2,:)
 %     plot(xi_app,tan_psi_app, "DisplayName", "Waveform")
 end
 % xlim([19.95,20])

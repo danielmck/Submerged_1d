@@ -1,4 +1,4 @@
-function [xi_final,y_final] = convert_to_better(custom_init,reverse,params,provide_init,master_xi,master_y)
+function [xi_final,y_final] = convert_to_var_rho(custom_init,reverse,params,provide_init,master_xi,master_y)
 % Does not work, an attempt to convert the no pe wave with no viscosity
 % into the full wave
 % Likely doesn't work as there is no way to find the flow height gradient
@@ -20,7 +20,7 @@ function [xi_final,y_final] = convert_to_better(custom_init,reverse,params,provi
         param_cell = num2cell(params);
         [Fr,theta,h_alt,alpha,d,tau0] = param_cell{:};
     else
-        master_name = "nv_convert_pres_h.txt";
+        master_name = "master_wave_full_var_rho.txt";
         master_file = load("../Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -43,18 +43,11 @@ function [xi_final,y_final] = convert_to_better(custom_init,reverse,params,provi
         end
     end
     
-    
-    rho = rho_p*phi_c+rho_f*(1-phi_c);
-    P = (rho-rho_f)/rho;
-    chi = (rho_f+3*rho)/(4*rho);
-    
-    [h0, crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, tau0);
+    [h0, crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, tau0, false, true);
     u_eq = Fr*sqrt(g*cosd(theta)*h0);
     phi_eq = phi_c/(1+sqrt(crit_Iv));
     
     crit_pb = rho_f*g*cosd(theta)*h0;
-    
-    p_tot = rho*g*cosd(theta);
     
     z_scale = h0;
     v_scale = u_eq;
@@ -71,9 +64,6 @@ function [xi_final,y_final] = convert_to_better(custom_init,reverse,params,provi
     rho_f_dl = rho_f*v_scale^2/p_scale;
     rho_p_dl = rho_p*v_scale^2/p_scale;
     d_dl = d/z_scale;
-    
-    p_tot_grad_dl = p_tot/p_scale*z_scale;
-    rho_dl = rho_p_dl*phi_c+rho_f_dl*(1-phi_c);
     
     
     beta_dl = 150*phi_c.^2.*eta_f_dl./((1-phi_c).^3.*d_dl^2);
@@ -154,7 +144,12 @@ function [xi_final,y_final] = convert_to_better(custom_init,reverse,params,provi
         u = (-Q1 + h.*u_w)./h;
         m = y(3);
         phi = y(4)./Q1;
+        rho_dl = (rho_p_dl*phi+rho_f_dl*(1-phi));
+        P = (rho_dl-rho_f_dl)/rho_dl;
+        chi = (rho_f_dl+3*rho_dl)/(4*rho_dl);
         pb = y(5) + g_dl*cosd(theta)*rho_dl*chi.*h;
+        
+        p_tot_grad_dl = rho_dl*g_dl*cosd(theta);
 
         zeta = 3/(2*alpha_dl*h) + P/4;
         p_p = p_tot_grad_dl*h-pb;
@@ -167,7 +162,7 @@ function [xi_final,y_final] = convert_to_better(custom_init,reverse,params,provi
         dhdxi = 1/Fr^2.*h.^3.*(fb_val+P*D*h)./denom;
         
         R_w3 = -phi*rho_f_dl/rho_dl*D;
-        R_w4 = (-rho_dl*g_dl*cosd(theta)*P*chi+zeta)*D - 2*3/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
+        R_w4 = ((-P/4)+zeta)*D - 2*3/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
 
         dQdxi = -P*D;
         dmdxi = h/(lambda+stat_len)*u^(1-pres_h);
@@ -207,12 +202,17 @@ function [xi_final,y_final] = convert_to_better(custom_init,reverse,params,provi
         h_mid = ya(2,2);
         u_mid = (-ya(1,2) + h_mid.*p(1))./h_mid;
         denom_mid = (h_mid.^3/Fr^2-ya(1,2).^2);
-        pb_mid = ya(5,2) + g_dl*cosd(theta)*rho_dl*chi.*h_mid;
-        p_p_mid = p_tot_grad_dl*h_mid-pb_mid;
+        phi_mid = ya(4,2)/ya(1,2);
+        rho_mid = (rho_p_dl*phi_mid+rho_f_dl*(1-phi_mid));
+        P_mid = (rho_mid-rho_f_dl)/rho_mid;
+        chi_mid = (rho_f_dl+3*rho_mid)/(4*rho_mid);
+        p_tot_grad_mid = rho_mid*g_dl*cosd(theta);
+        pb_mid = ya(5,2) + g_dl*cosd(theta)*rho_mid*chi_mid.*h_mid;
+        p_p_mid = p_tot_grad_mid*h_mid-pb_mid;
         D_mid = -2/beta_dl/h_mid*(pb_mid-h_mid);
         Iv_mid = 3*eta_f_dl*abs(u_mid)/h_mid/p_p_mid;
-        fric_coeff_mid = p_p_mid/(p_tot_grad_dl*h_mid)*mu_Iv_fn(Iv_mid);
-        fb_val_mid = tand(theta)-fric_coeff_mid-tau0_dl*rho_f/rho/h_mid+P*D_mid*h_mid;
+        fric_coeff_mid = p_p_mid/(p_tot_grad_mid*h_mid)*mu_Iv_fn(Iv_mid);
+        fb_val_mid = tand(theta)-fric_coeff_mid-tau0_dl*rho_f_dl/rho_mid/h_mid+P_mid*D_mid*h_mid;
         
         cont_resid = (ya(:,2) - yb(:,1))';  %[ya(1,2)-yb(1,1),ya(2,2)-yb(2,1),ya(3,2)-yb(3,1),ya(4,2)-yb(4,1), ...
              %ya(8,2)-yb(8,1),ya(8,2)-yb(8,1),ya(8,2)-yb(8,1),ya(8,2)-yb(8,1)]

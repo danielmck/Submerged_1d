@@ -33,8 +33,8 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         Fr_eq = 0.8;
         
         theta = 12;
-        lambda = 12;
-        nu = 0;
+        lambda = 20;
+        nu = 1e-4;
         alpha = 1e-5;
         d = 1e-4;
         tau0 = 0; % Pa
@@ -44,7 +44,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
 %         h0 = 0.1;
 %         [Fr_eq, ~] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h0, tau0);
         params = [Fr_eq,theta,lambda,nu,alpha,d,tau0,rel_flux,pres_h];
-        filename = "no_vis_better_pres_h.txt";
+        filename = "lambda_20_pres_h.txt";
     else
         custom_init = true;
         param_cell = num2cell(params);
@@ -58,7 +58,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     end
     
     if ~exist('master_y','var')
-        master_name = ".txt";
+        master_name = "master_full_pres_h.txt";
         master_file = load(Res_dir+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -347,7 +347,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
             D = -2/beta_dl/h*(pb-p_eq);
             Iv = abs(3*eta_f_dl*u/h/p_p);
             R_w3 = -phi*rho_f_dl/rho_dl*D;
-            R_w4 = (-P*chi+zeta)*D - 2*3/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
+            R_w4 = (-P*rho_dl*g_dl*cosd(theta)*chi+zeta)*D - 2*3/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
 
             dhdxi = n;
             n_coeff = 1-Q1.^2.*Fr_in^2/h^3;
@@ -357,7 +357,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
             dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_in^2/nu_dl/Q1*n_coeff*(n-n_eq);
             dmdxi = h*(u^(1-pres_h))/lambda_in;
 
-            dy6dxi = -R_w3;
+            dy6dxi = R_w3;
             dy7dxi = R_w4/(u-u_w);
             dydxi = [0,dQdxi,dhdxi,dndxi,dmdxi,dy6dxi,dy7dxi]';
         end
