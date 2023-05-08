@@ -1,4 +1,6 @@
 function k_contour_plot
+% Creates a contour plot of the number of unstable modes across parameter 
+% space
     str_end = "alpha_Fr_18deg_air_big_part";
     str_end2 = str_end+"";
     d = 1e-3;

@@ -1,4 +1,7 @@
 function plot_2d_stab_I
+% Plots stability criteria for the linear stability analysis for different
+% diameters and compressibilities.
+
     crit_Fr = load("crit_Fr_alpha_theta_water_I.txt");
     d_list = [1e-6 5e-6 1e-5 5e-5 1e-4];
 %     d_list = [1e-5 5e-5 1e-4 5e-4 1e-3];

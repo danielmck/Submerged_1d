@@ -1,4 +1,5 @@
 function phase_plot
+% Plots the phase of the unstable modes in the linear stability analysis
     str_end = "alpha_Fr_9deg_water_big_part";
     d = 1e-3;
     theta = 9;

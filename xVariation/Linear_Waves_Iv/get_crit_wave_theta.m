@@ -1,4 +1,6 @@
 function theta_out = get_crit_wave_theta(h, rho_p, rho_f, d, eta_f, alpha)
+% Finds the critical theta for linear instability for given h and other
+% parameters
 %     crit_Iv = nan;
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
@@ -82,12 +84,4 @@ function theta_out = get_crit_wave_theta(h, rho_p, rho_f, d, eta_f, alpha)
         end
     end
     theta_out = (theta_max+theta_min)/2;
-
-    function mu_val = mu_Iv_fn(Iv)
-        mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
-    end
-    
-    function dmudIv = dmudIv_fn(Iv)
-        dmudIv = (mu2_Iv-mu1_Iv)*Iv_0./(Iv_0+abs(Iv)).^2 + 1 + 5/4*phi_c./sqrt(Iv);
-    end
 end

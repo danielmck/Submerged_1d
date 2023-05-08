@@ -1,4 +1,6 @@
 function rate_comp_plot
+% Creates a plot comparing the rate of decrease of the depth averaged model
+% with the full model
     z_model = "Ive_5deg_13init_deposit.txt";
     N = 200;
     vec = load("Results/"+z_model);

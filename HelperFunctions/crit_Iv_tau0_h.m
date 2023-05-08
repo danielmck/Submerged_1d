@@ -17,7 +17,7 @@ function [crit_Fr, Iv] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h, tau0, dl,
         max_tol = 1e-7;
         resid = 1;   
         del_Iv = 1e-8;
-        Iv = newt_solve_crit_Iv(theta,rho_p,rho_f, rho_var, phi_param);
+        Iv = 0.005; %newt_solve_crit_Iv(theta,rho_p,rho_f, rho_var, phi_param);
         Iv_max = Iv;
         Iv_min = 1e-8;
         rho_max = phi_c*rho_p + (1-phi_c)*rho_f;
@@ -25,7 +25,7 @@ function [crit_Fr, Iv] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h, tau0, dl,
         crit_mu = rho_max/(rho_max-rho_f)*tand(theta)-tau0/pp_max;
         if crit_mu>mu1_Iv
             while (abs(resid)>max_tol)
-                if var_rho
+                if rho_var
                     phi = phi_c/(1+sqrt(Iv));
                     rho = phi*rho_p + (1-phi)*rho_f;
                 else
@@ -62,7 +62,7 @@ function [crit_Fr, Iv] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h, tau0, dl,
             crit_Fr=0;
         end
     else
-        Iv = newt_solve_crit_Iv(theta,rho_p,rho_f,rho_var_phi_param);
+        Iv = newt_solve_crit_Iv(theta,rho_p,rho_f,rho_var,phi_param);
         crit_Fr=get_Fr(Iv);
     end
     

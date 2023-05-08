@@ -68,7 +68,7 @@ function viscous_Iv_bvp_from_ode
 %     y_final = horzcat(y_final(:,mindex:end),y_final(:,1:mindex-1));
 %     xi_final = mod(horzcat(xi_final(mindex:end),xi_final(1:mindex-1))-xi_final(mindex),lambda);
     out_final = vertcat(xi_final,y_final);
-    save("master_wave_no_pe.txt","out_final","-ascii")
+    save("Results/master_wave_no_pe.txt","out_final","-ascii")
     write_record("Results/wave_record.csv","master_wave_no_pe.txt",{"no_pe","water",Fr_eq,theta,lambda,nu,0,0,0})
     
     function [xi_out, y_out] = run_bvp_step(lambda_init, lambda_fin, nstep, xi_in, y_in, tol, count)

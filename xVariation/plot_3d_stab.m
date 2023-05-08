@@ -1,3 +1,5 @@
+% Creates a 3D plot of stability variation with slope angle, Froude number
+% and relativity density
 crit_Fr = load("crit_Fr_rho_theta.txt");
 crit_Fr(crit_Fr<0) = nan;
 rho_list = (linspace(2.5,25,100));

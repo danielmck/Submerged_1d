@@ -1,4 +1,6 @@
 function rel_wave_phase_calc
+% Finds the relative phase of the eigenvectors of the A matrix for a range
+% of Fr and d or alpha
     str_end = "alpha_Fr_9deg_water_big_part";
     d = 1e-3;
     theta = 9;

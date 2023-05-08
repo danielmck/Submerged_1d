@@ -1,4 +1,6 @@
 function [xi_vals, h_vals, u_vals, n_vals] = roll_waves_lambda(lambda,theta,rho_f_dl,rho_p_dl,eta_f_dl,Fr_min)
+% Creates roll waves of the two equation model that are close to a 
+% prescribed value of lambda. Use the ode method of solving the roll waves.
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;

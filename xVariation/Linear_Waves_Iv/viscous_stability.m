@@ -1,4 +1,6 @@
 function stable = viscous_stability(theta,Fr,nu,lambda)
+% Stability of the two equation model with viscosity. Can either run for a
+% single wavelength or a range.
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;
@@ -64,9 +66,5 @@ function stable = viscous_stability(theta,Fr,nu,lambda)
         c3 = k^2*(1/Fr^2-1)+1i*k/Fr^2*(P*dmudu-P*dmudh)+1i*k^3*nu_dl;
         r = roots([c1, c2, c3]);
         max_i = max(imag(r));
-    end
-    
-    function dmudIv = dmudIv_fn(Iv)
-        dmudIv = (mu2_Iv-mu1_Iv)*Iv_0./(Iv_0+abs(Iv)).^2 + 1 + 5/4*phi_c./sqrt(Iv);
     end
 end

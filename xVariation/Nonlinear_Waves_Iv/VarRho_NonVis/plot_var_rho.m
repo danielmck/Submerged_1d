@@ -1,4 +1,4 @@
-filelist = ["lambda_19_pres_h.txt"]; %long_low_pe
+filelist = ["master_pres_h.txt"]; %long_low_pe
 n_files = size(filelist,2);
 
 mu1_Iv = 0.32;
@@ -46,7 +46,6 @@ eta_f_dl = zeros(n_files,1);
 alpha_dl = zeros(n_files,1);
 g_dl = zeros(n_files,1);
 u_eq_dl = zeros(n_files,1);
-p_tot_grad_dl = zeros(n_files,1);
 rho_f_dl = zeros(n_files,1);
 rho_p_dl = zeros(n_files,1);
 rho_dl = zeros(n_files,1);
@@ -56,6 +55,7 @@ h_stop_dl = zeros(n_files,1);
 h_min = zeros(n_files,1);
 beta_dl = zeros(n_files,1);
 
+p_tot_grad_dl = cell([n_files,1]);
 Q1 = cell([n_files,1]);
 h = cell([n_files,1]);
 u = cell([n_files,1]);
@@ -91,6 +91,7 @@ mu_val_min = cell([n_files,1]);
 force_bal_max = cell([n_files,1]);
 dQdxi = cell([n_files,1]);
 dmdxi = cell([n_files,1]);
+dudxi = cell([n_files,1]);
 dy4dxi = cell([n_files,1]);
 dy5dxi = cell([n_files,1]);
 dpbdxi = cell([n_files,1]);
@@ -135,7 +136,7 @@ for i=1:n_files
 
     if tau0(i) == 0
         crit_Iv(i) = newt_solve_crit_Iv(theta(i), rho_p, rho_f,true);
-        pp_eq_grad(i) = (rho_p-rho_f)*g*phi_c*cosd(theta(i));
+        pp_eq_grad(i) = (rho_p-rho_f)*g*phi_c/(1+sqrt(crit_Iv(i))).*cosd(theta(i));
         u_const(i) = crit_Iv(i)/eta_f/3*pp_eq_grad(i);
         h0(i) = ((Fr(i)*sqrt(g*cosd(theta(i))))./u_const(i))^(2/3);  
     else
@@ -159,7 +160,6 @@ for i=1:n_files
     g_dl(i) = g*t_scale(i)/v_scale(i); 
 
     u_eq_dl(i) = u_eq(i)/v_scale(i);
-    p_tot_grad_dl(i) = p_tot(i)/p_scale(i)*z_scale(i);
     rho_f_dl(i) = rho_f*v_scale(i)^2/p_scale(i);
     rho_p_dl(i) = rho_p*v_scale(i)^2/p_scale(i); 
 %     rho_dl(i) = rho_p_dl(i)*phi_c+rho_f_dl(i)*(1-phi_c);
@@ -208,8 +208,8 @@ for i=1:n_files
         [phi_max,phi_max_ind] = max(phi{i,1});
         [phi_min,phi_min_ind] = min(phi{i,1});
     end
-
-    pp{i,1} = p_tot_grad_dl(i).*h{i,1}-pb{i,1};
+    p_tot_grad_dl{i,1} = rho{i,1}*g_dl(i)*cosd(theta(i));
+    pp{i,1} = p_tot_grad_dl{i,1}.*h{i,1}-pb{i,1};
     D{i,1} = -2/beta_dl(i)./h{i,1}.*(pb{i,1}-h{i,1});
     Iv{i,1} = abs(3*eta_f_dl(i).*abs(u{i,1})./h{i,1}./pp{i,1});
 
@@ -231,7 +231,7 @@ for i=1:n_files
 
     n_coeff{i,1} = 1-Q1{i,1}.^2.*Fr(i)^2./h{i,1}.^3;
     % Iv = 3*eta_f_dl(i).*abs(u)./h./pp;
-    mu_val{i,1} = pp{i,1}./(p_tot_grad_dl(i).*h{i,1}).*mu_Iv_fn(Iv{i,1})+tau0_dl(i)*rho_f_dl(i)./rho{i,1}./h{i,1};
+    mu_val{i,1} = pp{i,1}./(p_tot_grad_dl{i,1}.*h{i,1}).*mu_Iv_fn(Iv{i,1})+tau0_dl(i)*rho_f_dl(i)./rho{i,1}./h{i,1};
     force_bal{i,1} = tand(theta(i))-sign(u{i,1}).*mu_val{i,1};
     dhdxi{i,1} = force_bal{i,1}./n_coeff{i,1};
 
@@ -239,6 +239,7 @@ for i=1:n_files
     force_bal_max{i,1} = tand(theta(i))-sign(u{i,1}).*mu_val_min{i,1};
 
     dQdxi{i,1} = -P{i,1}.*D{i,1};
+    dudxi{i,1} = -dQdxi{i,1}./h{i,1}+dhdxi{i,1}.*Q1{i,1}./h{i,1}.^2;
     dmdxi{i,1} = h{i,1}./lambda(i).*u{i,1};
 
     if full_model
@@ -258,9 +259,28 @@ h_e = h{i,1}(end);
 Iv_e = Iv{i,1}(end);
 pp_e = pp{i,1}(end);
 
-app_rate = phi_e/(1+sqrt(Iv_e))*sqrt(Iv_e^3)/(u_w-u_e)/eta_f_dl/alpha_dl;
-xi_app = linspace(19.95,20,100);
-tan_psi_app = tan_psi_e*exp(app_rate*(xi_app-lambda));
+Iv_coeff = 1/(u_w-u_e)/eta_f_dl/alpha_dl;
+app_rate = phi_e/(1+sqrt(Iv_e))*sqrt(Iv_e^3).*Iv_coeff;
+xi_app = linspace(lambda-0.10,lambda,100);
+tan_psi_eq = alpha_dl(i)*h{i,1}/9*2./u{i,1}.*diffusion{i,1};
+tan_psi_app = tan_psi_eq(end)+(tan_psi_e-tan_psi_eq(end))*exp(app_rate*(xi_app-lambda));
+
+A = -phi_c(i);
+B = 3*eta_f_dl(i)*u{i,1}(end)./h{i,1}(end);
+C = p_tot_grad_dl{i,1}(end)*h{i,1}(end);
+D = alpha_dl(i)*h_e/9*2/u_e.*(-P{i,1}(end).*chi{i,1}(end)+zeta{i,1}(end)).*(-2/beta_dl(i)./h_e);
+E = h_e*D+phi_e;
+
+x_sol = roots([D, sqrt(B)*D, (A-D*C+E), -(D*C*(sqrt(B))-E*sqrt(B))]);
+x_sol = x_sol(x_sol>0);
+p_sol = -x_sol.^2+C;
+
+pp_root = B/(phi_c(i)/phi_e-1)^2;
+x_ex = sqrt(pp_root);
+root_ex = x_ex^3*D+sqrt(B)*D*x_ex^2+(A-D*C+E)*x_ex-(D*C*(sqrt(B))-E*sqrt(B));
+plot_x = linspace(0.5,1,100);
+val_x = plot_x.^3*D+sqrt(B)*D*plot_x.^2+(A-D*C+E)*plot_x-(D*C*(sqrt(B))-E*sqrt(B));
+% plot(plot_x,val_x)
 
 %%
 
@@ -268,7 +288,8 @@ tan_psi_app = tan_psi_e*exp(app_rate*(xi_app-lambda));
 hold on
 % plot(xi,2*Q1./Fr(i).^2.*dQdxi./(3.*h.^3), "DisplayName", "Waveform","color",C(1,:))
 for i=1:n_files
-    plot(xi{i,1}(1:end),pb{i,1}, "DisplayName", "Waveform"), %"color",C(2,:)
+    plot(xi{i,1}(1:end),pb{i,1}, "DisplayName", "Waveform") %"color",C(2,:)
+%     plot(xi{i,1}(1:end),tan_psi_app, "DisplayName", "Waveform")
 %     plot(xi_app,tan_psi_app, "DisplayName", "Waveform")
 end
-% xlim([19.95,20])
+xlim([lambda-0.5,lambda])

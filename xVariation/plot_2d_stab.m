@@ -1,4 +1,6 @@
 function plot_2d_stab
+% Plots stability criteria for variation with theta and another parameter,
+% either alpha or d
     phase = 'water';
     var = 'd';
     crit_Fr = load("Results/crit_Fr_"+var+"_theta_"+phase+".txt");

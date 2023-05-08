@@ -1,4 +1,6 @@
 function crit_press = get_critical_value(u_p,p_e,erosion,tol)
+% Finds the critical value of a field at the point at which the flow
+% deposits
     n_points = size(u_p,2);
     n_times = size(u_p,1);
     flow_points = sum(abs(u_p)<tol,1);

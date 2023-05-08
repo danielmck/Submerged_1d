@@ -1,4 +1,5 @@
 function Ive_depth_ave_plot
+% Compares the behaviour of depth averaged models across different angles
     n_times = 5001;
     h_vals = zeros(n_times,71);
     u_vals = zeros(n_times,71);

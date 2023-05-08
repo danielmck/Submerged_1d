@@ -1,4 +1,6 @@
 function compare_depth_ave
+% Compares the depth averaged models with the full models and different
+% closure relations
     theta = 5.0;
     n_times = 5001;
     N=200;

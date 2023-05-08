@@ -1,9 +1,5 @@
 function eigfns
-    mu1_Iv = 0.32;
-    mu2_Iv = 0.7;
-    Iv_0 = 0.005;
-
-    reg_param = 1*10^7;
+% Not actually sure what this does but I don't think it works
 
     phi_c=0.585; % Volume fraction
     g=9.81; % m/s^2
@@ -84,11 +80,4 @@ function eigfns
         v=[0.01*sin(2*pi/b*x) 0.1*sin(2*pi/b*x) 0.01*sin(2*pi/b*x) 0.1*sin(2*pi/b*x)]; 
     end
 
-    function mu_val = mu_Iv_fn(Iv)
-        mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
-    end
-    
-    function dmudIv = dmudIv_fn(Iv)
-        dmudIv = (mu2_Iv-mu1_Iv)*Iv_0./(Iv_0+abs(Iv)).^2 + 1 + 5/4*phi_c./sqrt(Iv);
-    end
 end

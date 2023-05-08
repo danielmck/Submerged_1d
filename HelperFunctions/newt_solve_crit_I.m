@@ -1,5 +1,4 @@
 function crit_I = newt_solve_crit_I(theta, rho_p, rho_f)
-% Solves for the critical value of I, using the Newton-Raphson method.
 %     mu1_I=0.342; 
 %     mu2_I=0.557;  
 %     I_0 = 0.069;

@@ -1,4 +1,6 @@
 function [xi_vals, h_vals] = roll_waves_old(theta,Fr,h_st)
+% The initial way of creating roll waves for the two equation model using
+% the ode method. Is dimensional
     phi_c=0.585; % Volume fraction
     eta_f = 0.0010016; % Pa s
     g=9.81; % m/s^2

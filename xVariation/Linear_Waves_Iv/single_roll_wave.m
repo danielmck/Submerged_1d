@@ -1,4 +1,6 @@
 function [xi_vals,h_vals,u_vals,n_vals]=single_roll_wave(h1,theta,rho_dl,rho_f_dl,g_dl,eta_f_dl,pp_grad_dl,crit_Iv)
+% Produces a single wave according to the conditions specified, starting
+% from a height h1. Use the ode method
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;

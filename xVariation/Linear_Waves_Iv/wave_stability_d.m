@@ -1,4 +1,6 @@
 function wave_stability_d
+% Finds a range of stability criteria for a single particle diameter with a
+% range of Froude numbers and compressibilities
     mu1_Iv = 0.32;
     mu2_Iv = 0.7;
     Iv_0 = 0.005;
@@ -62,6 +64,7 @@ function wave_stability_d
             chi_dl = (rho_f_dl+3*rho_dl)/(4*rho_dl);
             P = (rho_dl-rho_f_dl)/rho_dl;
                       
+           
             dIvdu = crit_Iv;
             dIvdh = -2*crit_Iv;
             dIvdp = crit_Iv/p_p_dl;
@@ -108,7 +111,6 @@ function wave_stability_d
             end  
         end
         
-        %%
         num_unstab = load("Results/nu_alpha_Fr_9deg_water_big_part.txt");
 %         stability = (max_sig>0);
         f = figure;

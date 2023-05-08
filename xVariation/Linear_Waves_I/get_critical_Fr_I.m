@@ -1,9 +1,8 @@
 function Fr_out = get_critical_Fr_I(theta, rho_p, rho_f, d, eta_f, alpha)
-%     crit_Iv = nan
-%     mu1_I=0.342; 
-%     mu2_I=0.557;  
-%     I_0 = 0.069;
-    
+% Finds the dritical Froude number for a given set of parameters. Works by
+% halving the range of Fr each time. Creates the A matrix determining the
+% evolution of perturbations and then finds the eigenvalues of it.
+   
     mu1_I=tand(20); 
     mu2_I=tand(33);  
     I_0 = 0.3;

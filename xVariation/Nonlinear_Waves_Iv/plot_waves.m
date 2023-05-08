@@ -1,4 +1,4 @@
-filename = "lambda_15_tau0_max.txt"; %long_low_pe
+filename = "master_wave_var_rho.txt"; %long_low_pe
 master_file = load("Results/"+filename);
 xi = master_file(1,:);
 y = master_file(2:end,:);
@@ -11,15 +11,15 @@ lambda = record.lambda(in_table);
 Fr = record.Fr(in_table);
 nu = record.nu(in_table);
 tau0 = record.tau0(in_table);
-if strcmp(wave_type,"full")
-    full_model=true;
-    d = record.d(in_table);
-    alpha = record.alpha(in_table);
-else
-    full_model=false;
-    alpha=0;
-    d=0;
-end
+% if strcmp(extract(wave_type{1,1},1),"full")
+full_model=true;
+d = record.d(in_table);
+alpha = record.alpha(in_table);
+% else
+%     full_model=false;
+%     alpha=0;
+%     d=0;
+% end
 s=0;
 
 
@@ -46,14 +46,8 @@ chi = (rho_f+3*rho)/(4*rho);
 P = (rho-rho_f)/rho;
 s_c = 1-rho/(rho-rho_f)*tand(theta)/mu1_Iv;
 
-if tau0 == 0
-    crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f,s);
-    pp_eq_grad = (rho_p-rho_f)*g*phi_c*cosd(theta);
-    u_const = crit_Iv/eta_f/2*pp_eq_grad*(1-s);
-    h0 = ((Fr*sqrt(g*cosd(theta)))./u_const)^(2/3);  
-else
-    [h0, crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, tau0);
-end
+[h0, crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, tau0, false, false);
+
 u_eq = Fr*sqrt(g*cosd(theta)*h0);
 phi_eq = phi_c/(1+sqrt(crit_Iv));
 p_tot = rho*g*cosd(theta);
@@ -157,12 +151,23 @@ if full_model
     dhdxi_scale = n/(h_max-h_min);
 end
 %%
+% n_out = 5000;
+% outpoints = linspace(0,lambda,n_out);
+% vec_save = interp1(xi,h0*h,outpoints);
+% save("time_d_load_h.txt","vec_save","-ascii");
+% vec_save = interp1(xi,h0*h.*u0.*u,outpoints);
+% save("time_d_load_hu.txt","vec_save","-ascii");
+% vec_save = interp1(xi,h0*h.*phi,outpoints);
+% save("time_d_load_hphi.txt","vec_save","-ascii");
+% vec_save = interp1(xi,h0*h.*crit_pb.*y(7,:),outpoints);
+% save("time_d_load_pbh.txt","vec_save","-ascii");
+%%
 C = viridis(3);
 %     SetPaperSize(10,10)
 hold on
 %     plot(linspace(0.5,1),get_force_bal(linspace(0.5,1)))
-plot(xi,y(7,:), "DisplayName", "Waveform","color",C(1,:))
-%     plot(xi,Q1/u_w,"--","DisplayName","$Q_1/u_w$","color","r")
+plot(xi*h0,phi, "DisplayName", "Waveform","color",C(1,:))
+%     plot(xi,h,"--","DisplayName","$Q_1/u_w$","color","r")
 %     plot(xi,ones(size(xi))*h_stop_dl,"--","DisplayName","$h_{stop}$","color","y")
 %     plot(xi(xi<5),n_eq(xi<5), "DisplayName", "Waveform","color",C(2,:))
 %     plot(Iv_equi,h, "DisplayName", "Equilibrium Curve","color",C(2,:))

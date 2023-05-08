@@ -1,5 +1,6 @@
 function critical_Fr_val_I
-
+% Finds the critical Froude number for instability for a range of theta and
+% other parameters, d and alpha
     rho_p = 2500;
     
 %     rho_f = 1000;

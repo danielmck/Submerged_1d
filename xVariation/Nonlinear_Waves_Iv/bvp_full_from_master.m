@@ -33,8 +33,8 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         Fr_eq = 0.8;
         
         theta = 12;
-        lambda = 20;
-        nu = 1e-4;
+        lambda = 12;
+        nu = 3e-5;
         alpha = 1e-5;
         d = 1e-4;
         tau0 = 0; % Pa
@@ -44,7 +44,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
 %         h0 = 0.1;
 %         [Fr_eq, ~] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h0, tau0);
         params = [Fr_eq,theta,lambda,nu,alpha,d,tau0,rel_flux,pres_h];
-        filename = "lambda_20_pres_h.txt";
+        filename = "master_pres_h.txt";
     else
         custom_init = true;
         param_cell = num2cell(params);
@@ -58,7 +58,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     end
     
     if ~exist('master_y','var')
-        master_name = "master_full_pres_h.txt";
+        master_name = "master_pres_h.txt";
         master_file = load(Res_dir+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -162,7 +162,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     tau0_list = linspace(master_tau0,tau0,n_steps);
     rf_list = linspace(master_rf, rel_flux, n_steps);
 
-    [xi_final,y_final] = run_bvp_step(Fr_list, theta_list, lambda_list, nu_list, alpha_list, d_list, tau0_list, rf_list, xi_lambda, y_lambda,1e-5);
+    [xi_final,y_final] = run_bvp_step(Fr_list, theta_list, lambda_list, nu_list, alpha_list, d_list, tau0_list, rf_list, xi_lambda, y_lambda);
 %     [xi_nope,y_nope] = viscous_Iv_bvp_from_master(true,[Fr_eq,theta,lambda,nu]);
     
     if ~custom_init
@@ -201,9 +201,9 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         % that way.
         if counter > 5
             out_vec = vertcat(xi_in,y_in);
-            fail_name = filename;
-            write_record(Res_dir+"wave_record.csv",fail_name,{wave_type,"water",Fr_vals(1),theta_vals(1),lambda_vals(1),nu_vals(1),alpha_vals(1),d_vals(1),tau0_vals(1)})
-            save(Res_dir+fail_name,"out_vec","-ascii")
+%             fail_name = filename;
+%             write_record(Res_dir+"wave_record.csv",fail_name,{wave_type,"water",Fr_vals(1),theta_vals(1),lambda_vals(1),nu_vals(1),alpha_vals(1),d_vals(1),tau0_vals(1)})
+%             save(Res_dir+fail_name,"out_vec","-ascii")
             error("Max iteration depth reached, non convergence. Trying no excess pressure method")
             y_in = -1;
             xi_in = -1;
@@ -256,7 +256,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
 
                 % Solves the stepped system
                 solInit1=bvpinit(xi_run,@bvp_guess);
-                opts = bvpset('RelTol',tol,'NMax',400*counter);
+                opts = bvpset('RelTol',tol,'NMax',500*counter);
                 try
                     solN1 = bvp4c(@full_syst,@bc_vals,solInit1,opts);
                     resid = solN1.stats.maxres;
@@ -347,17 +347,16 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
             D = -2/beta_dl/h*(pb-p_eq);
             Iv = abs(3*eta_f_dl*u/h/p_p);
             R_w3 = -phi*rho_f_dl/rho_dl*D;
-            R_w4 = (-P*rho_dl*g_dl*cosd(theta)*chi+zeta)*D - 2*3/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
+            R_w4 = (-P*rho_dl*g_dl*cosd(theta)*chi+zeta)*D - 9/2/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
 
             dhdxi = n;
-            n_coeff = 1-Q1.^2.*Fr_in^2/h^3;
-            mu_val = p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv)+tau0_dl*rho_f/rho/h;
-            n_eq = (tand(theta_in)-sign(u).*mu_val+P*D*h)./n_coeff;
-            dQdxi = -P*D;
-            dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_in^2/nu_dl/Q1*n_coeff*(n-n_eq);
+            
+
+            dQdxi = -P*D; % Minus sign is due to Q=h*(u_w-u) to ensure positive
+            dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_in^2/nu_dl/Q1*denom*(n-n_eq);
             dmdxi = h*(u^(1-pres_h))/lambda_in;
 
-            dy6dxi = R_w3;
+            dy6dxi = -R_w3; % Minus sign is due to Q=h*(u_w-u) to ensure positive
             dy7dxi = R_w4/(u-u_w);
             dydxi = [0,dQdxi,dhdxi,dndxi,dmdxi,dy6dxi,dy7dxi]';
         end

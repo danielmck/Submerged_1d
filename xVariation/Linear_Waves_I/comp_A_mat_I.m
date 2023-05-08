@@ -1,4 +1,7 @@
 function comp_A_mat_I
+% Compares the matrices of growth of the perturbations to the steady state
+% flow across a number of different cases. The wavenumber of interest also
+% needs to be specified.
     mu1_I=tand(20); 
     mu2_I=tand(33);  
     I_0 = 0.3;
@@ -92,8 +95,7 @@ function comp_A_mat_I
         mu_val = tanh(reg_param*I).*(mu1_I+(mu2_I-mu1_I)./(1+I_0./abs(I)));
     end
 
-    function dmudI = 
-        (I)
+    function dmudI = dmudI_fn(I)
         dmudI = (mu2_I-mu1_I)*I_0./(I_0+abs(I)).^2;
     end
 end

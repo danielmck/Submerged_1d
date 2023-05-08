@@ -1,4 +1,6 @@
 function Fr_out = get_critical_Fr(theta, rho_p, rho_f, d, eta_f, alpha)
+% Solves for the critical Froude number for linear instability for waves to
+% form with single_Fr_stab and halving the potential span.
     g=9.8;
     phi_c = 0.585;
 

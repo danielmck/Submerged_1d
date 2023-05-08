@@ -1,4 +1,6 @@
 function compare_all_angles
+% Compares different closure relations or angles, allowing comparison of
+% rate of slowing and deposition.
     Rauter_ave = load("Rauter_Closure/EqnOfState_Results/depth_ave_angles.txt");
     DA_ave = load("Iverson_DA/DA_Results/DA_pe_base_angles_v3.txt");
     Iverson_ave = load("Iverson_Closure/Results/Ive_basal_pe_angles.txt");

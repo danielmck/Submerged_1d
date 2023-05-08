@@ -1,5 +1,6 @@
 function critical_Fr_val
-
+% Finds the critical Froude number for instability of linear waves using 
+% get_critical_Fr
     rho_p = 2500;
     
 %     rho_f = 1000;

@@ -56,7 +56,7 @@ function [xi_out,y_out] = bvp_full_to_var_rho(custom_init,reverse,params,provide
     else
         
         if ~provide_init
-            master_name="master_wave_full.txt";
+            master_name="master_pres_h.txt";
             master_file = load(strcat("Results/",master_name));
             master_xi = master_file(1,:);
             master_y = master_file(2:end,:);
@@ -77,7 +77,7 @@ function [xi_out,y_out] = bvp_full_to_var_rho(custom_init,reverse,params,provide
             alpha = 1e-5;
             d = 1e-4;
         end
-        pres_h=strcmp(wave_type(max(end-7,1):end),"_pres_h");
+        pres_h=strcmp(wave_type,"full_pres_h");
     end
     
     
@@ -93,7 +93,7 @@ function [xi_out,y_out] = bvp_full_to_var_rho(custom_init,reverse,params,provide
     [xi_out,y_out] = run_bvp_iter(delta_vals, master_xi,master_y);
     if ~custom_init
         out_vec = vertcat(xi_out,y_out);
-        filename = "master_wave_full_var_rho.txt";
+        filename = "master_wave_var_rho.txt";
         save("Results/"+filename,"out_vec","-ascii")
         write_record("Results/wave_record.csv",filename,{"full","water",Fr,theta,lambda,nu,alpha,d,tau0})
     end
@@ -116,7 +116,7 @@ function [xi_out,y_out] = bvp_full_to_var_rho(custom_init,reverse,params,provide
 
             if tau0 == 0
                 crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f,true,phi_param);
-                u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
+                u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c/(1+sqrt(crit_Iv))*cosd(theta);
                 h0 = ((Fr*sqrt(g*cosd(theta)))./u_const)^(2/3);  
             else
                 [h0, crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, tau0,false,true,phi_param);
@@ -145,7 +145,7 @@ function [xi_out,y_out] = bvp_full_to_var_rho(custom_init,reverse,params,provide
             beta_dl = 150*phi_c.^2.*eta_f_dl./((1-phi_c).^3.*d_dl^2);
             
             solInit1=bvpinit(xi_in,@bvp_guess);
-            opts = bvpset('RelTol',tol,'NMax',200*counter);
+            opts = bvpset('RelTol',tol,'NMax',2000*counter);
             try
                 solN1 = bvp4c(@viscous_syst,@bc_vals,solInit1,opts);
                 resid = solN1.stats.maxres;
@@ -165,11 +165,11 @@ function [xi_out,y_out] = bvp_full_to_var_rho(custom_init,reverse,params,provide
                     y_in = solN1.y;
                     xi_in = solN1.x;
                 else
-                    [xi_in,y_in] = run_bvp_iter(linspace(delta_vals(i-1),delta_in,3)...
+                    [xi_in,y_in] = run_bvp_iter(linspace(delta_vals(i-1),phi_param,3)...
                     ,xi_in, y_in, tol,counter+1);
                 end
             else
-                [xi_in,y_in] = run_bvp_iter(linspace(delta_vals(i-1),delta_in,3)...
+                [xi_in,y_in] = run_bvp_iter(linspace(delta_vals(i-1),phi_param,3)...
                     ,xi_in, y_in, tol,counter+1);
             end
         end       
@@ -192,20 +192,20 @@ function [xi_out,y_out] = bvp_full_to_var_rho(custom_init,reverse,params,provide
             zeta = 3/(2*alpha_dl*h) + P/4;
             p_p = p_tot_grad_dl*h-pb;
             D = -2/beta_dl/h*(pb-h);
-            Iv = abs(2*eta_f_dl*u/h/p_p);
+            Iv = abs(3*eta_f_dl*u/h/p_p);
             R_w3 = -phi*rho_f_dl/rho_dl*D;
-            R_w4 = (rho_f_dl*g_dl*cosd(theta)*(-P/4)*(phi_param)-rho_dl*g_dl*cosd(theta)*P*chi*(1-phi_param)+zeta)*D - 2*3/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
+            R_w4 = ((-P/4)*(phi_param)-rho_dl*g_dl*cosd(theta)*P*chi*(1-phi_param)+zeta)*D - 9/2/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
 
             dhdxi = n;
             n_coeff = 1-Q1.^2.*Fr^2/h^3;
             Iv = 3*eta_f_dl*abs(u)/h/p_p;
             mu_val = p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv)+tau0_dl*rho_f_dl/rho_dl/h; 
-            n_eq = (tand(theta)-sign(u).*mu_val+P*D)./n_coeff;
+            n_eq = (tand(theta)-sign(u).*mu_val+(u_w-u)*P*D)./n_coeff;
             dQdxi = -P*D;
             dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr^2/nu_dl/Q1*n_coeff*(n-n_eq);
             dmdxi = h/lambda*u^(1-pres_h);
 
-            dy6dxi = R_w3;
+            dy6dxi = -R_w3;
             dy7dxi = R_w4/(u-u_w);
             dydxi = [0,dQdxi,dhdxi,dndxi,dmdxi,dy6dxi,dy7dxi]';  
         end

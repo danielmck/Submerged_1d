@@ -20,7 +20,7 @@ function [xi_final,y_final] = convert_to_var_rho(custom_init,reverse,params,prov
         param_cell = num2cell(params);
         [Fr,theta,h_alt,alpha,d,tau0] = param_cell{:};
     else
-        master_name = "master_wave_full_var_rho.txt";
+        master_name = "master_wave_var_rho.txt";
         master_file = load("../Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -30,7 +30,7 @@ function [xi_final,y_final] = convert_to_var_rho(custom_init,reverse,params,prov
         wave_type = record.wave_type(in_table);
         pres_h = 1; %(wave_type=="full_pres_h");
         theta = record.theta(in_table);
-%         lambda = record.lambda(in_table);
+        lambda_vis = record.lambda(in_table);
         Fr = record.Fr(in_table);
         tau0 = record.tau0(in_table);
         stat_len = 0;
@@ -80,9 +80,10 @@ function [xi_final,y_final] = convert_to_var_rho(custom_init,reverse,params,prov
     exact = (master_xi(crit_ind)*((abs(denom_val(crit_ind))+abs(denom_val(crit_ind+1)))-abs(denom_val(crit_ind)))+master_xi(crit_ind+1)*(abs(denom_val(crit_ind))))/(abs(denom_val(crit_ind))+abs(denom_val(crit_ind+1)));
     crit_y = interp1(master_xi,master_y(2:end,:)',exact)';
     y_in = horzcat(master_y(2:end,1:crit_ind),crit_y,crit_y,master_y(2:end,crit_ind+1:end));
+    y_in(3,:) = y_in(3,:)/lambda*lambda_vis;
     xi_in = horzcat(master_xi(:,1:crit_ind)/exact,1,1,1+(master_xi(:,crit_ind+1:end)-exact)/(lambda-exact));
     p_in = [master_y(1,1),lambda,exact];
-    rf_in = 1; %y_in(3,end);
+    rf_in = y_in(3,end);
 %     h_crit = (master_y(5,end)+master_y(10,1))/2;
 %     master_y(5,end) = h_crit;
 %     master_y(10,1) = h_crit;
@@ -104,7 +105,7 @@ function [xi_final,y_final] = convert_to_var_rho(custom_init,reverse,params,prov
     tol=1e-4;
     denom_eps = 1e-4;
     solInit1=bvpinit(xi_in,@bvp_guess,p_in);
-    opts = bvpset('RelTol',tol,'NMax',2000);
+    opts = bvpset('RelTol',tol,'NMax',4000);
 
     solN1 = bvp4c(@(x,y,r,p) viscous_syst(x,y,r,p),@bc_vals,solInit1,opts);
     resid = solN1.stats.maxres;
@@ -113,9 +114,9 @@ function [xi_final,y_final] = convert_to_var_rho(custom_init,reverse,params,prov
     xi_out = solN1.x;
     p_out = solN1.parameters;
     out_vec = vertcat(xi_out,y_out);
-    filename = "from_non_vis_pres_h_pt2.txt";
+    filename = "var_rho_master_pres_h.txt";
     save("Results/"+filename,"out_vec","-ascii")
-    write_record("Results/full_record.csv",filename,{"full","water",Fr,theta,alpha,d,tau0,p_out(1),p_out(2),p_out(3)})
+    write_record("Results/full_record.csv",filename,{"var_rho","water",Fr,theta,alpha,d,tau0,p_out(1),p_out(2),p_out(3)})
         
     function guess = bvp_guess(xi,region)
         % Initial guess function from the ode soln
@@ -157,16 +158,19 @@ function [xi_final,y_final] = convert_to_var_rho(custom_init,reverse,params,prov
         D = -2/beta_dl/h*(pb-h);
 
         denom = (h.^3/Fr^2-Q1.^2);
+%         fric_coeff = p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv);
+%         fb_val = tand(theta)-fric_coeff-tau0_dl*rho_f/rho/h;
+%         dhdxi = 1/Fr^2.*h.^3.*(fb_val+(u_w-u)*P*D)./denom;
         fric_coeff = p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv);
-        fb_val = tand(theta)-fric_coeff-tau0_dl*rho_f/rho/h;
-        dhdxi = 1/Fr^2.*h.^3.*(fb_val+P*D*h)./denom;
+        fb_val = tand(theta)-fric_coeff-tau0_dl*rho_f_dl/rho_dl/h;
+        dhdxi = h.^2.*(1/Fr^2.*h.*fb_val+P*D*(u_w-u))./denom;
         
         R_w3 = -phi*rho_f_dl/rho_dl*D;
-        R_w4 = ((-P/4)+zeta)*D - 2*3/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
+        R_w4 = ((-P/4)+zeta)*D - 9/2/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
 
         dQdxi = -P*D;
         dmdxi = h/(lambda+stat_len)*u^(1-pres_h);
-        dy6dxi = R_w3;
+        dy6dxi = -R_w3;
         dy7dxi = R_w4/(u-u_w);
         dydxi = [dQdxi,dhdxi,dmdxi,dy6dxi,dy7dxi];
         

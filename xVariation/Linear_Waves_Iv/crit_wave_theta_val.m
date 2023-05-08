@@ -1,5 +1,6 @@
 function crit_wave_theta_val
-
+% Finds the critical value of theta for a given height of flow, along with
+% other parameters
     rho_p = 2500;
     
 %     rho_f = 1000;

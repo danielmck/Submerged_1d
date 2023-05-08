@@ -1,4 +1,4 @@
-function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provide_init,master_xi,master_y,master_params)
+function [xi_final,y_final] = depo_wave_chop_end(specify_param,params,provide_init,master_xi,master_y,master_params)
 % Converts the master wave stored in no_pe_no_vis_master.txt into a 
 % waveform that maintains the flux of the conditions specified. Allows 
 % change in theta, Froude number and yield stress.
@@ -14,9 +14,9 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
 % needs params as the target 3 value list, master_xi as the initial value
 % xi, master_y as the initial y and master_params as the initial parameters
 
-    [phi_c,rho_f,rho_p,~,eta_f,g] = get_params_water();
-%     P = (rho-rho_f)/rho;
-%     chi = (rho_f+3*rho)/(4*rho);
+    [phi_c,rho_f,rho_p,rho,eta_f,g] = get_params_water();
+    P = (rho-rho_f)/rho;
+    chi = (rho_f+3*rho)/(4*rho);
     
     if ~exist("specify_param","var")
         specify_param = false;
@@ -26,7 +26,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
     end
     if ~provide_init
         Res_dir = "~/Documents/MATLAB/1D_System/xVariation/Nonlinear_Waves_Iv/VarRho_NonVis/";
-        master_name = "master_pres_h.txt"; %no_vis_better_master
+        master_name = "master_pres_h_chop2.txt"; %no_vis_better_master
         master_file = load(Res_dir+"Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -79,7 +79,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
 
         % h_alt specifies the distance from the static minimum that the
         % wave must begin at.
-        filename = "master_pres_h.txt";      
+        filename = "master_pres_h_chop.txt";      
     else
         param_cell = num2cell(params);
         [Fr_eq,theta,wlen_val,set_h_min,tau0,alpha,d,pres_h,rel_flux] = param_cell{:};
@@ -123,7 +123,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
     lambda_ratio = min(max(lambda_final/master_lambda,master_lambda/lambda_final),1e3);
     rf_ratio = abs(rel_flux - master_rf);
     ratio_sum = Fr_ratio-1+20*(theta_ratio-1)+tau0_ratio+hm_ratio*set_h_min+(1-set_h_min)*(lambda_ratio-1)+rf_ratio+(d_ratio-1)+(alpha_ratio-1);
-    if ratio_sum > 1e-4
+    if ratio_sum > 5e-4
         n_step = max(min(ceil(40*ratio_sum),800),90);
     else
         n_step=2;
@@ -157,7 +157,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
     if ~specify_param
         out_vec = vertcat(xi_final,y_final);
         save("Results/"+filename,"out_vec","-ascii")
-        write_record("Results/full_record.csv",filename,{"full_no_vis","water",Fr_eq,theta,alpha,d,tau0,p_final(1),p_final(2),p_final(3)})
+        write_record("Results/full_record.csv",filename,{"chop_end","water",Fr_eq,theta,alpha,d,tau0,p_final(1),lambda_final,p_final(3)})
     end
     
     function [xi_in, y_in,p_in] = run_bvp_step(Fr_vals, theta_vals, tau0_vals, wlen_vals, alpha_vals, d_vals, rf_vals, xi_in, y_in, p_in, tol,counter)
@@ -333,7 +333,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
             R_w4 = (-P/4+zeta)*D - 9/2/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
 
             dQdxi = -P*D;
-            dmdxi = h/(lambda_l)*u^(1-pres_h);
+            dmdxi = h*u^(1-pres_h);
             dy6dxi = -R_w3;
             dy7dxi = R_w4/(u-u_w);
             dydxi = [dQdxi,dhdxi,dmdxi,dy6dxi,dy7dxi];
@@ -383,13 +383,39 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
                 len_resid = [ya(2,1)-h_start, yb(2,2)-h_stop];
             else
                 h_stop = (-ya(2,1) + sqrt(ya(2,1).^2+8*ya(1,1)^2./(ya(2,1)/Fr_in^2)))/2;
-                len_resid = [p(2)-lambda_in, yb(2,2)-h_stop];
+                
+            end
+            u_stop = (-yb(1,2)+ h_stop.*p(1))./h_stop;
+            phi_stop = yb(4,2)/yb(1,2);
+            rho_stop = (rho_p_dl*phi_stop+rho_f_dl*(1-phi_stop));
+            P_stop = (rho_stop-rho_f_dl)/rho_stop;
+            chi_stop = (rho_f_dl+3*rho_stop)/(4*rho_stop);
+            zeta_stop = 3/(2*alpha_dl*h_stop) + P_stop/4;
+            A = -phi_c;
+            B = 3*eta_f_dl*u_stop./h_stop;
+            C = (rho_stop*g_dl*cosd(theta))*h_stop;
+            D = alpha_dl*h_stop/9*2/u_stop.*(-P_stop.*chi_stop+zeta_stop).*(-2/beta_dl./h_stop);
+            E = h_stop*D+phi_stop;
+
+            x_sol = roots([D, sqrt(B)*D, (A-D*C+E), -(D*C*(sqrt(B))-E*sqrt(B))]);
+            x_sol = x_sol(x_sol>0);
+            p_sol = -x_sol.^2+C;
+            p_sol = p_sol(p_sol>0);
+            pp_stop = x_sol.^2;
+            y5_stop = p_sol - g_dl*cosd(theta_in)*rho_stop*chi_stop.*h_stop;
+            Iv_stop = 3*eta_f_dl*abs(u_stop)/h_stop/pp_stop;
+            
+            Iv_coeff = 1/(p(1)-u_stop)/eta_f_dl/alpha_dl;
+            app_rate = phi_stop/(1+sqrt(Iv_stop))*sqrt(Iv_stop^3).*Iv_coeff;
+            dil_length = 3/app_rate;
+            if ~set_h_min
+                len_resid = [p(2)-(lambda_in-dil_length), yb(2,2)-h_stop];
             end
             
             cont_resid = (ya(:,2) - yb(:,1))';
 
-            resid = [ya(1,1)-yb(1,2), ya(3,1), yb(3,2)-rf_in,...
-                (ya(5,1)-yb(5,2)), denom_mid,len_resid, fb_val_mid, cont_resid];
+            resid = [ya(1,1)-yb(1,2), ya(3,1), yb(3,2)+dil_length*h_stop*(u_stop)^(1-pres_h)-rf_in*(p_in(2)+dil_length),...
+                (yb(5,2)-y5_stop), denom_mid,len_resid, fb_val_mid, cont_resid];
         end
     end
 end

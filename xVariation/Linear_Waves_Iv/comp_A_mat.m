@@ -1,3 +1,5 @@
+% Compares the A matrix for linear growth across a number of parameter
+% values
 mu1_Iv = 0.32;
 mu2_Iv = 0.7;
 Iv_0 = 0.005;
