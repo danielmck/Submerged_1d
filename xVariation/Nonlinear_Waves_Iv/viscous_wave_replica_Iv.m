@@ -92,18 +92,23 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, 
     end
 
     function dydx = full_system_orig_dl(x,y)
+        Q1_dl = y(1);
         h = y(2);
-        u = u_w_dl - y(1)/h;
+        u = u_w_dl - Q1_dl/h;
         n = y(3);
 
         dy1dx = 0;
         dy2dx = n;
-        n_coeff = 1-Q1_dl^2.*Fr_eq^2/h^3;
+        n_coeff = h/Fr_eq^2-Q1_dl^2/h^2;
         Fr = Fr_eq*abs(u)/h;
         Iv = crit_Iv*abs(u)/h^2;
-        n_eq = (tand(theta)-P*mu_Iv_fn(Iv))./n_coeff;
-        dy3dx = 1/(2*h)*n^2 + h^(3/2)/Fr_eq^2*R/Q1_dl*n_coeff*(n-n_eq);
+        force_bal = h*(tand(theta)-sign(u).*P*mu_Iv_fn(Iv))/Fr_eq^2;
+        n_eq = (force_bal)./n_coeff;
+        dy3dx = 1/Q1_dl/nu_dl*(n_coeff*n-force_bal);
 %         dy2dx = (g*h^3*cosd(theta))*(tand(theta)-mu_b)/(n_coeff);
+        n_coeff_old = 1-Q1_dl^2.*Fr_eq^2/h^3;
+        n_eq_old = (tand(theta)-P*mu_Iv_fn(Iv))./n_coeff_old;
+        dy3dx_old = 1/(2*h)*n^2 + h^(3/2)/Fr_eq^2*R/Q1_dl*n_coeff_old*(n-n_eq_old);
         dydx = [dy1dx dy2dx, dy3dx]';
     end
 

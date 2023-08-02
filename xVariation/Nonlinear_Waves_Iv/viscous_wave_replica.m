@@ -8,13 +8,13 @@ function viscous_wave_replica
     
 
     g=9.81; % m/s^2
-    theta = 29;
+    theta = 10;
     gamma = (mu2-tand(theta))/(tand(theta)-mu1);
 %     eta_f = 1.18e-5;
 %     rho_f = 1;
     
 %    crit_Fr = get_critical_Fr(theta, rho_p, rho_f, d, eta_f, alpha);
-    Fr_eq = 1.02; 
+    Fr_eq = 1.0; 
 %     Fr_eq = h0*beta/gamma/L;
     h0 = Fr_eq*L*gamma/beta;
     

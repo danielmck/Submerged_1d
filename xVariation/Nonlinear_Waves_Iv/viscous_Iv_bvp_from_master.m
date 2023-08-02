@@ -68,16 +68,16 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
     end
     
     if ~specify_param
-%         Fr_eq = 1.5; 
-        lambda = 10;
-        theta = 10;
+        Fr_eq = 1.0; 
+        lambda = 12;
+        theta = 12;
         nu = 2e-4;
-        tau0 = 40;
+        tau0 = 0;
         rel_flux = 1;
         pres_h = 0;
-        h0 = 0.1;
-        [Fr_eq, ~] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h0, tau0);
-        filename = "time_d_comp_vvshort.txt";
+%         h0 = 0.1;
+        [h0, ~] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr_eq, tau0);
+        filename = "rauter_convert.txt";
     else
         param_cell = num2cell(params);
         if (size(param_cell,2) == 5)
@@ -204,13 +204,13 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
                     [xi_in,y_in] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
                     ,linspace(nu_vals(i-1),nu_vals(i),3) ,linspace(theta_vals(i-1),theta_vals(i),3)...
                     ,linspace(lambda_vals(i-1),lambda_in,3), linspace(tau0_vals(i-1),tau0_in,3), ...
-                    xi_in*lambda_old/lambda_in, y_in, tol,counter+1);
+                    linspace(rf_vals(i-1),rf_in,3), xi_in/lambda_in*lambda_old, y_in, tol,counter+1);
                 end
             else
                 [xi_in,y_in] = run_bvp_step(linspace(Fr_vals(i-1),Fr_in,3)...
                     ,linspace(nu_vals(i-1),nu_vals(i),3) ,linspace(theta_vals(i-1),theta_vals(i),3)...
                     ,linspace(lambda_vals(i-1),lambda_in,3), linspace(tau0_vals(i-1),tau0_in,3), ...
-                    xi_in*lambda_old/lambda_in, y_in, tol, counter+1);
+                    linspace(rf_vals(i-1),rf_in,3), xi_in/lambda_in*lambda_old, y_in, tol, counter+1);
             end
         end
         y_out = solN1.y;
@@ -238,12 +238,12 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             m = y(5);
 
             dhdxi = n;
-            n_coeff = 1-Q1^2.*Fr_in^2/h^3;
-%             Fr = Fr_eq*abs(u)/h;
+            n_coeff = h/Fr_eq^2-Q1^2/h^2;
+            Fr = Fr_eq*abs(u)/h;
             Iv = crit_Iv*abs(u)/h^2;
-            force_bal = tand(theta_in)-sign(u).*P*mu_Iv_fn(Iv)-tau0_dl*rho_f/rho/h;
+            force_bal = h*(tand(theta)-sign(u).*P*mu_Iv_fn(Iv))/Fr_eq^2;
             n_eq = (force_bal)./n_coeff;
-            dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_in^2/nu_dl/Q1*n_coeff*(n-n_eq);
+            dndxi = 1/Q1/nu_dl*(n_coeff*n-force_bal);
             dmdxi = h*u^(1-pres_h)/lambda_in;
             dydxi = [0,0,dhdxi,dndxi,dmdxi]';
         end

@@ -140,6 +140,7 @@ function [xi_out,y_out] = bvp_full_to_var_rho(custom_init,reverse,params,provide
             u_eq_dl = u_eq/v_scale;
             rho_f_dl = rho_f*v_scale^2/p_scale;
             rho_p_dl = rho_p*v_scale^2/p_scale; 
+            rho_eq = rho_p_dl*phi_eq+(1-phi_eq)*rho_f_dl;
             d_dl = d/z_scale;
 
             beta_dl = 150*phi_c.^2.*eta_f_dl./((1-phi_c).^3.*d_dl^2);
@@ -199,14 +200,20 @@ function [xi_out,y_out] = bvp_full_to_var_rho(custom_init,reverse,params,provide
             dhdxi = n;
             n_coeff = 1-Q1.^2.*Fr^2/h^3;
             Iv = 3*eta_f_dl*abs(u)/h/p_p;
-            mu_val = p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv)+tau0_dl*rho_f_dl/rho_dl/h; 
-            n_eq = (tand(theta)-sign(u).*mu_val+(u_w-u)*P*D)./n_coeff;
+            n_coeff = h/Fr^2-Q1^2/h^2;
+            mu_val = p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv)+tau0_dl*rho_f_dl/rho_dl/h;
+            force_bal = h*(tand(theta)-sign(u).*mu_val)/Fr^2;
             dQdxi = -P*D;
-            dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr^2/nu_dl/Q1*n_coeff*(n-n_eq);
-            dmdxi = h/lambda*u^(1-pres_h);
+%             dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr^2/nu_dl/Q1*n_coeff*(n-n_eq);
+            dmdxi = (1-phi_param)*h/lambda*u^(1-pres_h)+phi_param*h*rho_dl/rho_eq./lambda*u^(1-pres_h);
 
             dy6dxi = -R_w3;
             dy7dxi = R_w4/(u-u_w);
+            dphidxi = (dy6dxi-phi*dQdxi)/Q1;
+            dPdxi = phi_param*(rho_p_dl-rho_f_dl)*rho_f_dl/rho_dl^2*dphidxi;
+            dpbdxi = dy7dxi+ ((1-phi_param)*rho_dl+rho_f_dl/4)*g_dl*cosd(theta)*dhdxi;
+            dDdxi = -2/beta_dl*((rho_p_dl-rho_f_dl)*g_dl*cosd(theta)*phi_param+dpbdxi/h-pb/h^2*dhdxi);
+            dndxi = 1/Q1/nu_dl*(n_coeff*n-force_bal+u*dQdxi)-h/Q1*(P*dDdxi+D*dPdxi);
             dydxi = [0,dQdxi,dhdxi,dndxi,dmdxi,dy6dxi,dy7dxi]';  
         end
         

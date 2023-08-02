@@ -55,5 +55,5 @@ function chop_end
     out_vec = vertcat(xi_out,y_out);
     out_name = strcat(filename(1:end-4),'_chop.txt');
     save("Results/"+out_name,"out_vec","-ascii")
-    write_record("Results/full_record.csv",out_name,{"chop_pres_h","water",Fr,theta,alpha,d,tau0,u_w,lambda,xi_crit})
+    write_record("Results/full_record.csv",out_name,{"chop_pres_h","water",Fr,theta,alpha,d,tau0,u_w,lambda,xi_crit,lambda_out})
 end

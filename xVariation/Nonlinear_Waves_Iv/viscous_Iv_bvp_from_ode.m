@@ -63,10 +63,15 @@ function viscous_Iv_bvp_from_ode
     
     [xi_final,y_final] = run_bvp_step(lambda_init, lambda, n_step, xi_wave, y_init,1e-3);
     h_final = y_final(3,:);
-    plot(xi_final,h_final)
     [~,mindex] = min(h_final);
-%     y_final = horzcat(y_final(:,mindex:end),y_final(:,1:mindex-1));
-%     xi_final = mod(horzcat(xi_final(mindex:end),xi_final(1:mindex-1))-xi_final(mindex),lambda);
+    y_final = horzcat(y_final(:,mindex:end-1),y_final(:,1:mindex-1));
+    xi_final = mod(horzcat(xi_final(mindex:end-1),xi_final(1:mindex-1))-xi_final(mindex),lambda);
+    y_final(4,:) = mod(y_final(4,:)-y_final(4,1),1);
+    xi_final = horzcat(xi_final,lambda);
+    y_final = horzcat(y_final,y_final(:,1));
+    y_final(4,end) = 1;
+    h_final = y_final(3,:);
+    plot(xi_final,h_final)
     out_final = vertcat(xi_final,y_final);
     save("Results/master_wave_no_pe.txt","out_final","-ascii")
     write_record("Results/wave_record.csv","master_wave_no_pe.txt",{"no_pe","water",Fr_eq,theta,lambda,nu,0,0,0})
@@ -85,17 +90,18 @@ function viscous_Iv_bvp_from_ode
             solInit1=bvpinit(xi_in,@bvp_guess);
             try
                 solN1 = bvp4c(@viscous_syst,@bc_vals,solInit1);
+                resid = solN1.stats.maxres;
             catch ME
                 switch ME.identifier
                     case 'MATLAB:UndefinedFunction'
                         warning('Function is undefined.  Assigning a value of NaN.');
+                        resid = 2*tol;
                     otherwise
                         rethrow(ME)
                 end
                 
             end
             % Solves the 5 value bvp for u_w, Q1, h, n and m.
-            resid = solN1.stats.maxres;
             h_wave = solN1.y(3,:);
             h_diff = max(h_wave)-min(h_wave);
             if h_diff>1e-4
@@ -134,11 +140,12 @@ function viscous_Iv_bvp_from_ode
             m = y(5);
 
             dhdxi = n;
-            n_coeff = 1-Q1^2.*Fr_eq^2/h^3;
+            n_coeff = h/Fr_eq^2-Q1^2/h^2;
             Fr = Fr_eq*abs(u)/h;
             Iv = crit_Iv*abs(u)/h^2;
-            n_eq = (tand(theta)-sign(u).*P*mu_Iv_fn(Iv))./n_coeff;
-            dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_eq^2*R/Q1*n_coeff*(n-n_eq);
+            force_bal = h*(tand(theta)-sign(u).*P*mu_Iv_fn(Iv))/Fr_eq^2;
+            n_eq = (force_bal)./n_coeff;
+            dndxi = 1/Q1/nu_dl*(n_coeff*n-force_bal);
             dmdxi = h/lambda_in*u;
             dydxi = [0,0,dhdxi,dndxi,dmdxi]';
         end

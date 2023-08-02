@@ -4,5 +4,5 @@ function dmudIv = dmudIv_fn(Iv)
     Iv_0 = 0.005;
     reg_param = 1*10^7;
     phi_c=0.585;
-    dmudIv = (mu2_Iv-mu1_Iv)*Iv_0./(Iv_0+abs(Iv)).^2 + 1 + 5/4*phi_c./sqrt(Iv);
+    dmudIv = (mu2_Iv-mu1_Iv)*Iv_0./(Iv_0+abs(Iv)).^2 + 1 + 5/4*phi_c./sqrt(max(Iv,1e-6));
     end
