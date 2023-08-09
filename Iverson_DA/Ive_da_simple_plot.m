@@ -1,12 +1,12 @@
 function Ive_da_simple_plot
-    fname = ["Ive_da_5deg_13init_medium.txt"];
+    fname = ["sin_u_evo.txt"];
 
     sim_num = size(fname,2);
     sim_list = cell(1,sim_num);
     n_times = zeros(sim_num,1);
     custom_times = zeros(sim_num,1);
     
-    h0 = 4e-2; % layer height (m)
+    h0 = 1e-1; % layer height (m)
     d= 1e-5*ones(sim_num,1);
     phi_c= 0.585*ones(sim_num,1);
     eta_f = 0.0010016*ones(sim_num,1);
@@ -17,12 +17,6 @@ function Ive_da_simple_plot
     density_ratio = 2.5*ones(sim_num,1);
 
     theta0=13;
-
-    mu1_Iv = 0.32;
-    mu2_Iv = 0.7;
-    Iv_0 = 0.005;
-
-    reg_param = 10^8;
 
     fric_ang = 0.65;
 
@@ -116,13 +110,4 @@ function Ive_da_simple_plot
     figname = "Ive_da_5deg_u_medium.pdf";
     exp_graph(gcf,figname)
     movefile(figname,"../Iverson_Closure/Figures/SecondYearReport")
-end
-
-function mu_val = mu_Iv_fn(Iv)
-    mu1_Iv = 0.32;
-    mu2_Iv = 0.7;
-    Iv_0 = 0.005;
-    reg_param = 10^8;
-    phi_c = 0.585;
-    mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
 end

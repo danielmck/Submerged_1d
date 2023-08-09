@@ -1,22 +1,21 @@
 % fname = ["Ive_da_13_acc.txt"]; %,"Ive_da_13_deep_quad_alpha4.txt","Ive_da_13_deep_quad_alpha5.txt"];
 % fname = ["Ive_da_5_deep_alpha3.txt","Ive_da_5_deep_alpha4.txt","Ive_da_5_deep_alpha5.txt"];
 % fname = ["Ive_da_4_deep_9_2_start.txt"]; %,"Ive_da_4_deep_9_start.txt"];
-fname = ["Ive_da_5deg_13init_fast.txt"];
-plot_titles = ["$\alpha = 10^{-3}$","$\alpha = 10^{-4}$","$\alpha = 10^{-5}$"];
+fname = ["sin_u_evo_play.txt"];
+% plot_titles = ["$\alpha = 10^{-3}$","$\alpha = 10^{-4}$","$\alpha = 10^{-5}$"];
 
 sim_num = size(fname,2);
 sim_list = cell(1,sim_num);
 n_times = zeros(sim_num,1);
 custom_times = zeros(sim_num,1);
 
-N=[200,200,200]';
-h = [4e-2,4e-2,4e-2]';
-d= 1e-5*ones(sim_num,1);
+h = [1e-1,4e-2,4e-2]';
+d= 1e-4*ones(sim_num,1);
 
 phi_c= 0.585*ones(sim_num,1);
 eta_f = 0.0010016*ones(sim_num,1);
 g=9.81*ones(sim_num,1); % m/s^2
-theta = 5*ones(sim_num,1); % deg
+theta = 0*ones(sim_num,1); % deg
 alpha = [1e-4,1e-4]'; % 1/Pa
 rho_f = 1000*ones(sim_num,1);
 density_ratio = 2.5*ones(sim_num,1);
@@ -26,12 +25,6 @@ t_step = 10*ones(sim_num,1);
 N = 200; % number of discretisation points in z for each of tau, u
 h0 = 4e-2; % layer height (m)
 d=1e-5; % grain diameter (m)
-
-mu1_Iv = 0.32;
-mu2_Iv = 0.7;
-Iv_0 = 0.005;
-
-reg_param = 10^8;
 
 fric_ang = 0.65;
 
@@ -54,6 +47,7 @@ t_vals = zeros(sim_num,5001);
 h = zeros(sim_num,5001);
 phi = zeros(sim_num,5001);
 u = zeros(sim_num,5001);
+pb = zeros(sim_num,5001);
 pe = zeros(sim_num,5001);
 
 cd Results
@@ -68,20 +62,22 @@ for k=1:sim_num
         t_vals(k,1:n_times(1,k)) = linspace(0,(size(data_file,1)-1)*t_step,size(data_file,1));
     end
     h(k,1:n_times(1,k)) = data_file(:,custom_time+1);
-    phi(k,1:n_times(1,k)) = data_file(:,custom_time+2);
+    phi(k,1:n_times(1,k)) = data_file(:,custom_time+2)./h(k,1:n_times(1,k))';
     u(k,1:n_times(1,k)) = data_file(:,custom_time+3);
-    pe(k,1:n_times(1,k)) = data_file(:,custom_time+4)'-cosd(theta(k)).*h(k,1:n_times(1,k));
+    pb(k,1:n_times(1,k)) = data_file(:,custom_time+4);
+    pe(k,1:n_times(1,k)) = pb(k,1:n_times(1,k))-cosd(theta(k)).*h(k,1:n_times(1,k));
 end
 cd ..
 
 rho = density_ratio.*phi+(1-phi);
 pp = (rho-1).*h.*cosd(theta)-pe;
 
-Iv = 3.*u.*eta_f_dl./(h.*(pp));
-Iv_base = 3.*u.*eta_f_dl./(h.*(pp));
+Iv = 3.*abs(u).*eta_f_dl./(h.*(pp));
+Iv_base = 3.*abs(u).*eta_f_dl./(h.*(pp));
 Iv_phi = (phi_c-phi).^2./(phi.^2);
 
-tan_psi = phi-phi_c./(1+sqrt(Iv));
+phi_Iv = phi_c./(1+sqrt(Iv));
+tan_psi = phi-phi_Iv;
 tau_zx = pp.*mu_Iv_fn(Iv_base)+(1-phi).*eta_f_dl.*2.*u./h;
 D = -2.*kappa_dl./(eta_f_dl.*h).*pe;
 
@@ -153,21 +149,54 @@ medium_scale = u./sind(9);
 % theta_Iv = 3.*theta_u.*eta_f_dl./(theta_h.*(theta_pp));
 % theta_tan_psi = theta_phi-phi_c./(1+sqrt(theta_Iv));
 
+smooth_span = 402.5;
+
+Iv_smooth = zeros(sim_num,5001);
+phi_smooth = zeros(sim_num,5001);
+phi_Iv_smooth = zeros(sim_num,5001);
+pe_smooth = zeros(sim_num,5001);
 for i=1:sim_num
+    for k=1:n_times(1,i)
+        t_now = t_vals(i,k);
+        n_below = min(sum((t_vals(i,:)-t_now > -smooth_span/2) & (t_vals(i,:)<t_now))+1,k-1);
+        n_above = min(sum(t_vals(i,:)-t_now < smooth_span/2 & (t_vals(i,:)>t_now))+1,n_times(1,i)-k);
+        pe_ave = 0;
+        Iv_ave = 0;
+        phi_Iv_ave = 0;
+        phi_ave = 0;
+        for l=-n_below+1:n_above
+            pe_ave = pe_ave+(pe(i,k+l)+pe(i,k+l-1))/2*(t_vals(i,k+l)-t_vals(i,k+l-1));
+            Iv_ave = Iv_ave+(Iv(i,k+l)+Iv(i,k+l-1))/2*(t_vals(i,k+l)-t_vals(i,k+l-1));
+            phi_ave = phi_ave+(phi(i,k+l)+phi(i,k+l-1))/2*(t_vals(i,k+l)-t_vals(i,k+l-1));
+            phi_Iv_ave = phi_Iv_ave+(phi_Iv(i,k+l)+phi_Iv(i,k+l-1))/2*(t_vals(i,k+l)-t_vals(i,k+l-1));
+        end
+        pe_ave = pe_ave/(t_vals(i,k+n_above)-t_vals(i,k-n_below));
+        Iv_ave = Iv_ave/(t_vals(i,k+n_above)-t_vals(i,k-n_below));
+        phi_ave = phi_ave/(t_vals(i,k+n_above)-t_vals(i,k-n_below));
+        phi_Iv_ave = phi_Iv_ave/(t_vals(i,k+n_above)-t_vals(i,k-n_below));
+        pe_smooth(i,k) = pe_ave;
+        Iv_smooth(i,k) = Iv_ave;
+        phi_smooth(i,k) = phi_ave;
+        phi_Iv_smooth(i,k) = phi_Iv_ave;
+    end
+%     SetPaperSize(8,8);  
     if (i == 1)
         colour = "blue";
     else
         colour = "red";
     end
     t_start = 0;
-    t_stop = 1500;
+    t_stop = 5000;
     t_begin = max(sum(t_vals(i,1:n_times(1,i))<t_start)-1,1);
     t_end = min(sum(t_vals(i,1:n_times(1,i))<t_stop)+1,n_times(1,i));
-    plot(t_vals(i,t_begin:t_end),pp(i,t_begin:t_end),colour,'DisplayName',"Exact Value")
     hold on
+    plot(t_vals(i,t_begin:t_end),pe_smooth(i,t_begin:t_end),'DisplayName',"Smoothed $\phi$")
+%     plot(t_vals(i,t_begin:t_end),phi_Iv_smooth(i,t_begin:t_end),'DisplayName',"Smoothed $\phi(I_v)$")
+%     plot(t_vals(i,t_begin:t_end),phi_c./(1+sqrt(Iv_smooth(i,t_begin:t_end))),'DisplayName',"Exact Value")
+    
 %     plot(t_vals(i,t_begin:t_end),dIvdt_phi(i,t_begin:t_end),"red",'DisplayName',"Exact Value")
 %     plot(t_vals(i,t_begin:t_end),(3.*u(i,t_begin:t_end).*eta_f_dl./Iv_phi(i,t_begin:t_end)),'DisplayName',"Approximation")
-    plot(t_vals(i,t_begin:t_end),(pp_approx_early(i,t_begin:t_end)),"red",'DisplayName',"Approximation")
+%     plot(t_vals(i,t_begin:t_end),(pp_approx_early(i,t_begin:t_end)),"red",'DisplayName',"Approximation")
 %     plot(theta_times,theta_tan_psi)
 
 
@@ -179,28 +208,15 @@ end
 % plot(t_vals(i,t_begin:t_end),(rho(2,1)-1)*cosd(13).*ones(1,t_end-t_begin+1),"--k",'DisplayName',"Previous Slope Value")
 legend('Location', "best",'UserData', 8);
 xlabel("$t$");
-ylabel('$\tan \psi$');%,'Position',[-35 0.0045]);
+ylabel('$p_e$ (Pa)');%,'Position',[-35 0.0045]);
 % xlim([t_start t_stop])
 % ylim([0 0.01])
 box on
-title('Exact Value and Approximation of $\tan \psi$ during the Fast Timescale')
-
+% title('Exact Value and Approximation of $\tan \psi$ during the Fast Timescale')
+% exp_graph(gcf,"u_sinus_phi_Iv_smooth.pdf")
 ax = gca;
 %      set(gca,'ytick',[])
 % ax.YAxis.Exponent = 0;
 % yticks(-1e-4:2e-5:0)
 % ytickformat('%5.0e');
 ax.YAxis.Exponent = 0;
-
-% PrintFig('Ive_da_early_tan_psi')
-% plot(linspace(0,1000,101),dudt_approx(1:101))
-% plot(linspace(0,5000,5001),tand(theta)*rho./())
-
-function mu_val = mu_Iv_fn(Iv)
-    mu1_Iv = 0.32;
-    mu2_Iv = 0.7;
-    Iv_0 = 0.005;
-    reg_param = 10^8;
-    phi_c = 0.585;
-    mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
-end

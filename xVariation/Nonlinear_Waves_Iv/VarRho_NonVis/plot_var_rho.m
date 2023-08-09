@@ -311,8 +311,16 @@ u_min = u{i,1}(1);
 u_pl = u{i,1}(end);
 Q1_shock = Q1{i,1}(end);
 
+Iv_app1 = 3.*u_e.*eta_f_dl(i)/h_e./(p_tot_e-p_sol);
+mu_val_app1 = (p_tot_e-p_sol)./(p_tot_e).*mu_Iv_fn(Iv_app1)+tau0_dl(i)*rho_f_dl(i)./rho_e./h_e;
+force_bal_app1 = tand(theta(i))-sign(u_e).*mu_val_app1;
+dhdxi_app1 = min(force_bal_app1./n_coeff{i,1}(j),1);
+
 dppdxi = 1./Q1{i,1}.*dhdxi{i,1}.*(u_w-u{i,1}).*g_dl(i).*cosd(theta(i)).*(rho{i,1}.*h{i,1}-chi{i,1}.*rho{i,1}.*h{i,1})-(h{i,1}./4-pp{i,1})./Q1{i,1}.*dQdxi{i,1}+dhy5dxi{i,1}./Q1{i,1};
-dIvdxi = 3*eta_f_dl(i)./h{i,1}./pp{i,1}.*(-dQdxi{i,1}./h{i,1}+(Q1{i,1}./h{i,1}.^2-u{i,1}./h{i,1}).*dhdxi{i,1}-u{i,1}./pp{i,1}.*dppdxi);
+dQdxi_app1 = -P{i,1}.*D_app1;
+dhy5dxi_app1 = (pb_approx-rho{i,1}.*g_dl(i)*cosd(theta(i)).*chi{i,1}.*h{i,1}).*dQdxi_app1;
+dppdxi_app1 = 1./Q1{i,1}.*dhdxi_app1.*(u_w-u{i,1}).*g_dl(i).*cosd(theta(i)).*(rho{i,1}.*h{i,1}-chi{i,1}.*rho{i,1}.*h{i,1})-(h{i,1}./4-pp_app1)./Q1{i,1}.*dQdxi_app1+dhy5dxi_app1./Q1{i,1};
+dIvdxi_app1 = 3*eta_f_dl(i)./h{i,1}./pp{i,1}.*(-dQdxi_app1./h{i,1}+(Q1{i,1}./h{i,1}.^2-u{i,1}./h{i,1}).*dhdxi_app1-u{i,1}./pp{i,1}.*dppdxi_app1);
 
 R4_term = -u{i,1}./pp{i,1}./Q1{i,1}.*dhy5dxi{i,1};
 R1_term = (-1./h{i,1}+u{i,1}./pp{i,1}./Q1{i,1}.*(h{i,1}/4-pp{i,1})).*dQdxi{i,1};
