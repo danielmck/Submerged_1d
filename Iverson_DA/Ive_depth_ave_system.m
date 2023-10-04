@@ -1,26 +1,21 @@
 function Ive_depth_ave_system
-h0 = 4e-2; % layer height (m)
-d=1e-5; % grain diameter (m)
-
-mu1_Iv = 0.32;
-mu2_Iv = 0.7;
-Iv_0 = 0.005;
-
-reg_param = 10^8;
-
-phi_c=0.585; % Volume fraction
-eta_f = 0.0010016; % Pa s
-g=9.81; % m/s^2
-rho_f = 1000; % kg/m^3
-rho_p = 2500; % kg/m^3
-theta = 5; % deg
-theta0 = 13;
+h0 = 0.0388; % layer height (m)
+d=1e-4; % grain diameter (m)
+[phi_c,rho_f,rho_p,~,eta_f,g] = get_params_water();
+theta = 8; % deg
+theta0 = 10;
+change_t = 30;
 % fric_ang = 0.65;
 
-alpha = 1e-4;
+alpha = 1e-5;
 kappa = ((1-phi_c).^3.*d^2)./(150*phi_c.^2);
 
 buoyancy = -(rho_p-rho_f)*g*phi_c*cosd(theta);
+
+[Fr, init_Iv] = crit_Iv_tau0_h(theta0, rho_p, rho_f, eta_f, h0, 0, true);
+init_phi = phi_c/(1+sqrt(init_Iv));
+init_rho = rho_p*init_phi + rho_f*(1-init_phi);
+init_u = init_Iv/eta_f/3.*(init_rho-rho_f).*cosd(theta0).*g*h0^2;
 
 v_scale = sqrt(g.*h0);
 p_scale = rho_f.*g.*h0;
@@ -34,9 +29,9 @@ eta_f_dl = eta_f/(p_scale*t_scale);
 alpha_dl = alpha*p_scale;
 kappa_dl = kappa/(z_scale)^2;
 beta_dl = eta_f_dl/kappa_dl;
-init_Iv = newt_solve_crit_Iv(theta0,rho_p,rho_f);
-init_u = init_Iv/eta_f_dl/3.*(rho-1).*cosd(theta0);
-init_phi = phi_c/(1+sqrt(init_Iv));
+% init_Iv = newt_solve_crit_Iv(theta0,rho_p,rho_f);
+change_t_dl = change_t/t_scale;
+init_u_dl = init_u/v_scale;
 % flux_con = load('../Iverson_Closure/Results/flux_conditions.txt');
 % for l=1:50
 %     flux=flux_con(l,1);
@@ -52,20 +47,30 @@ init_phi = phi_c/(1+sqrt(init_Iv));
 %     run_Ive_da_sim()
 %     movefile(fname,'Results/');
 % end
-fname = "Ive_da_"+num2str(theta)+"deg_"+num2str(theta0)+"init_long.txt";
+fname = "Ive_da_"+num2str(theta)+"deg_"+num2str(theta0)+"init_change_"+num2str(change_t)+".txt";
 run_Ive_da_sim()
 movefile(fname,'Results/');
 % EOS_write_record(fname,N,h,d,reg_param,density_ratio,phi_c,theta,eta_f_dl,a_dl,phi_rcp,phi_rlp,t_step,2,shear_lim_dl);
 
     function dvecdt=Ive_depth_ave(t,vec)
         h = vec(1);
-        phi = vec(2);
+        phi = vec(2)/h;
         u = vec(3);
         pb = vec(4);
+        
+        if (change_t_dl > 0)
+            if t < change_t_dl
+                theta_in = theta0+(theta-theta0)/change_t_dl*t;
+            else
+                theta_in = theta;
+            end
+        else
+            theta_in = theta;
+        end
  
-        rho = density_ratio*phi_c+(1-phi_c);
-        pe = (pb-cosd(theta)*h);
-        pp = rho*h*cosd(theta)-pb;
+        rho = density_ratio*phi+(1-phi);
+        pe = (pb-cosd(theta_in)*h);
+        pp = rho*h*cosd(theta_in)-pb;
         Iv = 3*u*eta_f_dl/(h*(pp));
         tan_psi = phi-phi_c/(1+sqrt(Iv));
         tau_zx = pp*mu_Iv_fn(Iv)+(1-phi)*eta_f_dl*2*u/h;
@@ -73,11 +78,11 @@ movefile(fname,'Results/');
         
         dhdt = (rho-1)/rho*D;
 %         dhdt=0;
-        dphidt = -phi*D/h;
-        dudt = sind(theta)*h-tau_zx/rho;
-        dpbdt = -3/(alpha_dl*beta_dl*h^2)*pe+cosd(theta)*dhdt/4-3*u/(h*alpha_dl)*(tan_psi);
+        dphidt = -phi*D/rho;
+        dudt = sind(theta_in)*h-tau_zx/rho;
+        dpbdt = -3/(alpha_dl*beta_dl*h^2)*pe+cosd(theta_in)*dhdt/4-3*u/(h*alpha_dl)*(tan_psi);
         dIvdt = dudt.*3.*eta_f_dl./pp+1./pp.*Iv.*(-3*u/(h*alpha_dl)*(tan_psi));
-        tan_psi_eq = -(sind(theta)-tand(theta0)/cosd(theta)).*3.*eta_f_dl./((rho-1).*cosd(theta0))/(-init_Iv^2./eta_f_dl/((h*alpha_dl)));
+        tan_psi_eq = -(sind(theta_in)-tand(theta0)/cosd(theta_in)).*3.*eta_f_dl./((rho-1).*cosd(theta0))/(-init_Iv^2./eta_f_dl/((h*alpha_dl)));
         
         dvecdt = [dhdt,dphidt,dudt,dpbdt]';
     end
@@ -98,22 +103,15 @@ movefile(fname,'Results/');
         
         % No initial pressure of phihat and initial values of u_p and u_f
         % defined above
-        time_vals = linspace(0,30000,1500);
+        time_vals = linspace(0,4000,1500);
 %         opts=odeset('AbsTol',1e-12,'RelTol',1e-12,'Stats','on');
 
 %         [~,vec]=ode15s(@Ive_depth_ave,time_vals,[1,depth_phi_orig,depth_u,pb_init],opts);
-        [tvals,vec]=ode15s(@Ive_depth_ave,time_vals,[1,init_phi,init_u,cosd(theta0)]);
+        [tvals,vec]=ode15s(@Ive_depth_ave,time_vals,[1,init_phi,init_u_dl,cosd(theta0)]);
         vec = horzcat(tvals,vec);
-        size(vec)
+        size(vec);
+        vec = vec.*[t_scale,z_scale,1,v_scale,p_scale];
         save(fname, 'vec','-ascii')
         success=1;
-    end
-
-    function beta_val=beta_fn(phihat)
-        beta_val = 150*phi_c.^2./((1-phi_c).^3.*d_dl^2);
-    end
-   
-    function mu_val = mu_Iv_fn(Iv)
-        mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
     end
 end

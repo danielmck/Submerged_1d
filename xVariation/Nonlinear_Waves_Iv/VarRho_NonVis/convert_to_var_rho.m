@@ -1,8 +1,4 @@
 function [xi_final,y_final] = convert_to_var_rho(custom_init,reverse,params,provide_init,master_xi,master_y)
-% Does not work, an attempt to convert the no pe wave with no viscosity
-% into the full wave
-% Likely doesn't work as there is no way to find the flow height gradient
-% at the critical point.
     [phi_c,rho_f,rho_p,rho,eta_f,g] = get_params_water();
     P = (rho-rho_f)/rho;
     if ~exist("custom_init","var")

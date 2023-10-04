@@ -16,7 +16,7 @@ function viscous_Iv_bvp_from_ode
     rho_p = 2500;
     
     Fr_eq = 0.8; 
-    lambda = 12;
+    lambda = 30;
     
     rho = rho_p*phi_c+rho_f*(1-phi_c);
     P = (rho-rho_f)/rho;
@@ -73,8 +73,9 @@ function viscous_Iv_bvp_from_ode
     h_final = y_final(3,:);
     plot(xi_final,h_final)
     out_final = vertcat(xi_final,y_final);
-    save("Results/master_wave_no_pe.txt","out_final","-ascii")
-    write_record("Results/wave_record.csv","master_wave_no_pe.txt",{"no_pe","water",Fr_eq,theta,lambda,nu,0,0,0})
+    fname = "master_wave_no_pe_test.txt";
+    save("Results/"+fname,"out_final","-ascii")
+    write_record("Results/wave_record.csv",fname,{"no_pe","water",Fr_eq,theta,lambda,nu,0,0,0})
     
     function [xi_out, y_out] = run_bvp_step(lambda_init, lambda_fin, nstep, xi_in, y_in, tol, count)
         % Can account for a change in wavelength but should really use

@@ -1,4 +1,4 @@
-filelist = ["var_rho_master_pres_h.txt"]; %long_low_pe
+filelist = ["report_full_demo.txt"]; %long_low_pe
 n_files = size(filelist,2);
 
 mu1_Iv = 0.32;
@@ -153,16 +153,16 @@ for i=1:n_files
     g_dl(i) = g*t_scale(i)/v_scale(i); 
 
     u_eq_dl(i) = u_eq(i)/v_scale(i);
-    rho_f_dl(i) = rho_f*v_scale(i)^2/p_scale(i);
-    rho_p_dl(i) = rho_p*v_scale(i)^2/p_scale(i); 
+    rho_f_dl(i) = rho_f*v_scale(i).^2/p_scale(i);
+    rho_p_dl(i) = rho_p*v_scale(i).^2/p_scale(i); 
     rho_eq_dl(i) = rho_p_dl(i)*phi_eq(i)+rho_f_dl(i)*(1-phi_eq(i));
     d_dl(i) = d(i)/z_scale(i);
     tau0_dl(i) = tau0(i)/p_scale(i);
     h_stop_dl(i) = h_stop(i)/z_scale(i);
 
-    beta_dl(i) = 150*phi_c.^2.*eta_f_dl(i)./((1-phi_c).^3.*d_dl(i)^2);
+    beta_dl(i) = 150*phi_c.^2.*eta_f_dl(i)./((1-phi_c).^3.*d_dl(i).^2);
     flux_eq = (phi_eq(i)*rho_p_dl(i)+(1-phi_eq(i))*rho_f_dl(i));
-    St(i) = rho_p*d^2*u_eq(i)/3/h0(i)/eta_f;
+    St(i) = rho_p*d(i)^2*u_eq(i)/3/h0(i)/eta_f;
 % u_w(i) = y(1,1);
 % lambda(i) = y(2,1);
 % h_crit_xi(i) = y(3,1);
@@ -172,6 +172,8 @@ for i=1:n_files
     m{i,1} = y_temp(3,:);
 
     xi{i,1} = horzcat(xi_temp(xi_temp<1)*h_crit_xi(i),h_crit_xi(i)+(xi_temp(xi_temp>=1)-1)*(lambda(i)-h_crit_xi(i)));
+    
+    y_proc = vertcat(xi{i,1}/lambda,u_w(i).*ones(size(xi{i,1})),y_temp(1,:),lambda(i).*ones(size(xi{i,1})),y_temp(2:end,:));
 
     if full_model
         phi{i,1} = y_temp(4,:)./Q1{i,1};
@@ -223,7 +225,7 @@ for i=1:n_files
         [Fr_equi{i,1}(i),Iv_equi{i,1}(i)] = crit_Iv_tau0_h(theta(i), rho_p, rho_f, eta_f, h{i,1}(i)*h0(i), tau0(i),0);
     end
 
-    n_coeff{i,1} = 1-Q1{i,1}.^2.*Fr(i)^2./h{i,1}.^3;
+    n_coeff{i,1} = 1-Q1{i,1}.^2.*Fr(i).^2./h{i,1}.^3;
     % Iv = 3*eta_f_dl(i).*abs(u)./h./pp;
     mu_val{i,1} = pp{i,1}./(p_tot_grad_dl{i,1}.*h{i,1}).*mu_Iv_fn(Iv{i,1})+tau0_dl(i)*rho_f_dl(i)./rho{i,1}./h{i,1};
     force_bal{i,1} = tand(theta(i))-sign(u{i,1}).*mu_val{i,1};
@@ -252,17 +254,9 @@ for i=1:n_files
     end
 end
 
-
-
-% Iv_coeff = 1/(u_w-u_e)/eta_f_dl/alpha_dl;
-% app_rate = phi_e/(1+sqrt(Iv_e))*sqrt(Iv_e^3).*Iv_coeff;
-% xi_app = linspace(lambda-0.10,lambda,100);
-% tan_psi_eq = alpha_dl(i)*h{i,1}/9*2./u{i,1}.*(diffusion{i,1}+P{i,1}.*D{i,1});
-% tan_psi_app = tan_psi_eq(end)+(tan_psi_e-tan_psi_eq(end))*exp(app_rate*(xi_app-lambda));
-
-pb_approx = zeros(size(xi{i,1}));
-pb2_approx = zeros(size(xi{i,1}));
-pb2_resid_vec = zeros(size(xi{i,1}));
+% pb_approx = zeros(size(xi{i,1}));
+% pb2_approx = zeros(size(xi{i,1}));
+% pb2_resid_vec = zeros(size(xi{i,1}));
 for j=1:size(xi{i,1},2)
     tan_psi_e = tan_psi{i,1}(j);
     rho_e = rho{i,1}(j);
@@ -271,6 +265,7 @@ for j=1:size(xi{i,1},2)
     u_e = u{i,1}(j);
     h_e = h{i,1}(j);
     Iv_e = Iv{i,1}(j);
+    pp_e = pp{i,1}(j);
     Q1_e = Q1{i,1}(j);
     p_tot_e = p_tot_grad_dl{i,1}(j).*h_e;
     A = -phi_c(i);
@@ -297,6 +292,16 @@ for j=1:size(xi{i,1},2)
     pb2 = -pb2_resid./pb2_coeff;
     pb2_approx(1,j) = pb2;
 end
+% 
+Iv_coeff = 3/2/(u_w-u_e)/eta_f_dl/alpha_dl;
+app_rate = phi_e/(1+sqrt(Iv_e))/2*sqrt(Iv_e^3).*Iv_coeff;
+% app_rate2 = phi_c/(1+sqrt(Iv_e))^2/2*Iv_e^(1/2)*9/2/alpha_dl*u_e/h_e/pp_e/(u_w-u_e);
+xi_app = linspace(lambda-0.10,lambda,100);
+tan_psi_eq = alpha_dl(i)*h{i,1}/9*2./u{i,1}.*(diffusion{i,1}+P{i,1}.*D{i,1});
+tan_psi_app = tan_psi_eq(end)+(tan_psi_e-tan_psi_eq(end)).*exp(app_rate*(xi_app-lambda));
+Iv_app = (phi_c./(phi_e-tan_psi_app)-1).^2;
+pp_app = 3*u_e*eta_f_dl/h_e./Iv_app;
+pb_app = p_tot_e-pp_app;
 
 % pp_root = B/(phi_c(i)/phi_e-1)^2;
 % x_ex = sqrt(pp_root);
@@ -317,10 +322,11 @@ force_bal_app1 = tand(theta(i))-sign(u_e).*mu_val_app1;
 dhdxi_app1 = min(force_bal_app1./n_coeff{i,1}(j),1);
 
 dppdxi = 1./Q1{i,1}.*dhdxi{i,1}.*(u_w-u{i,1}).*g_dl(i).*cosd(theta(i)).*(rho{i,1}.*h{i,1}-chi{i,1}.*rho{i,1}.*h{i,1})-(h{i,1}./4-pp{i,1})./Q1{i,1}.*dQdxi{i,1}+dhy5dxi{i,1}./Q1{i,1};
-dQdxi_app1 = -P{i,1}.*D_app1;
-dhy5dxi_app1 = (pb_approx-rho{i,1}.*g_dl(i)*cosd(theta(i)).*chi{i,1}.*h{i,1}).*dQdxi_app1;
-dppdxi_app1 = 1./Q1{i,1}.*dhdxi_app1.*(u_w-u{i,1}).*g_dl(i).*cosd(theta(i)).*(rho{i,1}.*h{i,1}-chi{i,1}.*rho{i,1}.*h{i,1})-(h{i,1}./4-pp_app1)./Q1{i,1}.*dQdxi_app1+dhy5dxi_app1./Q1{i,1};
-dIvdxi_app1 = 3*eta_f_dl(i)./h{i,1}./pp{i,1}.*(-dQdxi_app1./h{i,1}+(Q1{i,1}./h{i,1}.^2-u{i,1}./h{i,1}).*dhdxi_app1-u{i,1}./pp{i,1}.*dppdxi_app1);
+% D_app1 = -2/beta_dl(i)./h{i,1}.*(pb2_approx-h{i,1});
+% dQdxi_app1 = -P{i,1}.*D_app1;
+% dhy5dxi_app1 = (pb_approx-rho{i,1}.*g_dl(i)*cosd(theta(i)).*chi{i,1}.*h{i,1}).*dQdxi_app1;
+% dppdxi_app1 = 1./Q1{i,1}.*dhdxi_app1.*(u_w-u{i,1}).*g_dl(i).*cosd(theta(i)).*(rho{i,1}.*h{i,1}-chi{i,1}.*rho{i,1}.*h{i,1})-(h{i,1}./4-pp_app1)./Q1{i,1}.*dQdxi_app1+dhy5dxi_app1./Q1{i,1};
+% dIvdxi_app1 = 3*eta_f_dl(i)./h{i,1}./pp{i,1}.*(-dQdxi_app1./h{i,1}+(Q1{i,1}./h{i,1}.^2-u{i,1}./h{i,1}).*dhdxi_app1-u{i,1}./pp{i,1}.*dppdxi_app1);
 
 R4_term = -u{i,1}./pp{i,1}./Q1{i,1}.*dhy5dxi{i,1};
 R1_term = (-1./h{i,1}+u{i,1}./pp{i,1}./Q1{i,1}.*(h{i,1}/4-pp{i,1})).*dQdxi{i,1};
@@ -328,24 +334,61 @@ dh_term = (Q1{i,1}./h{i,1}.^2-u{i,1}./h{i,1}-u{i,1}./pp{i,1}./Q1{i,1}.*(u_w-u{i,
 Iv_deriv = 3*eta_f_dl(i)./h{i,1}./pp{i,1}.*(dh_term+R1_term+R4_term);
 
 dil_cont = u{i,1}./pp{i,1}./Q1{i,1}.*h{i,1}.*dilatancy{i,1};
+
 %%
-SetPaperSize(8,8)
+
+% [h0_2e, crit_Iv_2e] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, tau0,false,false);
+% u0_2e = Fr*sqrt(g*cosd(theta)*h0_2e);
+filename_2e = "report_demo_wave_v2.txt";
+master_file_2e = load("../TwoEqn_non_vis/Results/"+filename_2e);
+xi_temp_2e = master_file_2e(1,:);
+y_temp_2e = master_file_2e(2:end,:);
+record = readtable('../TwoEqn_non_vis/Results/wave_record.csv');
+
+in_table_2e = strcmp(record.Name, filename_2e);
+wave_type_2e = record.wave_type(in_table_2e);
+theta_2e = record.theta(in_table_2e); 
+Fr_2e = record.Fr(in_table_2e);
+tau0_2e = record.tau0(in_table_2e);
+
+lambda_2e = y_temp_2e(3,1);
+xi_2e = xi_temp_2e*lambda_2e;
+Q1_2e = y_temp_2e(2,1);
+u_w_2e = y_temp_2e(1,1);
+
+h_2e = y_temp_2e(4,:);
+u_2e = u_w_2e - Q1_2e./h_2e;
+m_2e = y_temp_2e(5,:);
+
+%%
+SetPaperSize(7.6,7.6)
+% SetPaperSize(10,10)
 C = viridis(3);
 hold on
 % plot(xi,2*Q1./Fr(i).^2.*dQdxi./(3.*h.^3), "DisplayName", "Waveform","color",C(1,:))
 for i=1:n_files
 %     plot(xi{i,1}(1:end),dh_term+R1_term+R4_term, "DisplayName", "Waveform")
-    plot(xi{i,1},rho{i,1}.*u{i,1}.*h{i,1}, "color",C(1,:), "DisplayName", "Waveform")
-    plot(xi{i,1},wave_flux*ones(size(xi{i,1})),"--", "color",C(1,:), "DisplayName", "Waveform average")
-    plot(xi{i,1},rho_eq_dl(i)*ones(size(xi{i,1})),"--", "color",C(2,:), "DisplayName", "Uniform equilibrium")
+    plot(xi{i,1}*h0,u{i,1}*u_eq, "color",C(1,:), "DisplayName", "Waveform")
+%     plot(xi_2e*h0_2e,u0_2e*h0_2e*Q1_2e*ones(size(xi_2e)), "color",C(2,:), "DisplayName", "No $p_e$ model")
+%     plot(xi{i,1}*h0,Q1_2e*ones(size(xi{i,1})),"--", "color",C(1,:), "DisplayName", "Uniform equilibrium")
+%     plot(xi{i,1},rho_eq_dl(i)*ones(size(xi{i,1})),"--", "color",C(2,:), "DisplayName", "Uniform equilibrium")
 %     plot(xi{i,1}(1:end-1),diff(Iv{i,1})./diff(xi{i,1}), "DisplayName", "Waveform")
 %     plot(xi{i,1}(1:end),pb{i,1}-pb_approx-pb2_approx, "DisplayName", "Waveform") %"color",C(2,:)
 %     plot(xi{i,1}(1:end),tan_psi_eq, "DisplayName", "Waveform")
-%     plot(xi_app,tan_psi_app, "DisplayName", "Waveform")
+%     plot(xi_app*h0,pb_app*crit_pb, "DisplayName", "Approximation")
 end
 % ylim([-0.001,0.001])
-% xlim([lambda-0.5,lambda])
-xlabel("$\xi$")
-ylabel("Flux")
-legend("Location","best")
-% exp_graph(gcf,"flux_wave_uniform_comp.pdf")
+% xlim([(lambda-0.1)*h0,lambda*h0])
+xlabel("$\xi$ ($m$)")
+% ylim([-0.001,0.001])
+% ax = gca;
+% ax.YAxis.Exponent = 0;
+% ylabel("$h$ ($m$)")
+% ylabel("$u$ ($ms^{-1}$)")
+ylabel("$\phi$")
+% ylabel("$p_b$ ($Pa$)")
+% ylabel("$\tan \psi$")
+% ylabel("Liquefaction ratio $\frac{p_b}{p_{tot}}$")
+% legend("Location","best")
+title("$Fr = 1.0$, $\theta = "+num2str(theta)+"^{\circ}$, $\tau_0 = "+num2str(tau0)+"Pa$")
+% exp_graph(gcf,"acc_case_phi.pdf")

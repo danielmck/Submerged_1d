@@ -1,11 +1,6 @@
 function Ive_start_comp
 
 
-phi_c=0.585; % Volume fraction
-eta_f = 0.0010016; % Pa s
-g=9.81; % m/s^2
-rho_f = 1000; % kg/m^3
-rho_p = 2500; % kg/m^3
 theta = 5; % deg
 theta0 = 13;
 % fric_ang = 0.65;

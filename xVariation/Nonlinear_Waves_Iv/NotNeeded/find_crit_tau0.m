@@ -68,7 +68,7 @@ function find_crit_tau0
             end
             Iv_vals(i,j) = Iv;
             h0_vals(i,j) = h0;
-            tau0_vals(i,j) = tau0_dl;
+            tau0_vals(i,j) = tau0;
         end
     end
     SetPaperSize(8,8)
@@ -78,10 +78,10 @@ function find_crit_tau0
     hold on
 %     contour(Fr_vals,theta_vals,tau0_vals',[4.5,5.5,6.5,7.5,8.5])
     c = colorbar;
-    c.Label.String = "$\tau_0^{\ast}$";%'$\tau_0$ (Pa)';
-    xlabel("$Fr$")
+    c.Label.String = '$\tau_0$ (Pa)'; %"$\tau_0^{\ast}$";%;
+    xlabel("$Fr$ at $h_$")
     ylabel("$\theta$")
-    exp_graph(gcf,"theta_Fr_tau0_dl_crit.pdf")
+    exp_graph(gcf,"theta_Fr_tau0_crit.pdf")
     
     function mu_val = mu_Iv_fn(Iv)
         mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));

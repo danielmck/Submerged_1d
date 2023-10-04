@@ -2,12 +2,6 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, 
 %     Finds a solution for the viscous problem withut pe that is close to
 %     the given value lambda. Is used in conjunction with
 %     viscous_Iv_bvp_from_ode to find a wave of a specific length.
-    mu1_Iv = 0.32;
-    mu2_Iv = 0.7;
-    Iv_0 = 0.005;
-
-    reg_param = 1*10^7;
-
     phi_c=0.585; % Volume fraction
 
     g=9.81; % m/s^2
@@ -122,9 +116,5 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, 
         position = y(1)-max_h;
         isterminal = 1;
         direction = 0;
-    end
-
-    function mu_val = mu_Iv_fn(Iv)
-        mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
     end
 end

@@ -1,18 +1,13 @@
 function u_sinusoid
 h0 = 1e-1; % layer height (m)
 d=1e-4; % grain diameter (m)
-
-phi_c=0.585; % Volume fraction
-eta_f = 0.0010016; % Pa s
-g=9.81; % m/s^2
-rho_f = 1000; % kg/m^3
-rho_p = 2500; % kg/m^3
+[phi_c,rho_f,rho_p,~,eta_f,g] = get_params_water();
 theta = 0; % deg
 theta0 = 10; % deg
 
 % fric_ang = 0.65;
 
-alpha = 1e-4;
+alpha = 1e-5;
 kappa = ((1-phi_c).^3.*d^2)./(150*phi_c.^2);
 
 buoyancy = -(rho_p-rho_f)*g*phi_c*cosd(theta);
@@ -22,7 +17,7 @@ p_scale = rho_f.*g.*h0;
 t_scale = sqrt(h0./g);
 z_scale = h0;
 density_ratio = rho_p./rho_f;
-rho = phi_c*density_ratio+1-phi_c;
+rho_eq = phi_c*density_ratio+1-phi_c;
 
 d_dl = d/z_scale;
 eta_f_dl = eta_f/(p_scale*t_scale);
@@ -32,20 +27,42 @@ beta_dl = eta_f_dl/kappa_dl;
 init_Iv = newt_solve_crit_Iv(theta0,rho_p,rho_f,false,true);
 init_phi = phi_c/(1+sqrt(init_Iv));
 init_rho = init_phi*density_ratio+1-init_phi;
-init_u = init_Iv/eta_f_dl/3.*(rho-1).*cosd(theta0);
+init_u = init_Iv/eta_f_dl/3.*(rho_eq-1).*cosd(theta0);
 
 %     movefile(fname,'Results/');
 % end
-phase = 0.01;
+k = 0.01;
 u_peak = 1;
-run_Ive_da_sim()
+
+time_vals = [0,100*2*pi/k];
+phase=0;
+[tvals,vec]=ode15s(@Ive_depth_ave,time_vals,[1,0.575,1]);
+vec = horzcat(tvals,vec(:,1:2),u_fn(tvals),vec(:,3));%+sin(2*tvals*k)
+fname = "sin_u_evo.txt";
+save("Results/"+fname, 'vec','-ascii')
+long_run = load("Results/sin_u_evo.txt");
+%         opts=odeset('AbsTol',1e-12,'RelTol',1e-12,'Stats','on');
+time_vals = [0,2*pi/k];
+% phase = mod(long_run(end,1),2*pi/k)*k;
+
+%         [~,vec]=ode15s(@Ive_depth_ave,time_vals,[1,depth_phi_orig,depth_u,pb_init],opts);
+[tvals,vec]=ode15s(@Ive_depth_ave,time_vals,[long_run(end,2),long_run(end,3),long_run(end,5)]);
+
+vec = horzcat(tvals,vec(:,1:2),u_fn(tvals),vec(:,3));%+sin(2*tvals*k)
+fname = "sin_u_period.txt";
+save("Results/"+fname, 'vec','-ascii')
+
 % EOS_write_record(fname,N,h,d,reg_param,density_ratio,phi_c,theta,eta_f_dl,a_dl,phi_rcp,phi_rlp,t_step,2,shear_lim_dl);
+    function u = u_fn(t)
+        u = u_peak*(sin(t*k+phase));
+    end
+
 
     function dvecdt=Ive_depth_ave(t,vec)
         h = vec(1);
         phi = vec(2)/h;
         pb = vec(3);
-        u = u_peak*(sin(t*phase)+sin(2*t*phase));
+        u = u_fn(t); %+sin(2*t*k)
  
         rho = density_ratio*phi+(1-phi);
         P = (rho-1)./rho;
@@ -64,18 +81,4 @@ run_Ive_da_sim()
         
         dvecdt = [dhdt,dphidt,dpbdt]';
     end
-
-    function success = run_Ive_da_sim()        
-        % No initial pressure of phihat and initial values of u_p and u_f
-        % defined above
-        time_vals = [0,5000];
-%         opts=odeset('AbsTol',1e-12,'RelTol',1e-12,'Stats','on');
-
-%         [~,vec]=ode15s(@Ive_depth_ave,time_vals,[1,depth_phi_orig,depth_u,pb_init],opts);
-        [tvals,vec]=ode15s(@Ive_depth_ave,time_vals,[1,0.575,1]);
-        vec = horzcat(tvals,vec(:,1:2),u_peak*(sin(tvals*phase)+sin(2*tvals*phase)),vec(:,3));
-        fname = "sin_u_evo_play.txt";
-        save("Results/"+fname, 'vec','-ascii')
-        success=1;
-    end    
 end

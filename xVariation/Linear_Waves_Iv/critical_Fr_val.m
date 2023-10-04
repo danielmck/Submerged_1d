@@ -32,14 +32,14 @@ function critical_Fr_val
 %     theta_list = (linspace(10,14,n_pts2));
 %     
     
-    for a = 1:2
+    for a = 2
         theta_list = (linspace(theta_start(a),theta_stop(a),n_pts2));
         rho_f = rho_list(a);
         eta_f = eta_list(a);
         for b = 1:2
 %             alpha = 1e-2; % 1/Pa
-            alpha = 1e-4;
-            d = 1e-3;
+            alpha = 1e-5;
+            d = 1e-4;
             n_pts1 = size(var_list{b},2);
             crit_Fr = zeros(n_pts1,n_pts2);
             for i = 1:n_pts1
@@ -55,7 +55,7 @@ function critical_Fr_val
                     crit_Fr(i,j) = get_critical_Fr(theta, rho_p, rho_f, d, eta_f, alpha);
                 end
             end
-            save("Results/crit_h_"+var_names(b)+"_theta_"+phase_name(a)+".txt", 'crit_Fr','-ascii')
+            save("Results/crit_Fr_"+var_names(b)+"_theta_"+phase_name(a)+".txt", 'crit_Fr','-ascii')
         end
     end
     

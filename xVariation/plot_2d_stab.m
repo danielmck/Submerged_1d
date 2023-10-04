@@ -7,11 +7,11 @@ function plot_2d_stab
 %     
     if strcmp(var, 'alpha')
         var_list = [1e-6 5e-6 1e-5 5e-5 1e-4];
-        var_name = "Compressibilies";
+        var_name = "compressibilies";
         slash = "\";
     else
-        var_list = [2e-5 2e-4 2e-3];
-        var_name = "Particle Size";
+        var_list = [1e-5 1e-4 1e-3];
+        var_name = "particle size";
         slash = "";
     end
     if strcmp(phase, 'air')
@@ -32,12 +32,12 @@ function plot_2d_stab
     for i=1:size(var_list,2)
         plot(theta_list,crit_Fr(i,:),'DisplayName',"$"+slash+var+"=$ "+num2str(var_list(i)))
     end
-    ylim([0 0.6])
+    ylim([0 0.4])
 %     xlim([0 1e-3])
     ax = gca;
     ax.YAxis.Exponent = 0;
     YL = get(gca, 'YLim');
-    plot([1 1]*x_min, [0 0.6],'--','Color',[0.2 0.2 0.2 0.5],'DisplayName','Min Slope Angle')
+    plot([1 1]*x_min, [0 0.6],'--','Color',[0.2 0.2 0.2 0.5],'DisplayName','Min slope angle')
     lines1 = get(gca, 'Children');
     lines2 = vertcat(lines1(2:end),lines1(1));
     set(gca, 'Children', lines2 )
@@ -48,8 +48,8 @@ function plot_2d_stab
     ylabel("Froude Number $Fr$")
 %     ylabel("Flow Height $h$")
     
-    title("Critical $Fr$ for Different "+var_name+" and Slope Angles for "+strcat(upper(phase(1)),phase(2:end)))
-    plot_name = strcat('Crit_Fr_',var,'_',phase);
-    PrintFig(plot_name)
-    movefile(plot_name+".pdf","Figures/StabilityLinePlots")
+%     title("Critical $Fr$ with slope angle for different "+var_name)
+    plot_name = strcat('Crit_Fr_',var,'_',phase,'.pdf');
+    exp_graph(gcf,plot_name)
+    movefile(plot_name,"Figures/StabilityLinePlots")
 end

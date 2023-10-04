@@ -33,8 +33,8 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         Fr_eq = 0.8;
         
         theta = 12;
-        lambda = 12;
-        nu = 4e-4;
+        lambda = 50;
+        nu = 1e-4;
         alpha = 1e-5;
         d = 1e-4;
         tau0 = 0; % Pa
@@ -44,7 +44,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
 %         h0 = 0.1;
 %         [Fr_eq, ~] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h0, tau0);
         params = [Fr_eq,theta,lambda,nu,alpha,d,tau0,rel_flux,pres_h];
-        filename = "rauter_convert.txt";
+        filename = "report_long_rho_con.txt";
     else
         custom_init = true;
         param_cell = num2cell(params);
@@ -58,7 +58,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     end
     
     if ~exist('master_y','var')
-        master_name = "master_wave_full.txt";
+        master_name = "master_pres_h.txt";
         master_file = load(Res_dir+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);

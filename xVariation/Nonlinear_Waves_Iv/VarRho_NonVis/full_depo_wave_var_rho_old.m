@@ -26,7 +26,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
     end
     if ~provide_init
         Res_dir = "~/Documents/MATLAB/1D_System/xVariation/Nonlinear_Waves_Iv/VarRho_NonVis/";
-        master_name = "master_pres_h.txt"; %master_pres_h
+        master_name = "master_pres_h.txt"; %no_vis_better_master
         master_file = load(Res_dir+"Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -50,7 +50,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
         if (master_y(2,1)-master_y(1,1)/master_u_w<1e-2)
             master_h_min = -1;
         else
-            master_h_min = master_y(2,1);
+            master_h_min = master_y(5,1);
         end
         if (size(master_y,1) == 10)
             master_stat_len = master_y(10,1);
@@ -63,9 +63,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
     end
     
     if ~specify_param
-        spec_h0 = false;
-        Fr_eq = 0.8;
-        h0_final = 0.015;
+        Fr_eq = 0.8; 
         theta = 12;
         tau0 = 0;
         
@@ -73,7 +71,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
         alpha=1e-5;
         
         set_h_min = false;
-        h_min = 0.772823929784104;
+        h_min = master_h_min;
         lambda_final = 12;
         
         pres_h = true;
@@ -81,7 +79,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
 
         % h_alt specifies the distance from the static minimum that the
         % wave must begin at.
-        filename = "check_model.txt";      
+        filename = "master_pres_h.txt";      
     else
         param_cell = num2cell(params);
         [Fr_eq,theta,wlen_val,set_h_min,tau0,alpha,d,pres_h,rel_flux] = param_cell{:};
@@ -109,12 +107,6 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
         master_rf = m_val;
     end
     
-    if spec_h0
-        [Fr_eq,~] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h0_final, tau0,0,true);
-    else
-        [h0_final,~] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr_eq, tau0,0,true);
-    end
-    
     alt_xi = master_xi([true,diff(master_xi)>0]);
     alt_y = master_y(:,[true,diff(master_xi)>0]);
     break_ind = sum(alt_xi<1);
@@ -127,7 +119,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
     d_ratio = max(d/master_d,master_d/d);
     alpha_ratio = max(alpha/master_alpha,master_alpha/alpha);
     
-    hm_ratio = abs(min(max(h_min/master_h_min,master_h_min/h_min),1e3));
+    hm_ratio = min(max(h_min/master_h_min,master_h_min/h_min),1e3);
     lambda_ratio = min(max(lambda_final/master_lambda,master_lambda/lambda_final),1e3);
     rf_ratio = abs(rel_flux - master_rf);
     ratio_sum = Fr_ratio-1+20*(theta_ratio-1)+tau0_ratio+hm_ratio*set_h_min+(1-set_h_min)*(lambda_ratio-1)+rf_ratio+(d_ratio-1)+(alpha_ratio-1);
@@ -161,13 +153,11 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
 % %     master_p(4) = 0.05;
 %     master_y = master_y(4:8,:);
     
-    [xi_rough,y_rough,p_rough] = run_bvp_step(Fr_list, theta_list, tau0_list, wlen_list, alpha_list, d_list, rf_list, xi_prep, y_prep, master_p);
-    wlen_fine = (lambda_final+set_h_min*(h_min-lambda_final))*[1,1];
-    [xi_final,y_final,p_final] = run_bvp_step([Fr_eq,Fr_eq], [theta,theta], [tau0,tau0], wlen_fine, [alpha,alpha], [d,d], [rel_flux,rel_flux], xi_rough, y_rough, p_rough,1e-10);
+    [xi_final,y_final,p_final] = run_bvp_step(Fr_list, theta_list, tau0_list, wlen_list, alpha_list, d_list, rf_list, xi_prep, y_prep, master_p);
     if ~specify_param
         out_vec = vertcat(xi_final,y_final);
         save("Results/"+filename,"out_vec","-ascii")
-        write_record("Results/full_record.csv",filename,{"full_no_vis","water",Fr_eq,theta,alpha,d,tau0,p_final(1),p_final(2),p_final(3),0})
+        write_record("Results/full_record.csv",filename,{"full_no_vis","water",Fr_eq,theta,alpha,d,tau0,p_final(1),p_final(2),p_final(3)})
     end
     
     function [xi_in, y_in,p_in] = run_bvp_step(Fr_vals, theta_vals, tau0_vals, wlen_vals, alpha_vals, d_vals, rf_vals, xi_in, y_in, p_in, tol,counter)
@@ -177,14 +167,14 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
             counter = 1;
         end
         if ~exist('tol','var')
-            tol = 1e-3;
+            tol = 1e-5;
         end
         xi_eps = 1e-3;
         if counter > 10
             out_vec = vertcat(xi_in,y_in);
-            fail_name = ":.txt";
+            fail_name = "low_Fr_low_theta_tau0.txt";
             save("Results/"+fail_name,"out_vec","-ascii")
-            write_record("Results/full_record.csv",fail_name,{"full","water",Fr_vals(1),theta_vals(1),alpha_vals(1),d_vals(1),tau0_vals(1),p_in(1),p_in(2),p_in(3),0})
+            write_record("Results/full_record.csv",fail_name,{"full","water",Fr_vals(1),theta_vals(1),alpha_vals(1),d_vals(1),tau0_vals(1),p_in(1),p_in(2),p_in(3)})
             error("Max iteration depth reached, non convergence")
         end
         
@@ -208,26 +198,29 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
             alpha_in = alpha_vals(i);
             d_in = d_vals(i);
             rf_in = rf_vals(i);
-            [h0_in,Iv_eq] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in,0,true);
-            crit_pb = rho_f*g*cosd(theta_in)*h0_in;
-            u_eq = Fr_in*sqrt(g*cosd(theta_in)*h0_in);
+            [h0,Iv_eq] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in,0,true);
+            crit_pb = rho_f*g*cosd(theta_in)*h0;
+            u_eq = Fr_in*sqrt(g*cosd(theta_in)*h0);
             phi_eq = phi_c/(1+sqrt(Iv_eq));
 
-            z_scale = h0_in;
+            z_scale = h0;
             v_scale = u_eq;
             p_scale = crit_pb;
             t_scale = z_scale/v_scale;
 
-            tau0_dl = tau0_in/p_scale;
+            tau0_dl = tau0/p_scale;
             eta_f_dl = eta_f/(p_scale*t_scale);
             alpha_dl = alpha_in*p_scale;
             g_dl = g*t_scale/v_scale; 
 
             u_eq_dl = u_eq/v_scale;
             rho_f_dl = rho_f*v_scale^2/p_scale;
-            rho_p_dl = rho_p*v_scale^2/p_scale;
-            rho_eq = rho_p_dl*phi_eq+(1-phi_eq)*rho_f_dl;
+            rho_p_dl = rho_p*v_scale^2/p_scale; 
             d_dl = d_in/z_scale;
+            
+            rho_eq = (rho_p_dl*phi_eq+rho_f_dl*(1-phi_eq));
+            P_eq = (rho_eq-rho_f_dl)/rho_eq;
+            chi_eq = (rho_f_dl+3*rho_eq)/(4*rho_eq);
 
             beta_dl = 150*phi_c.^2.*eta_f_dl./((1-phi_c).^3.*d_dl^2);
             
@@ -332,40 +325,28 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
             D = -2/beta_dl/h*(pb-h);
 
             denom = (h.^3/Fr_in^2-Q1.^2);
-%             fric_coeff = p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv);
-%             fb_val = tand(theta_in)-fric_coeff-tau0_dl*rho_f_dl/rho_dl/h;
-%             dhdxi = (h.^2.*/Fr_in^2.*h.*fb_val+P*D*(u_w-u))./denom;
-            
-            fric_coeff = p_p/(p_tot_grad_dl)*mu_Iv_fn(Iv);
-            fb_val = tand(theta_in)*h-fric_coeff-tau0_dl*rho_f_dl/rho_dl; % Taken factor of h into 
-            dhdxi = (h.^2/Fr_in^2.*fb_val+h*Q1*P*D)./denom;
-            
-%             dhdxi2 = (g_dl*sind(theta_in)*h-mu_Iv_fn(Iv)*p_p/rho_dl-tau0_dl/rho_dl+(u_w-u)*P*D)/(g_dl*cosd(theta_in)*h-(u_w-u)^2);
+            fric_coeff = p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv);
+            fb_val = tand(theta_in)-fric_coeff-tau0_dl*rho_f_dl/rho_dl/h;
+            dhdxi = h.^2.*(1/Fr_in^2.*h.*fb_val+P*D*(u_w-u))./denom;
+
             R_w3 = -phi*rho_f_dl/rho_dl*D;
             R_w4 = (-P/4+zeta)*D - 9/2/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
 
             dQdxi = -P*D;
-            dmdxi = rho_dl*h/rho_eq/(lambda_l)*u^(1-pres_h);
+            dmdxi = h/(lambda_l)*u^(1-pres_h);
             dy6dxi = -R_w3;
             dy7dxi = R_w4/(u-u_w);
             dydxi = [dQdxi,dhdxi,dmdxi,dy6dxi,dy7dxi];
             if abs(denom)<denom_eps
-                fb_pp_coeff = -mu_Iv_fn(Iv)./(p_tot_grad_dl)+p_p./(p_tot_grad_dl).*dmudIv_fn(Iv).*Iv./p_p;
-                fb_pb_coeff = -fb_pp_coeff; %-P.*2./beta_dl -P.*2./beta_dl
-                fb_h_coeff = tand(theta_in)+p_p./(p_tot_grad_dl.*h).*dmudIv_fn(Iv).*3*eta_f_dl.*abs(u)./h.^2./p_p+fb_pp_coeff.*rho_dl.*g_dl.*cosd(theta_in);
-                full_fb_h_coeff = 1./Fr_in^2.*(g_dl*cosd(theta_in)*rho_dl.*chi.*fb_pb_coeff+fb_h_coeff-p_p./(p_tot_grad_dl.*h).*dmudIv_fn(Iv).*Iv./u.*Q1./h.^2);
-                other_h_coeff = (u_w-u)*(g_dl*cosd(theta_in)*rho_dl.*chi-1)*(-P.*2./beta_dl)-P*D*Q1./h.^2;
+                A_pp_coeff = -mu_Iv_fn(Iv)./(p_tot_grad_dl.*h)+p_p./(p_tot_grad_dl.*h).*dmudIv_fn(Iv).*Iv./p_p;
+                A_pb_coeff = -P.*2./beta_dl-A_pp_coeff;
+                A_h_coeff = p_p./(p_tot_grad_dl.*h.^2).*mu_Iv_fn(Iv)+p_p./(p_tot_grad_dl.*h).*dmudIv_fn(Iv).*3*eta_f_dl.*abs(u)./h.^2./p_p+tau0_dl.*rho_f_dl./rho_dl./h.^2-P.*2./beta_dl+A_pp_coeff.*rho_dl.*g_dl.*cosd(theta_in);
 
-                full_h_coeff = (h.^2.*(full_fb_h_coeff+other_h_coeff)+2.*h.*(fb_val./Fr_in^2+P*D*(u_w-u)));
-    %                 full_h_coeff = (h.^3./Fr_in^2.*(g_dl*cosd(theta_in)*rho_dl.*chi.*A_pb_coeff+A_h_coeff-p_p./(p_tot_grad_dl.*h).*dmudIv_fn(Iv).*Iv./u.*Q1./h.^2)+3.*h.^2./Fr_in^2.*(fb_val+P.*D.*h));
+                full_h_coeff = (h.^3./Fr_in^2.*(g_dl*cosd(theta_in)*rho_dl.*chi.*A_pb_coeff+A_h_coeff-p_p./(p_tot_grad_dl.*h).*dmudIv_fn(Iv).*Iv./u.*Q1./h.^2)+3.*h.^2./Fr_in^2.*(fb_val+P.*D.*h));
                 numer_h_term = full_h_coeff.*dhdxi;
-                numer_other_term = h.^2.*((dy7dxi.*fb_pb_coeff+p_p./(p_tot_grad_dl).*dmudIv_fn(Iv).*Iv./u.*dQdxi./h)./Fr_in^2+P*D*dQdxi./h);
+                numer_other_term = h.^3./Fr_in^2.*(dy7dxi.*A_pb_coeff+p_p./(p_tot_grad_dl.*h).*dmudIv_fn(Iv).*Iv./u.*dQdxi./h.^2);
+
                 h_quad_roots = roots([3*h.^2./Fr_in^2, -full_h_coeff-2.*Q1.*dQdxi, -numer_other_term]);
-                if imag(h_quad_roots(1))==0
-                    dydxi(2) = min(h_quad_roots(h_quad_roots>0));
-                else
-                    dydxi(2) = 0;
-                end
                 if imag(h_quad_roots(1))==0
                     dydxi(2) = min(h_quad_roots(h_quad_roots>0));
                 else
@@ -397,8 +378,8 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
             D_mid = -2/beta_dl/h_mid*(pb_mid-h_mid);
             fb_val_mid = tand(theta_in)-fric_coeff_mid-tau0_dl*rho_f_dl/rho_mid/h_mid+P_mid*D_mid*h_mid;
             if set_h_min
-                h_start = max(ya(1)/p(1)+h_b_pert,h_min_in);
-                h_stop = (-h_start + sqrt(h_start.^2+8*ya(1)^2./(h_start/Fr_in^2)))/2;
+                h_start = max(yl(1)/p(1)+h_b_pert,h_min_in);
+                h_stop = (-h_start + sqrt(h_start.^2+8*yl(1)^2./(h_start/Fr_in^2)))/2;
                 len_resid = [ya(2,1)-h_start, yb(2,2)-h_stop];
             else
                 h_stop = (-ya(2,1) + sqrt(ya(2,1).^2+8*ya(1,1)^2./(ya(2,1)/Fr_in^2)))/2;

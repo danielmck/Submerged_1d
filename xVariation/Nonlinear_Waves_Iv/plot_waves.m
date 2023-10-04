@@ -1,4 +1,4 @@
-filename = "master_wave_var_rho.txt"; %long_low_pe
+filename = "master_wave_no_pe_test.txt"; %long_low_pe
 master_file = load("Results/"+filename);
 xi = master_file(1,:);
 y = master_file(2:end,:);
@@ -12,7 +12,7 @@ Fr = record.Fr(in_table);
 nu = record.nu(in_table);
 tau0 = record.tau0(in_table);
 % if strcmp(extract(wave_type{1,1},1),"full")
-full_model=true;
+full_model=all(wave_type{1}(1:4)=='full');
 d = record.d(in_table);
 alpha = record.alpha(in_table);
 % else
@@ -166,7 +166,7 @@ C = viridis(3);
 %     SetPaperSize(10,10)
 hold on
 %     plot(linspace(0.5,1),get_force_bal(linspace(0.5,1)))
-plot(xi*h0,phi, "DisplayName", "Waveform","color",C(1,:))
+plot(xi*h0,h, "DisplayName", "Waveform","color",C(1,:))
 %     plot(xi,h,"--","DisplayName","$Q_1/u_w$","color","r")
 %     plot(xi,ones(size(xi))*h_stop_dl,"--","DisplayName","$h_{stop}$","color","y")
 %     plot(xi(xi<5),n_eq(xi<5), "DisplayName", "Waveform","color",C(2,:))

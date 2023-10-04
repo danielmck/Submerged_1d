@@ -69,15 +69,15 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
     
     if ~specify_param
         Fr_eq = 1.0; 
-        lambda = 12;
+        lambda = 200;
         theta = 12;
         nu = 2e-4;
         tau0 = 0;
         rel_flux = 1;
-        pres_h = 0;
+        pres_h = 1;
 %         h0 = 0.1;
         [h0, ~] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr_eq, tau0);
-        filename = "rauter_convert.txt";
+        filename = "long_12deg.txt";
     else
         param_cell = num2cell(params);
         if (size(param_cell,2) == 5)
@@ -93,10 +93,10 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
         m_init = zeros(size(master_xi));
         m_val = 0;
         u_flux = (master_y(1,1) - master_y(2,:)./master_y(3,:)).^(1-pres_h);
-        for j = 1:size(master_xi,1)
+        for j = 1:size(master_xi,2)
             m_init(j) = m_val;
-            if j < size(master_xi,1)
-                m_val = m_val + 1/lambda_init* (master_y(3,:)*u_flux(j)+y_wave(j+1,2)*u_init(j))/2*(xi_master(j+1)-xi_master(j));
+            if j < size(master_xi,2)
+                m_val = m_val + 1/master_lambda* (master_y(3,j)*u_flux(j)+master_y(3,j+1)*u_flux(j+1))/2*(master_xi(j+1)-master_xi(j));
             end
         end
         master_y = vertcat(master_y(1:4,:),m_init);
@@ -238,11 +238,12 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             m = y(5);
 
             dhdxi = n;
-            n_coeff = h/Fr_eq^2-Q1^2/h^2;
-            Fr = Fr_eq*abs(u)/h;
+            n_coeff = h/Fr_in^2-Q1^2/h^2;
+            Fr = Fr_in*abs(u)/h;
             Iv = crit_Iv*abs(u)/h^2;
-            force_bal = h*(tand(theta)-sign(u).*P*mu_Iv_fn(Iv))/Fr_eq^2;
+            force_bal = h*(tand(theta_in)-sign(u).*P*mu_Iv_fn(Iv))/Fr_in^2;
             n_eq = (force_bal)./n_coeff;
+            
             dndxi = 1/Q1/nu_dl*(n_coeff*n-force_bal);
             dmdxi = h*u^(1-pres_h)/lambda_in;
             dydxi = [0,0,dhdxi,dndxi,dmdxi]';

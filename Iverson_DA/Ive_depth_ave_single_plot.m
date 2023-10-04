@@ -1,7 +1,7 @@
 % fname = ["Ive_da_13_acc.txt"]; %,"Ive_da_13_deep_quad_alpha4.txt","Ive_da_13_deep_quad_alpha5.txt"];
 % fname = ["Ive_da_5_deep_alpha3.txt","Ive_da_5_deep_alpha4.txt","Ive_da_5_deep_alpha5.txt"];
 % fname = ["Ive_da_4_deep_9_2_start.txt"]; %,"Ive_da_4_deep_9_start.txt"];
-fname = ["sin_u_evo_play.txt"];
+fname = ["sin_u_period.txt"];
 % plot_titles = ["$\alpha = 10^{-3}$","$\alpha = 10^{-4}$","$\alpha = 10^{-5}$"];
 
 sim_num = size(fname,2);
@@ -9,22 +9,17 @@ sim_list = cell(1,sim_num);
 n_times = zeros(sim_num,1);
 custom_times = zeros(sim_num,1);
 
-h = [1e-1,4e-2,4e-2]';
+h0 = [1e-1]';
 d= 1e-4*ones(sim_num,1);
 
 phi_c= 0.585*ones(sim_num,1);
 eta_f = 0.0010016*ones(sim_num,1);
 g=9.81*ones(sim_num,1); % m/s^2
 theta = 0*ones(sim_num,1); % deg
-alpha = [1e-4,1e-4]'; % 1/Pa
+alpha = [1e-5]'; % 1/Pa
 rho_f = 1000*ones(sim_num,1);
 density_ratio = 2.5*ones(sim_num,1);
 t_step = 10*ones(sim_num,1);
-
-
-N = 200; % number of discretisation points in z for each of tau, u
-h0 = 4e-2; % layer height (m)
-d=1e-5; % grain diameter (m)
 
 fric_ang = 0.65;
 
@@ -84,12 +79,13 @@ D = -2.*kappa_dl./(eta_f_dl.*h).*pe;
 dhdt = (rho-1)./rho.*D;
 
 dphidt = -phi.*D./h;
+dhphidt = -phi.*D./rho;
 dudt = sind(theta).*h-tau_zx./rho;
 dudt_approx = sind(theta) - cosd(theta).*tand(13)+tand(13).*pe./(rho-1);
 dudt_approx2 = sind(theta) - pp.*tand(13)./(rho-1);
 diffusion = -3.*kappa_dl./(alpha_dl.*eta_f_dl.*h.^2).*pe;
-dilatancy = -3.*u./(h.*alpha_dl).*(tan_psi);
-dpbdt = -3.*kappa_dl./(alpha_dl.*eta_f_dl.*h.^2).*pe+cosd(theta).*dhdt/4-3.*u./(h.*alpha_dl).*(tan_psi);
+dilatancy = -3.*abs(u)./(h.*alpha_dl).*(tan_psi);
+dpbdt = diffusion+cosd(theta).*dhdt/4+dilatancy;
 
 dIvdt_u = dudt.*3.*eta_f_dl./pp;
 dIvdt_pp = 1./pp.*Iv.*dpbdt;
@@ -121,6 +117,16 @@ pp_prime = ((alpha_dl.*pp_eq)./(3.*u.^2).*(sind(theta)-pp_eq.*mu_Iv_fn(Iv_phi)./
 
 fast_scale = eta_f_dl.*alpha_dl./(phi.*Iv.^(3/2));
 medium_scale = u./sind(9);
+
+%%
+scale_vec = [t_scale,z_scale,1,v_scale,p_scale];
+scale_data = data_file.*scale_vec;
+dl_name = fname(k);
+dl_name = split(dl_name,".txt");
+dl_name = dl_name(1);
+scale_name = dl_name+"_dim.txt";
+save("Results/"+scale_name,"scale_data","-ascii")
+
 %% 
 
 % SetPaperSize(10,10);
@@ -165,7 +171,7 @@ for i=1:sim_num
         phi_Iv_ave = 0;
         phi_ave = 0;
         for l=-n_below+1:n_above
-            pe_ave = pe_ave+(pe(i,k+l)+pe(i,k+l-1))/2*(t_vals(i,k+l)-t_vals(i,k+l-1));
+            pe_ave = pe_ave+(phi(i,k+l)+phi(i,k+l-1))/2*(t_vals(i,k+l)-t_vals(i,k+l-1));
             Iv_ave = Iv_ave+(Iv(i,k+l)+Iv(i,k+l-1))/2*(t_vals(i,k+l)-t_vals(i,k+l-1));
             phi_ave = phi_ave+(phi(i,k+l)+phi(i,k+l-1))/2*(t_vals(i,k+l)-t_vals(i,k+l-1));
             phi_Iv_ave = phi_Iv_ave+(phi_Iv(i,k+l)+phi_Iv(i,k+l-1))/2*(t_vals(i,k+l)-t_vals(i,k+l-1));
@@ -186,11 +192,25 @@ for i=1:sim_num
         colour = "red";
     end
     t_start = 0;
-    t_stop = 5000;
+    t_stop = 650;
     t_begin = max(sum(t_vals(i,1:n_times(1,i))<t_start)-1,1);
     t_end = min(sum(t_vals(i,1:n_times(1,i))<t_stop)+1,n_times(1,i));
+    pe_ave = 0;
+    phi_pe_ave = 0;
+    pe_mag = 0;
+    phi_pe_mag = 0;
+    for k=2:t_end
+        pe_ave = pe_ave + (pe(k)+pe(k-1))/2*(t_vals(k)-t_vals(k-1));
+        phi_pe_ave = phi_pe_ave + (pe(k)*phi(k)+pe(k-1)*phi(k-1))/2*(t_vals(k)-t_vals(k-1));
+        pe_mag = pe_mag + (abs(pe(k))+abs(pe(k-1)))/2*(t_vals(k)-t_vals(k-1));
+        phi_pe_mag = phi_pe_mag + (abs(pe(k).*phi(k))+abs(pe(k-1).*phi(k-1)))/2*(t_vals(k)-t_vals(k-1));
+    end
+    pe_ave = pe_ave/(t_vals(t_end)-t_vals(t_begin));
+    phi_pe_ave = phi_pe_ave/(t_vals(t_end)-t_vals(t_begin));
+    pe_mag = pe_mag/(t_vals(t_end)-t_vals(t_begin));
+    phi_pe_mag = phi_pe_mag/(t_vals(t_end)-t_vals(t_begin));
     hold on
-    plot(t_vals(i,t_begin:t_end),pe_smooth(i,t_begin:t_end),'DisplayName',"Smoothed $\phi$")
+    plot(t_vals(i,t_begin:t_end), phi(t_begin:t_end),'DisplayName',"Smoothed $\phi$")
 %     plot(t_vals(i,t_begin:t_end),phi_Iv_smooth(i,t_begin:t_end),'DisplayName',"Smoothed $\phi(I_v)$")
 %     plot(t_vals(i,t_begin:t_end),phi_c./(1+sqrt(Iv_smooth(i,t_begin:t_end))),'DisplayName',"Exact Value")
     
@@ -209,7 +229,7 @@ end
 legend('Location', "best",'UserData', 8);
 xlabel("$t$");
 ylabel('$p_e$ (Pa)');%,'Position',[-35 0.0045]);
-% xlim([t_start t_stop])
+xlim([t_start t_stop])
 % ylim([0 0.01])
 box on
 % title('Exact Value and Approximation of $\tan \psi$ during the Fast Timescale')

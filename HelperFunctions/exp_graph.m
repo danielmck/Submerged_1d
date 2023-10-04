@@ -1,15 +1,32 @@
 function exp_graph(fig, fname)
     a=findobj(fig,'type','axe');
     xlab=get(get(a,'xlabel'),'string');
-    ylab=get(get(a,'ylabel'),'string');
+    
     figtitle = get(get(a,'title'),'string');
     fs = 10;
     H = get(a,'Children');
     if size(xlab,2)
+        xCol = get(a,'YColor');
         xlabel(xlab,'Interpreter','latex','FontSize', fs)
+        set(gca,'YColor', xCol)
     end
+    yyaxis right
+    ylab=get(get(a,'ylabel'),'string');
     if size(ylab,2)
+        yCol = get(a,'YColor');
         ylabel(ylab,'Interpreter','latex','FontSize', fs)
+        set(gca,'YColor', yCol)
+    else
+        set(gca,'YColor', 'none')
+    end
+    yyaxis left
+    ylab=get(get(a,'ylabel'),'string');
+    if size(ylab,2)
+        yCol = get(a,'YColor');
+        ylabel(ylab,'Interpreter','latex','FontSize', fs)
+        set(gca,'YColor', yCol)
+    else
+        set(gca,'YColor', 'none')
     end
     if size(figtitle,2)
         title(figtitle,'Interpreter','latex','FontSize', fs)
