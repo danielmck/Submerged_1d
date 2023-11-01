@@ -68,16 +68,16 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
     end
     
     if ~specify_param
-        Fr_eq = 1.0; 
-        lambda = 200;
+        Fr_eq = 0.6; 
+        lambda = 50;
         theta = 12;
-        nu = 2e-4;
+        nu = 1e-3;
         tau0 = 0;
         rel_flux = 1;
         pres_h = 1;
 %         h0 = 0.1;
         [h0, ~] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr_eq, tau0);
-        filename = "long_12deg.txt";
+        filename = "td_check_12deg_pres_h.txt";
     else
         param_cell = num2cell(params);
         if (size(param_cell,2) == 5)
@@ -136,7 +136,12 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
         if ~specify_param
             out_vec = vertcat(xi_final,y_final);
             save("Results/"+filename,"out_vec","-ascii")
-            write_record("Results/wave_record.csv",filename,{"no_pe","water",Fr_eq,theta,lambda,nu,0,0,tau0})
+            if pres_h
+            type = "no_pe_pres_h";
+            else
+                type = "no_pe";
+            end
+            write_record("Results/wave_record.csv",filename,{type,"water",Fr_eq,theta,lambda,nu,0,0,tau0})
         end
     end
     
@@ -163,15 +168,9 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             Fr_in = Fr_vals(i);
             tau0_in = tau0_vals(i);
             rf_in = rf_vals(i);
-            if tau0_in == 0
-                crit_Iv = newt_solve_crit_Iv(theta_in, rho_p, rho_f);
-                u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
-                h0 = ((Fr_in*sqrt(g*cosd(theta_in)))./u_const)^(2/3);  
-            else
-                [h0, crit_Iv] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in);
-            end
+            [h0, crit_Iv] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in);
             u_eq = Fr_in*sqrt(g*cosd(theta_in)*h0);
-            nu_dl = nu_vals(i)/(u_eq*h0);
+            nu_dl = nu_vals(i)/(u_eq);
             tau0_dl = tau0_in/(rho_f*g*cosd(theta_in)*h0);
             lambda_old = lambda_vals(i-1);
             lambda_in = lambda_vals(i);

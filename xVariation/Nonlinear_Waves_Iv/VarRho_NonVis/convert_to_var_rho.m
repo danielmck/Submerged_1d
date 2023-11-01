@@ -1,6 +1,6 @@
 function [xi_final,y_final] = convert_to_var_rho(custom_init,reverse,params,provide_init,master_xi,master_y)
-    [phi_c,rho_f,rho_p,rho,eta_f,g] = get_params_water();
-    P = (rho-rho_f)/rho;
+    [phi_c,rho_f,rho_p,~,eta_f,g] = get_params_water();
+%     P = (rho-rho_f)/rho;
     if ~exist("custom_init","var")
         custom_init = false;
     end
@@ -16,7 +16,7 @@ function [xi_final,y_final] = convert_to_var_rho(custom_init,reverse,params,prov
         param_cell = num2cell(params);
         [Fr,theta,h_alt,alpha,d,tau0] = param_cell{:};
     else
-        master_name = "master_wave_var_rho.txt";
+        master_name = "var_rho_long_flux_low_vis.txt";
         master_file = load("../Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -24,7 +24,7 @@ function [xi_final,y_final] = convert_to_var_rho(custom_init,reverse,params,prov
 
         in_table = strcmp(record.Name, master_name);
         wave_type = record.wave_type(in_table);
-        pres_h = 1; %(wave_type=="full_pres_h");
+        pres_h = 0; %(wave_type=="full_pres_h");
         theta = record.theta(in_table);
         lambda_vis = record.lambda(in_table);
         Fr = record.Fr(in_table);
@@ -111,7 +111,7 @@ function [xi_final,y_final] = convert_to_var_rho(custom_init,reverse,params,prov
     xi_out = solN1.x;
     p_out = solN1.parameters;
     out_vec = vertcat(xi_out,y_out);
-    filename = "var_rho_master_pres_h.txt";
+    filename = "var_rho_master_long.txt";
     save("Results/"+filename,"out_vec","-ascii")
     write_record("Results/full_record.csv",filename,{"var_rho","water",Fr,theta,alpha,d,tau0,p_out(1),p_out(2),p_out(3),0})
         

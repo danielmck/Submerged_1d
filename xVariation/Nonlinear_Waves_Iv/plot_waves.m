@@ -1,4 +1,4 @@
-filename = "master_wave_no_pe_test.txt"; %long_low_pe
+filename = "td_check_var_rho_pres_h.txt"; %long_low_pe
 master_file = load("Results/"+filename);
 xi = master_file(1,:);
 y = master_file(2:end,:);
@@ -6,15 +6,17 @@ record = readtable('Results/wave_record.csv');
 
 in_table = strcmp(record.Name, filename);
 wave_type = record.wave_type(in_table);
+wave_type = wave_type{1};
 theta = record.theta(in_table); 
 lambda = record.lambda(in_table);
 Fr = record.Fr(in_table);
 nu = record.nu(in_table);
 tau0 = record.tau0(in_table);
 % if strcmp(extract(wave_type{1,1},1),"full")
-full_model=all(wave_type{1}(1:4)=='full');
+full_model= true; %all(wave_type{1}(1:4)=='full');
 d = record.d(in_table);
 alpha = record.alpha(in_table);
+var_rho = all(wave_type(1:min(7,size(wave_type,2)))=='var_rho');
 % else
 %     full_model=false;
 %     alpha=0;
@@ -46,7 +48,7 @@ chi = (rho_f+3*rho)/(4*rho);
 P = (rho-rho_f)/rho;
 s_c = 1-rho/(rho-rho_f)*tand(theta)/mu1_Iv;
 
-[h0, crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, tau0, false, false);
+[h0, crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, tau0, false, var_rho);
 
 u_eq = Fr*sqrt(g*cosd(theta)*h0);
 phi_eq = phi_c/(1+sqrt(crit_Iv));
@@ -67,7 +69,6 @@ alpha_dl = alpha*p_scale;
 g_dl = g*t_scale/v_scale; 
 
 u_eq_dl = u_eq/v_scale;
-p_tot_grad_dl = p_tot/p_scale*z_scale;
 rho_f_dl = rho_f*v_scale^2/p_scale;
 rho_p_dl = rho_p*v_scale^2/p_scale; 
 rho_dl = rho_p_dl*phi_c+rho_f_dl*(1-phi_c);
@@ -86,12 +87,18 @@ m = y(5,:);
 
 if full_model
     phi = y(6,:)./Q1;
-    pb = y(7,:) + rho_dl*g_dl*cosd(theta)*chi.*h;
+    if var_rho
+        rho_dl = rho_p_dl*phi+rho_f_dl*(1-phi);
+    else
+        rho_dl = rho_p_dl*phi_c+rho_f_dl*(1-phi_c);
+    end
+    chi = (rho_f_dl+3*rho_dl)./(4*rho_dl);
+    pb = y(7,:) + rho_dl.*g_dl*cosd(theta).*chi.*h;
     pe = pb-h;
 else
     pb=h;
 end
-
+p_tot_grad_dl = rho_dl*g_dl*cosd(theta);
 Fr_vals = Fr.*u./sqrt(h);
 
 h_min = roots([1,0,-u_w,-Q1(1)]);
@@ -110,24 +117,31 @@ end
 
 pp = p_tot_grad_dl.*h-pb;
 D = -2/beta_dl./h.*(pb-h);
-Iv = abs(2*eta_f_dl.*u./h./pp);
+Iv = 3*eta_f_dl.*abs(u)./h./pp;
 
 if full_model
     zeta = 3./(2*alpha_dl.*h) + P/4;
     tan_psi = phi - phi_c./(1+sqrt(Iv));
     R_w3 = -phi.*rho_f_dl/rho_dl.*D;
-    R_w4 = (-P.*chi+zeta).*D - 2*3/alpha_dl./h.*u.*(tan_psi);
+    if var_rho
+        R_w4 = (-P/4+zeta).*D - 9/2/alpha_dl./h.*u.*(tan_psi);
+    else
+        R_w4 = (-P.*chi+zeta).*D - 9/2/alpha_dl./h.*u.*(tan_psi);
+    end
 end
 
 Fr_equi = zeros(size(h));
 Iv_equi = zeros(size(h));
+ave_wave = 0;
 for i=1:size(h,2)
     [Fr_equi(i),Iv_equi(i)] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h(i)*h0, tau0,0);
+    if i ~= 1
+        ave_wave = ave_wave + (rho_dl(i)*h(i)+rho_dl(i-1)*h(i-1))/2.0*(xi(i)-xi(i-1))/lambda;
+    end
 end
 
 dhdxi = n;
 n_coeff = 1-Q1.^2.*Fr^2./h.^3;
-Iv = 3*eta_f_dl.*abs(u)./h./pp;
 mu_val = pp./(p_tot_grad_dl.*h).*mu_Iv_fn(Iv)+tau0_dl*rho_f/rho./h;
 force_bal = tand(theta)-sign(u).*mu_val;
 
@@ -144,9 +158,13 @@ dmdxi = h./lambda.*u;
 
 if full_model
     dy6dxi = -R_w3;
+    dphidxi = (dy6dxi-phi.*dQdxi)./Q1;
     dy7dxi = R_w4./(u-u_w);
-    dpbdxi = dy7dxi + rho_dl*g_dl*cosd(theta)*chi.*n;
-
+    if var_rho
+        dpbdxi = dy7dxi + rho_dl.*g_dl.*cosd(theta).*chi.*dhdxi + 3/4.*g_dl.*cosd(theta).*(rho_p_dl-rho_f_dl).*dphidxi;
+    else
+        dpbdxi = dy7dxi+ rho_dl.*g_dl.*cosd(theta_in).*chi.*dhdxi;
+    end
     dpbdxi_scale = dpbdxi/(p_max-p_min);
     dhdxi_scale = n/(h_max-h_min);
 end
@@ -166,7 +184,7 @@ C = viridis(3);
 %     SetPaperSize(10,10)
 hold on
 %     plot(linspace(0.5,1),get_force_bal(linspace(0.5,1)))
-plot(xi*h0,h, "DisplayName", "Waveform","color",C(1,:))
+plot(xi*h0,h*h0, "DisplayName", "Waveform")%,"color",C(1,:)
 %     plot(xi,h,"--","DisplayName","$Q_1/u_w$","color","r")
 %     plot(xi,ones(size(xi))*h_stop_dl,"--","DisplayName","$h_{stop}$","color","y")
 %     plot(xi(xi<5),n_eq(xi<5), "DisplayName", "Waveform","color",C(2,:))
@@ -176,9 +194,9 @@ plot(xi*h0,h, "DisplayName", "Waveform","color",C(1,:))
 %     plot(xi,dpbdxi(xi>20), "DisplayName", "$\frac{d p_b}{d \xi}$","color",C(3,:))
 
 xlabel("$\xi$")
-ylabel("$h$")
+% ylabel("$h$")
 legend("Location","best")
-title("$\theta="+num2str(theta)+"$, $\tau_0="+num2str(tau0)+"$, No $p_e$ case")
+% title("$\theta="+num2str(theta)+"$, $\tau_0="+num2str(tau0)+"$, No $p_e$ case")
 %     plot(xi,force_bal)
 %     xlim([0,0.1])
 %     exp_graph(gcf,"no_pe_tau0_20_u_stop_h_Iv.pdf")

@@ -1,4 +1,4 @@
-filelist = ["report_full_demo.txt"]; %long_low_pe
+filelist = ["var_rho_master_pres_h.txt"]; %long_low_pe
 n_files = size(filelist,2);
 
 mu1_Iv = 0.32;
@@ -368,7 +368,7 @@ hold on
 % plot(xi,2*Q1./Fr(i).^2.*dQdxi./(3.*h.^3), "DisplayName", "Waveform","color",C(1,:))
 for i=1:n_files
 %     plot(xi{i,1}(1:end),dh_term+R1_term+R4_term, "DisplayName", "Waveform")
-    plot(xi{i,1}*h0,u{i,1}*u_eq, "color",C(1,:), "DisplayName", "Waveform")
+    plot(xi{i,1}*h0,h{i,1}*h0, "color",C(1,:), "DisplayName", "Waveform")
 %     plot(xi_2e*h0_2e,u0_2e*h0_2e*Q1_2e*ones(size(xi_2e)), "color",C(2,:), "DisplayName", "No $p_e$ model")
 %     plot(xi{i,1}*h0,Q1_2e*ones(size(xi{i,1})),"--", "color",C(1,:), "DisplayName", "Uniform equilibrium")
 %     plot(xi{i,1},rho_eq_dl(i)*ones(size(xi{i,1})),"--", "color",C(2,:), "DisplayName", "Uniform equilibrium")

@@ -1,18 +1,18 @@
 function Ive_da_simple_plot
-    fname = ["sin_u_evo.txt"];
+    fname = ["Ive_da_0deg_30init_change_0.txt"];
 
     sim_num = size(fname,2);
     sim_list = cell(1,sim_num);
     n_times = zeros(sim_num,1);
     custom_times = zeros(sim_num,1);
     
-    h0 = 1e-1; % layer height (m)
-    d= 1e-5*ones(sim_num,1);
+    h0 = 0.0388; % layer height (m)
+    d= 1e-4*ones(sim_num,1);
     phi_c= 0.585*ones(sim_num,1);
     eta_f = 0.0010016*ones(sim_num,1);
     g=9.81*ones(sim_num,1); % m/s^2
-    theta = 5*ones(sim_num,1); % deg
-    alpha = [1e-4]'; % 1/Pa
+    theta = 0*ones(sim_num,1); % deg
+    alpha = [1e-5]'; % 1/Pa
     rho_f = 1000*ones(sim_num,1);
     density_ratio = 2.5*ones(sim_num,1);
 
@@ -47,9 +47,9 @@ function Ive_da_simple_plot
     end
     cd ..
 
-    rho = density_ratio*phi_c+(1-phi_c);
-    pe = (pb-cosd(theta)*h);
-    pp = rho*h*cosd(theta)-pb;
+    rho = rho_f*(density_ratio*phi_c+(1-phi_c));
+    pe = (pb-rho_f*g*cosd(theta)*h);
+    pp = rho*h*g*cosd(theta)-pb;
     Iv = 3*u.*eta_f_dl./(h.*(pp));
     tan_psi = phi-phi_c./(1+sqrt(Iv));
     tau_zx = pp.*mu_Iv_fn(Iv)+(1-phi)*eta_f_dl*2.*u./h;
@@ -89,7 +89,7 @@ function Ive_da_simple_plot
     fast_scale = 2*eta_f_dl.*alpha_dl./(phi.*Iv.^(3/2));
     medium_scale = u./sind(9);
     
-    SetPaperSize(7,7)
+%     SetPaperSize(7,7)
     C = viridis(3);
     
     for i=1:sim_num
@@ -101,13 +101,13 @@ function Ive_da_simple_plot
         hold on
     %     plot(t_vals(i,t_begin:t_end),dIvdt_phi(i,t_begin:t_end),"red",'DisplayName',"Exact Value")
     %     plot(t_vals(i,t_begin:t_end),(3.*u(i,t_begin:t_end).*eta_f_dl./Iv_phi(i,t_begin:t_end)),'DisplayName',"Approximation")
-        plot(t_vals(i,t_begin:t_end),(u_approx(i,t_begin:t_end)),'LineStyle','--','color',C(2,:),'DisplayName',"Approximation",'LineWidth',1)
+%         plot(t_vals(i,t_begin:t_end),(u_approx(i,t_begin:t_end)),'LineStyle','--','color',C(2,:),'DisplayName',"Approximation",'LineWidth',1)
     end
     ylabel('$u$')
     xlabel('$t$')
     xlim([0,500])
     legend("Location","best")
     figname = "Ive_da_5deg_u_medium.pdf";
-    exp_graph(gcf,figname)
-    movefile(figname,"../Iverson_Closure/Figures/SecondYearReport")
+%     exp_graph(gcf,figname)
+%     movefile(figname,"../Iverson_Closure/Figures/SecondYearReport")
 end

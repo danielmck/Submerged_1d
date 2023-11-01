@@ -1,4 +1,4 @@
-function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,master_params)
+function [xi_final,y_final] = dim_from_master(params,master_y,master_xi,master_params)
     % Uses the master solution to parameter step to the desired values
     % specified in params. If the params vector is not set then the default
     % values specified are used.
@@ -22,29 +22,29 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     eta_f = 0.0010016; % Pa s
     rho_p = 2500;
     
-    rho = rho_p*phi_c+rho_f*(1-phi_c);
-    chi = (rho_f+3*rho)/(4*rho);
-    P = (rho-rho_f)/rho;
+%     rho = rho_p*phi_c+rho_f*(1-phi_c);
+%     chi = (rho_f+3*rho)/(4*rho);
+%     P = (rho-rho_f)/rho;
     
     % Defines parameters if not specified
     if ~exist('params','var')
         custom_init = false;
-        wave_type = "full_pres_h";
+        wave_type = "var_rho";
         Fr_eq = 0.8;
         
         theta = 12;
         lambda = 50;
-        nu = 1e-4;
+        nu = 2e-4;
         alpha = 1e-5;
         d = 1e-4;
         tau0 = 0; % Pa
         rel_flux = 1;
-        pres_h = (wave_type == "full_pres_h");
+        pres_h = (wave_type == "var_rho_pres_h");
         
 %         h0 = 0.1;
 %         [Fr_eq, ~] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h0, tau0);
         params = [Fr_eq,theta,lambda,nu,alpha,d,tau0,rel_flux,pres_h];
-        filename = "report_long_rho_con.txt";
+        filename = "var_rho_long_flux_low_vis.txt";
     else
         custom_init = true;
         param_cell = num2cell(params);
@@ -58,7 +58,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     end
     
     if ~exist('master_y','var')
-        master_name = "master_pres_h.txt";
+        master_name = "td_check_var_rho.txt"; %master_wave_var_rho
         master_file = load(Res_dir+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -66,7 +66,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
 
         in_table = strcmp(record.Name, master_name);
         master_wave_type = record.wave_type(in_table);
-        master_pres_h = (master_wave_type == "full_pres_h");
+        master_pres_h = (master_wave_type == "var_rho_pres_h");
         master_theta = record.theta(in_table); 
         master_lambda = record.lambda(in_table);
         master_Fr = record.Fr(in_table);
@@ -78,8 +78,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         master_rf = 1;
 %         end
         master_params = [master_Fr,master_theta,master_lambda,master_nu,master_alpha,master_d,master_tau0];
-    else
-        
+    else   
         master_temp = num2cell(master_params);
         if (size(param_cell,2) == 7)
             [master_Fr,master_theta,master_lambda,master_nu,master_alpha,master_d,master_tau0] = master_temp{:};
@@ -93,37 +92,28 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
     
     
     if (pres_h ~= master_pres_h)
+        [master_h, master_Iv] = crit_Iv_tau0(master_theta, rho_p, rho_f, eta_f, master_Fr, master_tau0);
+%         master_u_scale = master_Fr*sqrt(g*cosd(theta)*master_h);
+%         master_p_scale = rho_f*g*cosd(theta)*master_h;
+%         master_rho_f_dl = rho_f*master_u_scale^2/master_p_scale;
+%         master_rho_p_dl = rho_p*master_u_scale^2/master_p_scale;
+        master_phi_eq = phi_c/(1+sqrt(master_Iv));
+        master_rho_eq = rho_p*master_phi_eq+rho_f*(1-master_phi_eq);
         m_init = zeros(size(master_xi));
         m_val = 0;
-        u_flux = (master_y(1,1) - master_y(2,:)./master_y(3,:)).^(1-pres_h);
+        u_flux = (master_y(1,1) - master_y(2,:)./master_y(3,:)).^(1-1);
+        phi_init = master_y(6,:)./master_y(2,:);
+        rho_init = rho_p*phi_init+rho_f*(1-phi_init);
         for j = 1:size(master_xi,2)
             m_init(j) = m_val;
             if j < size(master_xi,2)
-                m_val = m_val + 1/master_lambda* (master_y(3,j)*u_flux(j)+master_y(3,j+1)*u_flux(j+1))/2*(master_xi(j+1)-master_xi(j));
+                m_val = m_val + 1/master_lambda/master_rho_eq*(master_y(3,j)*u_flux(j)*rho_init(j)+master_y(3,j+1)*rho_init(j+1)*u_flux(j+1))/2*(master_xi(j+1)-master_xi(j));
             end
         end
         master_y = vertcat(master_y(1:4,:),m_init,master_y(6:7,:));
         master_rf = m_val;
     end
-%     
-%     max_eig = zeros(1,100);
-%     for lin_lambda = 1:100
-%         lin_k = 2*pi/(0.1*lin_lambda);
-%         A_mat = make_A_mat(lin_k,rho_p,rho_f,theta,eta_f,d,alpha,Fr_eq,newt_solve_crit_Iv(theta,rho_p,rho_f),nu);
-%         A_eig = eigs(A_mat);
-%         [~, idx] = sort(imag(A_eig),'descend');
-%         A_eig = A_eig(idx);
-%         max_eig(lin_lambda)=imag(A_eig(1));
-%     end
-    k = 2*pi/lambda;
-    A_mat = make_A_mat(k,rho_p,rho_f,theta,eta_f,d,alpha,Fr_eq,newt_solve_crit_Iv(theta,rho_p,rho_f),nu);
-    A_eig = eigs(A_mat);
-    [~, idx] = sort(imag(A_eig),'descend');
-    A_eig = A_eig(idx);
-    % Checks that the parameters lead to linearly unstable wave perts
-    if (imag(A_eig(1))<0)
-        error("Wave is not unstable, try a different value")
-    end
+
     Fr_ratio = max(Fr_eq/master_Fr,master_Fr/Fr_eq);
     nu_ratio = max(nu/master_nu,master_nu/nu);
     theta_ratio = max(theta/master_theta,master_theta/theta);
@@ -140,18 +130,9 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         n_steps=2;
     end
     
-%     if lambda_ratio>1
-%         [xi_nope,y_nope] = bvp_non_pe_to_full(true,true,master_params,true,master_xi,master_y);
-%         y_nope = y_nope(1:5,:);
-%         new_params = [master_params(1:2),lambda,master_params(4),master_params(7)];
-%         [xi_nope,y_nope] = viscous_Iv_bvp_from_master(true,new_params,true,xi_nope,y_nope,master_params);
-%         [xi_lambda,y_lambda] = bvp_non_pe_to_full(true,false,[new_params(1:4),master_params(5:7)],true,xi_nope,y_nope);
-%     else
-        xi_lambda = master_xi;
-        y_lambda = master_y;
-%     end
-    % Sets lists for parameter stepping between master and designated
-    % values
+    xi_lambda = master_xi;
+    y_lambda = master_y;
+
     Fr_list = linspace(master_Fr,Fr_eq,n_steps);
     nu_list = linspace(master_nu,nu,n_steps);
     theta_list = linspace(master_theta,theta,n_steps);
@@ -170,10 +151,11 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         Q1 = y_final(2,:);
         h = y_final(3,:);
         u = u_w - Q1./h;
-        n = y_final(4,:);
-        m = y_final(5,:);
-        phi = y_final(6,:)./Q1;
-        pb = y_final(7,:) + rho/rho_f*chi.*h;
+%         n = y_final(4,:);
+%         m = y_final(5,:);
+%         phi = y_final(6,:)./Q1;
+%         chi = 
+%         pb = y_final(7,:) + rho/rho_f*chi.*h;
         out_vec = vertcat(xi_final,y_final);
         
         write_record(Res_dir+"wave_record.csv",filename,{wave_type,"water",Fr_eq,theta,lambda,nu,alpha,d,tau0})
@@ -213,50 +195,33 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
         for i = 2:n_step
             % Only carries out if not at max depth
             if ~isequal(y_in,-1)
+                theta_old = theta_vals(i-1);
+                lambda_old = lambda_vals(i-1);
+                Fr_old = Fr_vals(i-1);
+                tau0_old = tau0_vals(i-1);
+                [h_old, old_Iv] = crit_Iv_tau0(theta_old, rho_p, rho_f, eta_f, Fr_old, tau0_old,false,true);
+                u_old = Fr_old*sqrt(g*cosd(theta_old)*h_old);
+                phi_old = phi_c/(1+sqrt(old_Iv));
+                
                 theta_in = theta_vals(i);
                 lambda_in = lambda_vals(i);
                 Fr_in = Fr_vals(i);
                 tau0_in = tau0_vals(i);
                 rf_in = rf_vals(i);
-                xi_run = xi_in/lambda_vals(i-1)*lambda_vals(i);
+                xi_run = xi_in/lambda_old*lambda_in;
 %                 xi_run = horzcat(linspace(0,3*lambda_vals(i)/4,70),linspace(3*lambda_vals(i)/4, lambda_vals(i),70));
-                if tau0_in == 0
-                    crit_Iv = newt_solve_crit_Iv(theta_in, rho_p, rho_f);
-                    u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
-                    h0 = ((Fr_in*sqrt(g*cosd(theta_in)))./u_const)^(2/3);  
-                else
-                    [h0, crit_Iv] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in);
-                    
-                end
+                [h0, crit_Iv] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in,false,true);
                 u_eq = Fr_in*sqrt(g*cosd(theta_in)*h0);
                 phi_eq = phi_c/(1+sqrt(crit_Iv));
-                p_tot = rho*g*cosd(theta_in);
+%                 p_tot = rho*g*cosd(theta_in);
                 crit_pb = rho_f*g*cosd(theta_in)*h0;
-                nu_dl = nu_vals(i)/(u_eq*h0);
                 
-%                 h_stop = tau_0/rho*g*cosd(theta)/(rho/(rho-rho_f)-mu1_Iv);
-                
-                z_scale = h0;
-                v_scale = u_eq;
-                p_scale = crit_pb;
-                t_scale = z_scale/v_scale;
-
-                eta_f_dl = eta_f/(p_scale*t_scale);
-                alpha_dl = alpha_vals(i)*p_scale;
-                g_dl = g*t_scale/v_scale; 
-
-                tau0_dl = tau0_in/p_scale;
-                p_tot_grad_dl = p_tot/p_scale*z_scale;
-                rho_f_dl = rho_f*v_scale^2/p_scale;
-                rho_p_dl = rho_p*v_scale^2/p_scale; 
-                rho_dl = rho_p_dl*phi_c+rho_f_dl*(1-phi_c);
-                d_dl = d_vals(i)/z_scale;
-
-                beta_dl = 150*phi_c.^2.*eta_f_dl./((1-phi_c).^3.*d_dl^2);
+                beta_dl = 150*phi_c.^2.*eta_f./((1-phi_c).^3.*d_in^2);
 
                 % Solves the stepped system
                 solInit1=bvpinit(xi_run,@bvp_guess);
                 opts = bvpset('RelTol',tol,'NMax',500*counter);
+                delta_in=1;
                 try
                     solN1 = bvp4c(@full_syst,@bc_vals,solInit1,opts);
                     resid = solN1.stats.maxres;
@@ -330,7 +295,7 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
                 guess = y_in(:,guess_ind)*(xi-xi_run(guess_ind))/gap + y_in(:,guess_ind+1)*(xi_in(guess_ind+1)-xi)/gap;
             end
         end
-            
+        
         function dydxi = full_syst(xi,y)
             u_w = y(1);
             Q1 = y(2);
@@ -339,34 +304,44 @@ function [xi_final,y_final] = bvp_full_from_master(params,master_y,master_xi,mas
             n = y(4);
             m = y(5);
             phi = y(6)./Q1;
-            pb = y(7) + rho_dl*g_dl*cosd(theta_in)*chi.*h;
+            rho = (rho_p*phi+rho_f*(1-phi));
+            p_tot_grad = rho*g*cosd(theta_in);
+            chi = (rho_f+3*rho)/(4*rho);
+            pb = y(7)/Q1 + rho*g*cosd(theta_in)*chi.*h;
+            P = (rho-rho_f)/rho;
 
-            zeta = 3/(2*alpha_dl*h) + P/4;
-            p_p = p_tot_grad_dl*h-pb;
-            p_eq = h;
-            D = -2/beta_dl/h*(pb-p_eq);
-            Iv = abs(3*eta_f_dl*u/h/p_p);
-            R_w3 = -phi*rho_f_dl/rho_dl*D;
-            R_w4 = (-P*rho_dl*g_dl*cosd(theta)*chi+zeta)*D - 9/2/alpha_dl/h*u*(phi - phi_c./(1+sqrt(Iv)));
+            zeta = 3/(2*alpha*h) + P/4*rho_f*g*cosd(theta_in);
+            p_p = p_tot_grad.*h-rho_f*g*cosd(theta_in)*pb;
+            D = -2/beta/h*(pb-rho_f*g*cosd(theta_in)*h);
+            Iv = 3*eta_f*abs(u)/h/p_p;
+            R_w3 = -phi*rho_f/rho*D;
+            R_w4 = (-P/4*rho_f*g*cosd(theta_in)+zeta)*D - 9/2/alpha/h*u*(phi - phi_c./(1+sqrt(Iv)));
 
             dhdxi = n;
-            n_coeff = h/Fr_eq^2-Q1^2/h^2;
-            mu_val = p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv)+tau0_dl*rho_f/rho;
-            force_bal = h*(tand(theta)-sign(u).*mu_val)/Fr_eq^2+u*P*D;
-            dQdxi = -P*D; % Minus sign is due to Q=h*(u_w-u) to ensure positive
-%             dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_in^2/nu_dl/Q1*denom*(n-n_eq);
-            dmdxi = h*(u^(1-pres_h))/lambda_in;
+            n_coeff = h*g*cosd(theta_in)-Q1^2/h^2;
+            
+            
+            mu_val = p_p/(p_tot_grad*h)*mu_Iv_fn(Iv); 
+            force_bal = g*cosd(theta_in)*h*(tand(theta_in)-sign(u).*mu_val)+tau0_in/rho+u*P*D;
+            n_eq = (force_bal)./n_coeff;
+            dQdxi = -P*D;
+            
+%             dndxi = 1/(2*h)*n^2 + h^(3/2)/Fr_in^2/nu_dl/Q1*n_coeff*(n-n_eq);
+            dmdxi = rho*h/lambda_in*u^(1-pres_h);
 
-            dy6dxi = -R_w3; % Minus sign is due to Q=h*(u_w-u) to ensure positive
-            dy7dxi = R_w4/(u-u_w);
-            dPdxi = 0;
-            dpbdxi = dy7dxi+ rho_dl*g_dl*cosd(theta)*chi*dhdxi;
-            dDdxi = -2/beta_dl*(dpbdxi/h-pb/h^2*dhdxi);
-            dndxi = 1/Q1/nu_dl*(n_coeff*n-force_bal+u*dQdxi)-h/Q1*(P*dDdxi+D*dPdxi);
-            dydxi = [0,dQdxi,dhdxi,dndxi,dmdxi,dy6dxi,dy7dxi]';
+            dy6dxi = -R_w3;
+            dy7dxi = -h*R_w4+(pb-rho*g*cosd(theta_in)*chi.*h)*dQdxi;
+            dphidxi = (dy6dxi-phi*dQdxi)/Q1;
+            dPdxi = rho_f*(rho_p-rho_f)./rho^2*dphidxi;
+            dpbdxi = dy7dxi+ rho*g*cosd(theta_in)*chi*dhdxi;
+            dDdxi = -2/beta*(dpbdxi/h-pb/h^2*dhdxi);
+%             dndxi_old = 1/Q1/nu_dl*(n_coeff*n-force_bal+u*dQdxi)-h/Q1*(P*dDdxi+D*dPdxi);
+            dndxi = 1/Q1/nu*((n_coeff-nu*P*(1-D))*n - force_bal+nu*(h*D*dPdxi-P*2/beta*dpbdxi));
+            dydxi = [0,dQdxi,dhdxi,dndxi,dmdxi,dy6dxi,dy7dxi]';  
         end
+        
         function resid = bc_vals(ya,yb)
-            resid = [ya(3)-yb(3), ya(4), yb(4), ya(5), yb(5)-rf_in, ya(6)-yb(6), ya(7)-yb(7)]; 
+            resid = [ya(3)-yb(3), ya(4), yb(4), ya(5), yb(5)-rf_in*h0*u_eq^(1-pres_h)*rho_eq, ya(6)-yb(6), ya(7)-yb(7)]; 
         end
     end      
 

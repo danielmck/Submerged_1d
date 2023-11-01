@@ -59,8 +59,8 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
             if reverse
                 master_name="master_wave_full.txt";
             else
-                master_name = "master_wave_no_pe.txt";
-%                 master_name = "time_d_comp_vvshort.txt";
+%                 master_name = "master_wave_no_pe.txt";
+                master_name = "td_check_12deg.txt";
             end
             master_file = load(strcat("Results/",master_name));
             master_xi = master_file(1,:);
@@ -154,7 +154,7 @@ function [xi_out,y_out] = bvp_non_pe_to_full(custom_init,reverse,params,provide_
     end
     if ~custom_init && ~reverse && ~provide_init
         out_vec = vertcat(xi_out,y_out);
-        filename = "master_wave_full.txt";
+        filename = "td_check_con_rho.txt";
         save("Results/"+filename,"out_vec","-ascii")
         write_record("Results/wave_record.csv",filename,{"full","water",Fr,theta,lambda,nu,alpha,d,tau0})
     end

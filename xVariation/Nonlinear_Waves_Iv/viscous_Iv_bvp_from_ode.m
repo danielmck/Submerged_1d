@@ -16,7 +16,7 @@ function viscous_Iv_bvp_from_ode
     rho_p = 2500;
     
     Fr_eq = 0.8; 
-    lambda = 30;
+    lambda = 12;
     
     rho = rho_p*phi_c+rho_f*(1-phi_c);
     P = (rho-rho_f)/rho;
@@ -28,13 +28,13 @@ function viscous_Iv_bvp_from_ode
     h0 = ((Fr_eq*sqrt(g*cosd(theta)))./u_const)^(2/3);
     
     u_eq = u_const.*h0^2;
-    nu = 2e-4;
+    nu = 1e-3;
     
     z_scale = h0;
     v_scale = u_eq;
     t_scale = z_scale/v_scale;
 
-    nu_dl = nu/z_scale/v_scale;
+    nu_dl = nu/v_scale;
     R = u_eq*h0/nu;
     
     % Gets the waveform from the ode solver
@@ -73,7 +73,7 @@ function viscous_Iv_bvp_from_ode
     h_final = y_final(3,:);
     plot(xi_final,h_final)
     out_final = vertcat(xi_final,y_final);
-    fname = "master_wave_no_pe_test.txt";
+    fname = "master_wave_no_pe.txt";
     save("Results/"+fname,"out_final","-ascii")
     write_record("Results/wave_record.csv",fname,{"no_pe","water",Fr_eq,theta,lambda,nu,0,0,0})
     
