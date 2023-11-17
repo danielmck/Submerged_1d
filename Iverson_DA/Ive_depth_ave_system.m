@@ -1,13 +1,13 @@
 function Ive_depth_ave_system
-h0 = 0.0061; % layer height (m)
+h0 = 0.01; % layer height (m)
 d=1e-4; % grain diameter (m)
 [phi_c,rho_f,rho_p,~,eta_f,g] = get_params_water();
-theta = 5; % deg
+theta = 10; % deg
 theta0 = 12;
 change_t = 20;
 % fric_ang = 0.65;
 
-alpha = 1e-5;
+alpha = 1e-4;
 kappa = ((1-phi_c).^3.*d^2)./(150*phi_c.^2);
 
 buoyancy = -(rho_p-rho_f)*g*phi_c*cosd(theta);
