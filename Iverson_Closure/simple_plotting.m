@@ -1,5 +1,5 @@
 function simple_plotting
-    names = ["Ive_5deg_13init.txt"]; %Ive_5deg_13initIve_5deg_13init.txt"Ive_comp_4_deep_1_flux.txt"];%,"Ive_comp_4_deep_9_2_start.txt""Ive_comp_4_deep_9_1_start.txt","
+    names = ["Ive_5deg_Fr_5_sand.txt"]; %Ive_5deg_13initIve_5deg_13init.txt"Ive_comp_4_deep_1_flux.txt"];%,"Ive_comp_4_deep_9_2_start.txt""Ive_comp_4_deep_9_1_start.txt","
     % names = ["Ive_comp_5_deep_custom_time_IC.txt"]; %,"Ive_comp_5_deep_custom_time_IC.txt"];%
     % Loads the data to compare and puts them in a list of simulations
 
@@ -149,7 +149,7 @@ function simple_plotting
         dpdt{i,1} = dpdt{i,1} + dilatancy{i,1};
     end
 %% 
-    theta0 = 13;
+    theta0 = 10;
     % Fast Timescale
     Iv_theta0 = newt_solve_crit_Iv(theta0,density_ratio,1);
     pp_theta0 = (rho-1)*cosd(theta0)*(1-z_pe{i,1});
@@ -174,28 +174,53 @@ function simple_plotting
     pp_medium = dudz_medium.*eta_f_dl.*phi{i,1}(1,100)^2./(phi{i,1}(1,100)-phi_c(i))^2;
     pe_medium = p_b{i,1} - pp_medium;
     
+    
+    Fr = 5;
+    % Fast Timescale
+    Iv_theta0_new = (phi_c-phi{i,1}(1,1))^2/phi{i,1}(1,1)^2;
+%     pp_theta0_new = (rho-1)*cosd(theta)*(1-z_pe{i,1});
+%     pp0 = rho*cosd(theta)*(1-z_pe{i,1});
+    Iv0_new = dupdz{i,1}(1,1)*eta_f_dl/p_p{i,1}(1,1);
+    tanpsi0_new = phi{i,1}(:,1)-phi_c./(1+sqrt(Iv0_new));
+    tau_s_new = phi{i,1}(:,1).*Iv_theta0_new^(3/2)./(2*eta_f_dl*alpha_dl);
+    tan_psi_fast_new = tanpsi0_new.*exp(-tau_s_new.*t_vals{i,1}');
+    pp_fast_new = eta_f_dl*dupdz{i,1}(:,1).*phi{i,1}(:,1).^2./(tan_psi_fast_new-(phi{i,1}(:,1)-phi_c(1))).^2;
+    pe_fast_new = p_b{i,1}-pp_fast_new;
+        
+    % Medium Timescale
+    dudz_ss_grad_new = rho(i).*sind(theta(i))./mu_Iv{i,1}.*(1-z_pe{i,1});
+    dudz_ss_new = rho(i).*sind(theta(i).*(phi{i,1}(100,1)-phi_c(i)).^2)./(phi{i,1}(100,1).^2.*eta_f_dl(i).*mu_Iv_fn(Iv_theta0_new)).*(1-z_pe{i,1});
+    fric_mult_new = (phi{i,1}(100,1).^2.*eta_f_dl(i).*mu_Iv_fn(Iv_theta0_new))./(phi{i,1}(100,1)-phi_c(i)).^2;
+    cos_const_term_new = dupdz{i,1}(1,1)-rho(i).*sind(theta(i).*(phi{i,1}(100,1)-phi_c(i)).^2)./(phi{i,1}(100,1).^2.*eta_f_dl(i).*mu_Iv_fn(Iv_theta0_new));
+    dudz_medium_new = dudz_ss_new;
+    for k =1:10
+        dudz_medium_new = dudz_medium_new + 8./(2*k-1).^2./pi.^2.*cos_const_term_new.*exp(-fric_mult_new(:,1)./rho(i).*pi^2/4.*(2*k-1).^2.*t_vals{i,1}').*cos(pi/2.*(2*k-1).*z_pe{i,1});
+    end
+    pp_medium_new = dudz_medium_new.*eta_f_dl./Iv_theta0_new;
+    pe_medium_new = p_b{i,1} - pp_medium_new;
     % Critical Pressure
-    crit_grad = -(density_ratio(i)*phi_c(i)+(1-phi_c(i)))*sind(theta(i))/0.32;
-    crit_pe = p_b{i,1}+crit_grad*(1-z_pe{i,1});
+    crit_grad_new = -(density_ratio(i)*phi_c(i)+(1-phi_c(i)))*sind(theta(i))/0.32;
+    crit_pe_new = (rho-1)*cosd(theta)*(1-z_pe{i,1})+crit_grad_new*(1-z_pe{i,1});
     
     nline=4;
     n_subs = 1;
-    C = viridis(4);
-    plot_vec = dupdz{i,1};
+    C = viridis(nline+1);
+    plot_vec = phi{i,1};
 %     plot_cell = {p_e{i,1},phi{i,1}};
-    t_init = 50;
+    t_init = 0;
     t_step = 50;
     t_maxes = linspace(t_init,t_init+t_step*(nline-1),nline);
-    SetPaperSize(6,9)
+    t_maxes(1)=2;
+    SetPaperSize(7.8,7.8)
     
     f = zeros(1,nline);
     a = zeros(1,2);
     hold on
-    a(1) = plot([NaN],[NaN],'color','k','DisplayName',"Full");
-    a(2) = plot([NaN],[NaN],'color','k','LineStyle','--','DisplayName',"Approx.");
+%     a(1) = plot([NaN],[NaN],'color','k','DisplayName',"Full");
+%     a(2) = plot([NaN],[NaN],'color','k','LineStyle','--','DisplayName',"Approx.");
     for k = 1:n_subs
         subplot(1,n_subs,k);
-%         hold on
+        hold on
 %         plot_vec = plot_cell{1,k};
         for j=linspace(1,nline,nline)
     %         t_vals{j,1}(t1(j))
@@ -203,22 +228,22 @@ function simple_plotting
     %         t_max = [50000,100000];
     %         t_val = (k-1)*t_step(i);
             t1=[sum(t_vals{i,1}<t_max)+1];
-            f(j) = plot(plot_vec(1:end,t1),z_pe{i,1}(1:end),'color',C(j,:),'DisplayName',"t="+num2str(t_max));
-    %         plot(pe_fast(:,t1),z_pe{i,1},'LineStyle','--','color',C(j,:),'DisplayName',"Approximation");
-            plot(dudz_medium(1:end,t1),z_pe{i,1}(1:end),'LineStyle','--','color',C(j,:),'DisplayName',"Approximation")
+            f(j) = plot(plot_vec(1:end-1,t1),z_pe{i,1}(1:end-1),'color',C(j,:),'DisplayName',"t="+num2str(t_max));
+%             plot(pe_medium_new(:,t1),z_pe{i,1},'LineStyle','--','color',C(j,:),'HandleVisibility','off');
+%             plot(tan_psi_fast_new(1:end,t1),z_pe{i,1}(1:end),'LineStyle','--','color',C(j,:),'DisplayName',"Approximation")
         end
-        if k == 1
-            ylabel('$z$','Interpreter','latex')
-            xlabel('$p_e$','Interpreter','latex')
-        else
-            xlabel('$\phi$','Interpreter','latex')
-        end
+%         if k == 1
+        ylabel('$z$','Interpreter','latex')
+        xlabel('$\phi$','Interpreter','latex')
+%         else\frac{\partial u}{\partial z}
+%             xlabel('$\phi$','Interpreter','latex')
+%         end
     end
-%     plot(crit_pe,z_pe{i,1}(1:end),'LineStyle','--','color','r','DisplayName',"$p_{crit}$")
-    legend([a,f],'Location','southoutside'); %["Full Profile","Approximation","t=1","t=2"]
+%     plot(crit_pe_new,z_pe{i,1}(1:end),'LineStyle','--','color','r','DisplayName',"$p_{crit}$")
+%     legend([a,f],'Location','southoutside'); %["Full Profile","Approximation","t=1","t=2"]
 %     legend([f(1),f(2)],{"Full Profile","Approximation"},'Location','east');
-%     legend('Location','southoutside','Interpreter','latex');
-    xlabel('$\frac{\partial u}{\partial z}$')
+%     legend('Position',[0.65 0.65 0.1 0.2],'Interpreter','latex');
+%     xlabel('$\frac{\partial u}{\partial z}$')
 %     xlabel('$p_e$')
 %     ylabel('$z$')
 %     annotation('arrow',[0.25 0.45],...
@@ -228,28 +253,11 @@ function simple_plotting
 %     'String',{'Increasing $t$'},...
 %     'FitBoxToText','off');
 %     title("t="+num2str(t_max))
-%     xlim([0,0.045]);
-    figname = "Ive_5deg_medium_gd_match.pdf";
+    xlim([0.581,0.5855]);
+    figname = "Ive_slow_phi_late_sand.pdf";
 %     exportgraphics(gcf,figname,"Resolution",300)
     exp_graph(gcf,figname)
-    movefile(figname,"Figures/BAMC_Talk")
-    function beta_val=beta_fn(phi)
-        beta_val = 150*phi.^2.*eta_f_dl./((1-phi).^3.*d_dl^2);
-    end
+%     movefile(figname,"Figures/BAMC_Talk")
 
-    function mu_val = mu_I_fn(I)
-        mu1_I=0.342; % \frac{u+u_d}{\rho_f \phi_c}
-        mu2_I=0.557; % 
-        I_0 = 0.069;
-        mu_val = tanh(reg_param*I).*(mu1_I+(mu2_I-mu1_I)./(1+I_0./abs(I)));
-    end
 
-    function mu_val = mu_Iv_fn(Iv)
-        mu1_Iv = 0.32;
-        mu2_Iv = 0.7;
-        Iv_0 = 0.005;
-
-        reg_param = 1*10^7;
-        mu_val = tanh(reg_param*Iv).*(mu1_Iv+(mu2_Iv-mu1_Iv)./(1+Iv_0./abs(Iv))+Iv+5/2*phi_c*sqrt(Iv));
-    end
 end

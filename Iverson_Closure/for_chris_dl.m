@@ -1,6 +1,6 @@
 function simple_submerged_system
     N = 200; % number of discretisation points in z for each of tau, u
-    h = 4e-3; % layer height (m)
+    h = 5e-2; % layer height (m)
     d=1.43e-4; % grain diameter (m)
 
     mu1_I=0.342; % \frac{u+u_d}{\rho_f \phi_c}
@@ -25,7 +25,7 @@ function simple_submerged_system
     theta = 5; % deg
 
 %     init_file_name = "dil_13deg_deep_comp_new_phic.txt";
-    alpha = 0.0001; % 1/Pa
+    alpha = 1e-5; % 1/Pa
     dz = h/(N-0.5); % z spacing
     z_pe = linspace(dz/2,h,N);
     z_u = linspace(0,h-dz/2,N);
@@ -65,36 +65,38 @@ function simple_submerged_system
 %     end
 %     fname = "Ive_comp_4_deep_v2.txt";
     flux_con = load('Results/flux_conditions.txt');
-    for l=5:10
-        flux=flux_con(l,1);
-        theta_init=flux_con(l,2);
-        init_phi=flux_con(l,3);
-        unit = floor(flux);
-        tenth = mod(l,10);
-        if (tenth == 0)
-%             init_file_name = "Ive_comp_"+num2str(unit)+"_deep.txt";
-            fname = "Ive_comp_4_deep_"+num2str(unit)+"_flux_big_part.txt";
-%             fname = "Ive_comp_"+num2str(unit)+"_deep.txt";
-        else
-%             init_file_name = "Ive_comp_"+num2str(unit)+"_"+num2str(tenth)+"_deep.txt";
-            fname = "Ive_comp_4_deep_"+num2str(unit)+"_"+num2str(tenth)+"_flux_big_part.txt";
-%             fname = "Ive_comp_"+num2str(unit)+"_"+num2str(tenth)+"_deep.txt";
-        end
-%         init_file_name = fname;
-%     init_file_name = "Ive_comp_9_2_deep_long_run.txt";
-%         fname = "Ive_comp_4_deep_9_2_start_long_run.txt";
-        run_dil_sim()
-        movefile(fname,'Results/');
-        write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,theta,eta_f_dl,t_step);
-    end
+%     for l=5:10
+%         flux=flux_con(l,1);
+%         theta_init=flux_con(l,2);
+%         init_phi=flux_con(l,3);
+%         unit = floor(flux);
+%         tenth = mod(l,10);
+%         if (tenth == 0)
+% %             init_file_name = "Ive_comp_"+num2str(unit)+"_deep.txt";
+%             fname = "Ive_comp_4_deep_"+num2str(unit)+"_flux_big_part.txt";
+% %             fname = "Ive_comp_"+num2str(unit)+"_deep.txt";
+%         else
+% %             init_file_name = "Ive_comp_"+num2str(unit)+"_"+num2str(tenth)+"_deep.txt";
+%             fname = "Ive_comp_4_deep_"+num2str(unit)+"_"+num2str(tenth)+"_flux_big_part.txt";
+% %             fname = "Ive_comp_"+num2str(unit)+"_"+num2str(tenth)+"_deep.txt";
+%         end
+% %         init_file_name = fname;
+% %     init_file_name = "Ive_comp_9_2_deep_long_run.txt";
+% %         fname = "Ive_comp_4_deep_9_2_start_long_run.txt";
+%         run_dil_sim()
+%         movefile(fname,'Results/');
+%         write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,theta,eta_f_dl,t_step);
+%     end
 
 % flux=5;
-% theta_init=9.9;
-% init_phi=0.57;
-% fname = "Ive_comp_10_shallow.txt";
-% run_dil_sim()
-% movefile(fname,'Results/');
-% write_record(fname,'dil',N,h,d,reg_param,density_ratio,alpha_dl,phi_c,theta,eta_f_dl,t_step);
+theta_init=10;
+[init_Fr, init_Iv] = crit_Iv_tau0_h(theta_init, rho_p, rho_f, eta_f, h, 0, true);
+init_phi = phi_c/(1+sqrt(init_Iv));
+u_m = init_Iv/2/eta_f_dl*(rho-1)*cosd(theta_init);
+fname = "Ive_5deg_10init.txt";
+run_dil_sim()
+movefile(fname,'Results/');
+write_record("Results/result_record.csv",fname,[N,h,d,reg_param,density_ratio,alpha_dl,phi_c,theta,eta_f_dl,t_step],["dil"]);
 % end
 
 
@@ -158,7 +160,7 @@ function simple_submerged_system
 
         Iv = eta_f_dl.*abs(dupdz)./(p_p(1:end-1));
 %         Iv(end) = eta_f_dl.*d2updz2(end)./(buoyancy_dl-dpdz(end));
-        I = 2.*d_dl.*abs(dupdz).*sqrt(density_ratio)./sqrt(abs(p_p(1:end-1)));
+        I = d_dl.*abs(dupdz).*sqrt(density_ratio)./sqrt(abs(p_p(1:end-1)));
 %         I_u = interp1(z_pe,I,z_u,'linear','extrap');
         K = sqrt(I.^2+2*Iv);
         
@@ -319,8 +321,8 @@ function simple_submerged_system
 %             vec(j,1) = p_b_dl(j)*-0.4;
             vec(j,1) = 0;
             vec(N+j,1) = init_phi-phi_c;
-            vec(2*N+j,1) = (1-(1-z_u_dl(j))^2)*3/2*flux+(1-phi_c).*sind(theta_init)./beta_fn(init_phi)./(1-phi_c)^2; %init_uf(j);
-            vec(3*N+j,1) = (1-(1-z_u_dl(j))^2).*3/2*flux; %init_up(j);
+            vec(2*N+j,1) = (1-(1-z_u_dl(j))^2)*u_m+(1-phi_c).*sind(theta_init)./beta_fn(init_phi)./(1-phi_c)^2; %init_uf(j);
+            vec(3*N+j,1) = (1-(1-z_u_dl(j))^2)*u_m; %init_up(j);
         end
 
         % No initial pressure of phihat and initial values of u_p and u_f

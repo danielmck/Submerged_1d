@@ -1,4 +1,4 @@
-filename = "td_check_var_rho_pres_h.txt"; %long_low_pe
+filename = "visc_comp_nu_point1.txt"; %long_low_pe
 master_file = load("Results/"+filename);
 xi = master_file(1,:);
 y = master_file(2:end,:);
@@ -13,7 +13,7 @@ Fr = record.Fr(in_table);
 nu = record.nu(in_table);
 tau0 = record.tau0(in_table);
 % if strcmp(extract(wave_type{1,1},1),"full")
-full_model= true; %all(wave_type{1}(1:4)=='full');
+full_model= all(wave_type=='var_rho_full');
 d = record.d(in_table);
 alpha = record.alpha(in_table);
 var_rho = all(wave_type(1:min(7,size(wave_type,2)))=='var_rho');
@@ -91,12 +91,16 @@ if full_model
         rho_dl = rho_p_dl*phi+rho_f_dl*(1-phi);
     else
         rho_dl = rho_p_dl*phi_c+rho_f_dl*(1-phi_c);
+        
     end
     chi = (rho_f_dl+3*rho_dl)./(4*rho_dl);
     pb = y(7,:) + rho_dl.*g_dl*cosd(theta).*chi.*h;
     pe = pb-h;
 else
     pb=h;
+end
+if ~var_rho
+    rho_dl = rho_dl*ones(size(h));
 end
 p_tot_grad_dl = rho_dl*g_dl*cosd(theta);
 Fr_vals = Fr.*u./sqrt(h);
@@ -180,11 +184,11 @@ end
 % vec_save = interp1(xi,h0*h.*crit_pb.*y(7,:),outpoints);
 % save("time_d_load_pbh.txt","vec_save","-ascii");
 %%
-C = viridis(3);
-%     SetPaperSize(10,10)
+C = viridis(4);
+SetPaperSize(7.5,7.5)
 hold on
 %     plot(linspace(0.5,1),get_force_bal(linspace(0.5,1)))
-plot(xi*h0,h*h0, "DisplayName", "Waveform")%,"color",C(1,:)
+plot(xi,h, "DisplayName", "$\nu = 0.1\nu_n$","color",C(3,:))%
 %     plot(xi,h,"--","DisplayName","$Q_1/u_w$","color","r")
 %     plot(xi,ones(size(xi))*h_stop_dl,"--","DisplayName","$h_{stop}$","color","y")
 %     plot(xi(xi<5),n_eq(xi<5), "DisplayName", "Waveform","color",C(2,:))
@@ -194,7 +198,7 @@ plot(xi*h0,h*h0, "DisplayName", "Waveform")%,"color",C(1,:)
 %     plot(xi,dpbdxi(xi>20), "DisplayName", "$\frac{d p_b}{d \xi}$","color",C(3,:))
 
 xlabel("$\xi$")
-% ylabel("$h$")
+ylabel("$h$")
 legend("Location","best")
 % title("$\theta="+num2str(theta)+"$, $\tau_0="+num2str(tau0)+"$, No $p_e$ case")
 %     plot(xi,force_bal)

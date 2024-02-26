@@ -24,7 +24,7 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
         provide_init = false;
     end
     if ~provide_init
-        master_name = "no_pe_no_vis_master_pres_h.txt";
+        master_name = "no_pe_no_vis_master_pres_h.txt"; %;"tau0_low_very_long.txt"
         master_file = load("Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -45,7 +45,7 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
     else
         master_stat_len = 0;
     end
-    master_lambda = master_y(3,1);
+    master_lambda = master_y(3,1)+master_stat_len;
     if (master_y(4,1)-master_y(2,1)/master_y(1,1)<1e-2)
         master_h_min = -1;
     else
@@ -54,18 +54,18 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
     master_rf = master_y(5,end);
     
     if ~specify_param
-        Fr_eq = 0.8; 
+        Fr_eq = 3.0; 
         theta = 12;
         tau0 = 0;
         stat_len=0;
         h_min = -1;
         rel_flux = 1;
-        lambda_spec = 12;
+        lambda_spec = 300;
         pres_h = true;
         set_h_min = false;
         % h_alt specifies the distance from the static minimum that the
         % wave must begin at.
-        filename = "report_demo_wave_v2.txt";
+        filename = "Fr3_theta12_long.txt";
         
     else
         param_cell = num2cell(params);
@@ -149,7 +149,7 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
         end
     else
         len_list = linspace(master_lambda,lambda_spec,n_step);
-        stat_reg = size(master_y,2)==6;
+        stat_reg = size(master_y,1)==6;
     end
     
     h_b_pert = 5e-4;
@@ -191,6 +191,8 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
             Fr_in = Fr_vals(i);
             tau0_in = tau0_vals(i);
             rf_in = rf_vals(i);
+            [h0,eq_Iv] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in,0);
+            tau0_dl = tau0_in/(rho_f*g*cosd(theta_in)*h0);
             if set_h_min
                 if ~stat_reg && len_vals(i)==0 && len_vals(i-1)~=0
                     stat_reg = true;
@@ -205,9 +207,16 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
                         stat_reg = false;
                         y_in = y_in(1:5,:);
                     end
-                elseif ~stat_reg && y_in(4,1)-y_in(2,1)/y_in(1,1)<h_b_pert+1e-4
+                elseif ~stat_reg && (y_in(4,1)-y_in(2,1)/y_in(1,1))/y_in(4,1)^2*eq_Iv<2.5e-7
                     stat_reg = true;
                     y_in = vertcat(y_in,zeros(size(xi_in)));
+                    opts = bvpset('RelTol',tol);
+                    solInit1=bvpinit(xi_in,@bvp_guess);
+                    solN1 = bvp4c(@viscous_syst_static,@bc_vals_static,solInit1,opts);
+                    if resid < tol
+                        y_in = solN1.y;
+                        xi_in = solN1.x;
+                    end
                 end
             end
             
@@ -220,12 +229,12 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
             else
                 lambda_in = len_vals(i);
             end
-            [h0,eq_Iv] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in,0);
+            
 %             u_const = eq_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta_in);
 %             h0 = ((Fr_in*sqrt(g*cosd(theta_in)))./u_const)^(2/3);  
 %             u_eq = Fr_in*sqrt(g*cosd(theta_in)*h0);
             
-            tau0_dl = tau0_in/(rho_f*g*cosd(theta_in)*h0);
+            
 
             solInit1=bvpinit(xi_in,@bvp_guess);
             opts = bvpset('RelTol',tol);
@@ -333,19 +342,20 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
             u = (-Q1 + h.*u_w)./h;
             m = y(5);
             s_len = y(6);
-            
             Iv = eq_Iv.*abs(u)/h.^2;
             
             denom = (h.^3/Fr_in^2-Q1.^2);
             if (abs(denom)>1e-6)
-                fb_val = tand(theta_in)-sign(u)*mu_Iv_fn(Iv).*(rho-rho_f)/rho-sign(u)*tau0_dl*rho_f/rho/h;
+                fb_val = tand(theta_in)-sign(u).*mu_Iv_fn(Iv).*(rho-rho_f)/rho-sign(u).*tau0_dl*rho_f/rho/h;
                 dhdxi = 1/Fr_in^2.*h.^3.*fb_val./denom;
             else
                 ud = Q1/h^2;
                 Iv_deriv = eq_Iv.*2.*ud./h.^2-2.*Iv/h;
-                fb_deriv = -sign(u)*dmudIv_fn(Iv).*Iv_deriv.*(rho-rho_f)/rho+sign(u)*tau0_dl*rho_f/rho./h.^2;
-                dhdxi = 1/Fr_in^2.*h.^3.*fb_deriv/(3*h.^2/Fr_in^2); 
+                fb_deriv = -dmudIv_fn(Iv).*Iv_deriv.*(rho-rho_f)/rho+tau0_dl*rho_f/rho./h.^2;
+                dhdxi = 1/Fr_in^2.*h.^3.*fb_deriv/(3*h.^2/Fr_in^2);
+                
             end
+            
             dmdxi = h/(lambda+s_len)*u^(1-pres_h);
             dydxi = [0,0,0,dhdxi,dmdxi,0]'*lambda;
         end
@@ -363,7 +373,7 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
             [~, crit_Iv] = crit_Iv_tau0_h(theta_in, rho_p, rho_f, eta_f, h_crit*h0, tau0_in,0);
             u_crit = crit_Iv/eq_Iv*h_crit^2; 
             resid = [ya(1)-(u_crit*h_crit + ya(2))/h_crit, len_res, ya(4)-h_start, ...
-                yb(4)-h_stop, ya(5)-set_h_min*ya(6)/lambda_in*ya(2)/ya(1), yb(5)-rf_in]; 
+                yb(4)-h_stop, ya(5)-ya(6)/lambda_in*ya(2)/ya(1), yb(5)-rf_in]; 
         end
     end
 end

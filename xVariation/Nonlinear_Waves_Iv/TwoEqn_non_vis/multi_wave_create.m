@@ -2,22 +2,22 @@ function multi_wave_create
     lambda = 50;
 %     tau0 = 0;
     theta = 10;
-    npts = 50;
+    npts = 20;
     h_crit_mat = zeros(npts,npts);
-    theta_start = 0;
-    theta_stop = 100;
+    theta_start = 10;
+    theta_stop = 200;
     theta_list = linspace(theta_start,theta_stop,npts);
-    Fr_start = 0.6;
+    Fr_start = 1;
     Fr_stop = 5;
     Fr_list = linspace(Fr_start,Fr_stop,npts);
     i_fail = [];
     j_fail = [];
     Fr_fail = [];
     theta_fail = [];
-    for i=1:npts
+    for i=1:1
         Fr = Fr_list(i);
         for j=1:npts
-            tau0 = theta_list(j);
+            lambda = theta_list(j);
             params = [Fr,theta,tau0,lambda,false,1.0,true];
             if (j == 1)
                 if (i==1)

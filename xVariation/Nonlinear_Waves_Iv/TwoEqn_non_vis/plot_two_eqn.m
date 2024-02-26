@@ -1,4 +1,4 @@
-filelist = ["report_demo_wave_v2.txt"]; %long_low_pe"",no_pe_static_show.txt
+filelist = ["tau0_low_long.txt"]; %long_low_pe"",no_pe_static_show.txt
 n_files = size(filelist,2);
 
 [phi_c,rho_f,rho_p,rho,eta_f,g] = get_params_water();
@@ -183,13 +183,16 @@ for i=1:n_files
 
     n_coeff{i,1} = 1-Q1(i).^2.*Fr(i)^2./h{i,1}.^3;
     % Iv = 3*eta_f_dl(i).*abs(u)./h./pp;
-    mu_val{i,1} = pp{i,1}./(p_tot_grad_dl(i).*h{i,1}).*mu_Iv_fn(Iv{i,1})+tau0_dl(i)*rho_f/rho./h{i,1};
-    force_bal{i,1} = tand(theta(i))-sign(u{i,1}).*mu_val{i,1};
+    mu_1 = 0.32;
+    mu_val{i,1} = pp{i,1}./(p_tot_grad_dl(i).*h{i,1}).*max(mu_Iv_fn(Iv{i,1}),mu_1)+tau0_dl(i)*rho_f/rho./h{i,1};
+%     mu_val{i,1}(u{i,1}==0) = pp{i,1}(u{i,1}==0)./(p_tot_grad_dl(i).*h{i,1}(u{i,1}==0)).*mu_1+tau0_dl(i)*rho_f/rho./h{i,1}(u{i,1}==0);
+    force_bal{i,1} = tand(theta(i))-mu_val{i,1}; %sign(u{i,1}).*
+    
     dhdxi{i,1} = force_bal{i,1}./n_coeff{i,1};
 
     dmdxi{i,1} = h{i,1}./lambda(i).*u{i,1};
     C = viridis(3);
-    SetPaperSize(8,8)
+%     SetPaperSize(8,8)
     hold on
 % plot(xi,2*Q1./Fr(i).^2.*dQdxi./(3.*h.^3), "DisplayName", "Waveform","color",C(1,:))
     h_alt_dl = h_alt/h0(i);
@@ -209,9 +212,22 @@ end
 %%
 
 % C = viridis(3);
-% SetPaperSize(8,8)
+SetPaperSize(7.5,7.5)
 % hold on
-plot(xi{i,1}*h0,h{i,1}*h0, "DisplayName", "Waveform","color",C(1,:))
+% subplot(1,2,1)
+plot(h{i,1},force_bal{i,1}, "DisplayName", "$\nu=0$","color",C(1,:))
+ylabel("Force balance")
+xlabel("$h$")
+plot([h_static,h_static],[-0.025,0.025],"r--")
+text(h_static+0.1,0.02,"$h=h_{stop}$","color","red","FontSize",12,"Interpreter","latex");
+% xlim([0,500])
+% xticks([0,100,200,300,400,500])
+% subplot(1,2,2)
+% plot(xi{i,1},u{i,1}, "DisplayName", "$\nu=0$","color",C(1,:))
+% ylabel("$\bar{u}$")
+% xlabel("$\xi$")
+ylim([-0.025,0.025])
+yticks([-0.02,-0.01,0.0,0.01,0.02])
 for i=1:n_files
 %     plot(h_alt,force_bal{i,1}, "DisplayName", "Waveform relation", "color",C(1,:))
 %     plot(h_alt,max(u_eq.*(u_w(i) - Q1(i)./h_alt*h0),0), "DisplayName", "Waveform relation", "color",C(1,:))
@@ -219,14 +235,16 @@ for i=1:n_files
 end
 ax=gca;
 ax.YAxis.Exponent = 0;
-xlabel("Dimensionless Flow height") %$p_b$ ($Pa$)
-ylabel("Flow height $h$ ($m$)")
-% ylabel("Velocity $u$ ($ms^{-1}$)")
-% ylabel("Dimensionless force balance")
-xlabel("$\xi$ ($m$)")
+% xlabel("Dimensionless Flow height") %$p_b$ ($Pa$)
+% ylabel("$h$")
+% % ylabel("Velocity $u$ ($ms^{-1}$)")
+% % % ylabel("Dimensionless force balance")
+% xlabel("$\xi$")
 % xlabel("Froude number")
-% xlim([0,])
+% xlim([0,500])
+% xticks([0,100,200,300,400,500])
 % ylim([0,5])
 % legend("Location","best")
-title("$\theta = "+num2str(theta(1))+"^{\circ}$, Base flow $Fr = "+num2str(Fr(1))+"$, $\tau_0 = "+num2str(tau0)+"Pa$"); %$
-exp_graph(gcf,"two_eqn_master_h.pdf")
+sgtitle("$\theta = "+num2str(theta(1))+"^{\circ}$, $Fr = "+num2str(Fr(1))+"$, $\tau_0 = "+num2str(tau0)+"Pa$")
+% title("$\theta = "+num2str(theta(1))+"^{\circ}$, Base flow $Fr = "+num2str(Fr(1))+"$, $\tau_0 = "+num2str(tau0)+"Pa$"); %$
+exp_graph(gcf,"two_eqn_tau0_low_fb.pdf")

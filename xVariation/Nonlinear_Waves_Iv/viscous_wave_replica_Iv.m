@@ -1,4 +1,4 @@
-function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, eta_f, nu, Fr_eq, lambda)
+function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, eta_f, Fr_eq, lambda)
 %     Finds a solution for the viscous problem withut pe that is close to
 %     the given value lambda. Is used in conjunction with
 %     viscous_Iv_bvp_from_ode to find a wave of a specific length.
@@ -13,18 +13,19 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, 
     P = (rho-rho_f)/rho;
     
     crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f);
+    crit_mu = rho/(rho-rho_f)*tand(theta);
     u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
 %     Fr_eq = h0*beta/gamma/L;
     h0 = ((Fr_eq*sqrt(g*cosd(theta)))./u_const)^(2/3);
     
     u_eq = u_const.*h0^2;
-%     nu = 1.13e-3;
+    nu = 3/4*crit_mu*eta_f/crit_Iv/rho;
     
     z_scale = h0;
     v_scale = u_eq;
     t_scale = z_scale/v_scale;
 
-    nu_dl = nu/v_scale;
+    nu_dl = nu/(v_scale)^2;
     R = u_eq*h0/nu;
     
 %     u_w = 1+sqrt(g_dl*cosd(theta));
@@ -46,7 +47,7 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, 
         opts1=odeset('AbsTol',1e-6,'RelTol',1e-6);
         opts2 = odeset('AbsTol',1e-6,'RelTol',1e-6,'Events',@WaveEndFn);
 
-        [xi_vals,out_vals]=ode15s(@full_system_orig_dl,[0, 1000],[Q1_dl,1.001,0],opts1);
+        [xi_vals,out_vals]=ode15s(@full_system_orig_dl,[0,5e3],[Q1_dl,1.01,0],opts1);
         y_end = out_vals(end,:);
         [xi_wave,out_wave,eq_val,~,~] = ode15s(@full_system_orig_dl,[0, 100],out_vals(end,:),opts2);
         non_zero_eq = eq_val(eq_val>1e-6);
@@ -98,7 +99,7 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, 
         Iv = crit_Iv*abs(u)/h^2;
         force_bal = h*(tand(theta)-sign(u).*P*mu_Iv_fn(Iv))/Fr_eq^2;
         n_eq = (force_bal)./n_coeff;
-        dy3dx = 1/Q1_dl/nu_dl*(n_coeff*n-force_bal);
+        dy3dx = n^2/h+h/Q1_dl/nu_dl*(n_coeff*n-force_bal);
 %         dy2dx = (g*h^3*cosd(theta))*(tand(theta)-mu_b)/(n_coeff);
         n_coeff_old = 1-Q1_dl^2.*Fr_eq^2/h^3;
         n_eq_old = (tand(theta)-P*mu_Iv_fn(Iv))./n_coeff_old;

@@ -60,7 +60,7 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
                 master_name="master_wave_var_rho.txt";
             else
 %                 master_name = "master_wave_no_pe.txt";
-                master_name = "td_check_12deg_pres_h.txt";
+                master_name = "theta12_Fr1_convert.txt";
             end
             master_file = load(strcat("Results/",master_name));
             master_xi = master_file(1,:);
@@ -72,7 +72,7 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
         theta = record.theta(in_table); 
         lambda = record.lambda(in_table);
         Fr = record.Fr(in_table);
-        nu = record.nu(in_table);
+        nu_ratio = record.nu(in_table);
         tau0 = record.tau0(in_table);
         rel_flux = master_y(5,end);
         if reverse
@@ -101,6 +101,8 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
         u_init = Fr*sqrt(g*cosd(theta)*h0_init);
 
         crit_pb_init = rho_f*g*cosd(theta)*h0_init;
+        nu_init = 3/4*mu_Iv_fn(crit_Iv_init)*eta_f/crit_Iv_init/rho*nu_ratio;
+        nu_dl = nu_init/(u_init)^2;
 
         z_scale_init = h0_init;
         v_scale_init = u_init;
@@ -115,7 +117,7 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
             
         k = 2*pi/lambda;
 
-        A_mat = make_A_mat(k,rho_p,rho_f,theta,eta_f,d,alpha,Fr,crit_Iv_init,nu);
+        A_mat = make_A_mat(k,rho_p,rho_f,theta,eta_f,d,alpha,Fr,crit_Iv_init,nu_init);
         A_eig = eigs(A_mat);
         [~, idx] = sort(imag(A_eig),'descend');
         A_eig = A_eig(idx);
@@ -123,7 +125,7 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
         if (imag(A_eig(1))<0)
             error("Wave is not unstable, try a different value")
         end
-        y6_in = phi_init*master_y(2,:);
+        y6_in = phi_init*master_y(3,:);
         y7_in = master_y(3,:) - rho_init*g_dl_init*cosd(theta)*chi_init.*master_y(3,:);
         y_in = vertcat(master_y,y6_in,y7_in);
 %         y_in=master_y;
@@ -137,7 +139,7 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
     end
     if ~custom_init && ~reverse && ~provide_init
         out_vec = vertcat(xi_out,y_out);
-        filename = "td_check_var_rho_pres_h.txt";
+        filename = "theta12_Fr1_full.txt";
         save("Results/"+filename,"out_vec","-ascii")
         if pres_h
             type = "var_rho_pres_h";
@@ -185,10 +187,13 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
     
             u_eq = Fr*sqrt(g*cosd(theta)*h0);
             phi_eq = phi_c/(1+sqrt(crit_Iv));
-
+            rho_eq = phi_eq*rho_p+(1-phi_eq)*rho_f;
+            
             p_tot = rho*g*cosd(theta);
             crit_pb = rho_f*g*cosd(theta)*h0;
-            nu_dl = nu/(u_eq);
+            
+            nu = 3/4*mu_Iv_fn(crit_Iv)*eta_f/crit_Iv/rho_eq*nu_ratio;
+            nu_dl = nu/(u_eq)^2;
 
             z_scale = h0;
             v_scale = u_eq;
@@ -204,7 +209,7 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
         %     p_tot_grad_dl = p_tot/p_scale*z_scale;
             rho_f_dl = rho_f*v_scale^2/p_scale;
             rho_p_dl = rho_p*v_scale^2/p_scale;
-            rho_eq = rho_p_dl*phi_eq + rho_f_dl*(1-phi_eq);
+            rho_eq = rho_p_dl*phi_c + rho_f_dl*(1-phi_c);
             d_dl = d/z_scale;
 
             beta_dl = 150*phi_c.^2.*eta_f_dl./((1-phi_c).^3.*d_dl^2);
@@ -264,8 +269,8 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
             dhdxi = n;
             n_coeff = h/Fr^2-Q1^2/h^2;
             
-            mu_val = delta_in*p_p/(p_tot_grad_dl*h)*mu_Iv_fn(Iv)+(1-delta_in)*P*mu_Iv_fn(crit_Iv*abs(u)/h^2)+tau0_dl*rho_f/rho/h; 
-            force_bal = h*(tand(theta)-sign(u).*mu_val)/Fr^2+tau0_dl*rho_f/rho+delta_in*u*P*D;
+            mu_val = delta_in*p_p/rho_dl*mu_Iv_fn(Iv)+(1-delta_in)*P/Fr^2*mu_Iv_fn(crit_Iv*abs(u)/h^2)*h+tau0_dl*rho_f/rho/h; 
+            force_bal = h*tand(theta)/Fr^2-sign(u).*mu_val-delta_in*(u_w-u)*P*D;
             n_eq = (force_bal)./n_coeff;
             dQdxi = -delta_in*P*D;
             
@@ -277,9 +282,10 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
             dphidxi = (dy6dxi-phi*dQdxi)/Q1;
             dPdxi = delta_in*rho_f_dl*(rho_p_dl-rho_f_dl)./rho_dl^2*dphidxi;
             dpbdxi = dy7dxi + rho_dl*g_dl*cosd(theta)*chi*dhdxi + 3/4*g_dl*cosd(theta)*(rho_p_dl-rho_f_dl)*dphidxi;
-%             dDdxi = -2/beta_dl*(dpbdxi/h-pb/h^2*dhdxi);
+            dDdxi = -2/beta_dl*(dpbdxi/h-pb/h^2*dhdxi);
 %             dndxi = 1/Q1/nu_dl*(n_coeff*n-force_bal+delta_in*u*dQdxi)-delta_in*h/Q1*(P*dDdxi+D*dPdxi);
-            dndxi = 1/Q1/nu_dl*((n_coeff+delta_in*nu_dl*P*(D+2/beta_dl))*n - force_bal-nu_dl*(h*D*dPdxi-P*2/beta_dl*dpbdxi));
+            dndxi_old = 1/Q1/nu_dl*(n_coeff*n - force_bal-nu_dl*(h*D*dPdxi-P*2/beta_dl*dpbdxi));
+            dndxi = 1/h*n^2+P*d/Q1*n-delta_in*h*D/Q1*dPdxi-delta_in*h*P/Q1*dDdxi+h/Q1/nu_dl*((n_coeff+delta_in*nu_dl*P*(D+2/beta_dl))*n - force_bal);
             dydxi = [0,dQdxi,dhdxi,dndxi,dmdxi,dy6dxi,dy7dxi]';  
         end
         

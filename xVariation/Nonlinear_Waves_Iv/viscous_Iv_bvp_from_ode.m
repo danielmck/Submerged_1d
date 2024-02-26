@@ -23,22 +23,23 @@ function viscous_Iv_bvp_from_ode
     
     crit_Iv = newt_solve_crit_Iv(theta, rho_p, rho_f);
     u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*phi_c*cosd(theta);
+    crit_mu = rho/(rho-rho_f)*tand(theta);
     
 %     Fr_eq = h0*beta/gamma/L;
     h0 = ((Fr_eq*sqrt(g*cosd(theta)))./u_const)^(2/3);
     
     u_eq = u_const.*h0^2;
-    nu = 1e-3;
+    nu = 3/4*crit_mu*eta_f/crit_Iv/rho;
     
     z_scale = h0;
     v_scale = u_eq;
     t_scale = z_scale/v_scale;
 
-    nu_dl = nu/v_scale;
+    nu_dl = nu/(v_scale)^2;
     R = u_eq*h0/nu;
     
     % Gets the waveform from the ode solver
-    [xi_wave, y_wave, uw_wave] = viscous_wave_replica_Iv(theta, rho_f, rho_p, eta_f, nu, Fr_eq, lambda);
+    [xi_wave, y_wave, uw_wave] = viscous_wave_replica_Iv(theta, rho_f, rho_p, eta_f, Fr_eq, lambda);
     Q1_wave = uw_wave - 1;
     lambda_init = xi_wave(end);
     lambda_ratio = lambda/lambda_init;
@@ -61,21 +62,21 @@ function viscous_Iv_bvp_from_ode
     % constant Q1
     y_init = vertcat(uw_init_vec',Q1_init_vec',y_wave(:,2:3)',m_init');
     
-    [xi_final,y_final] = run_bvp_step(lambda_init, lambda, n_step, xi_wave, y_init,1e-3);
+    [xi_final,y_final] = run_bvp_step(lambda_init, lambda, n_step, xi_wave, y_init,1e-5);
     h_final = y_final(3,:);
     [~,mindex] = min(h_final);
     y_final = horzcat(y_final(:,mindex:end-1),y_final(:,1:mindex-1));
     xi_final = mod(horzcat(xi_final(mindex:end-1),xi_final(1:mindex-1))-xi_final(mindex),lambda);
-    y_final(4,:) = mod(y_final(4,:)-y_final(4,1),1);
+    y_final(5,:) = mod(y_final(5,:)-y_final(5,1),1);
     xi_final = horzcat(xi_final,lambda);
     y_final = horzcat(y_final,y_final(:,1));
-    y_final(4,end) = 1;
+    y_final(5,end) = 1;
     h_final = y_final(3,:);
     plot(xi_final,h_final)
     out_final = vertcat(xi_final,y_final);
     fname = "master_wave_no_pe.txt";
     save("Results/"+fname,"out_final","-ascii")
-    write_record("Results/wave_record.csv",fname,{"no_pe","water",Fr_eq,theta,lambda,nu,0,0,0})
+    write_record("Results/wave_record.csv",fname,{"no_pe","water",Fr_eq,theta,lambda,1,0,0,0})
     
     function [xi_out, y_out] = run_bvp_step(lambda_init, lambda_fin, nstep, xi_in, y_in, tol, count)
         % Can account for a change in wavelength but should really use
@@ -88,9 +89,10 @@ function viscous_Iv_bvp_from_ode
             lambda_old = lambda_in;
             lambda_in = lambda_init + (lambda_fin-lambda_init)/n_step*i;
             xi_in = xi_in/lambda_old*lambda_in;
+            opts = bvpset('RelTol',tol);
             solInit1=bvpinit(xi_in,@bvp_guess);
             try
-                solN1 = bvp4c(@viscous_syst,@bc_vals,solInit1);
+                solN1 = bvp4c(@viscous_syst,@bc_vals,solInit1,opts);
                 resid = solN1.stats.maxres;
             catch ME
                 switch ME.identifier
@@ -146,7 +148,7 @@ function viscous_Iv_bvp_from_ode
             Iv = crit_Iv*abs(u)/h^2;
             force_bal = h*(tand(theta)-sign(u).*P*mu_Iv_fn(Iv))/Fr_eq^2;
             n_eq = (force_bal)./n_coeff;
-            dndxi = 1/Q1/nu_dl*(n_coeff*n-force_bal);
+            dndxi = n^2/h+h/Q1/nu_dl*(n_coeff*n-force_bal);
             dmdxi = h/lambda_in*u;
             dydxi = [0,0,dhdxi,dndxi,dmdxi]';
         end

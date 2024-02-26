@@ -1,16 +1,17 @@
 function dil_sim
     N = 200; % number of discretisation points in z for each of tau, u
-    h = 4e-2; % layer height (m)
-    d= 1e-5; % grain diameter (m)
+    h = 5e-1; % layer height (m)
+    d= 5e-3; % grain diameter (m)
     
     [phi_c,rho_f,rho_p,rho,eta_f,g] = get_params_water();
 %     [phi_c,rho_f,rho_p,rho,eta_f,g] = get_params_air()
     
     theta = 5; % deg
-    theta0 = 13;
-
+    theta0 = 10;
+    Fr = 5;
+    phi_init = 0.582;
 %     init_file_name = "dil_13deg_deep_comp_new_phic.txt";
-    alpha = 1e-4; % 1/Pa
+    alpha = 1e-5; % 1/Pa
     dz = h/(N-0.5); % z spacing
     z_pe = linspace(dz/2,h,N);
     z_u = linspace(0,h-dz/2,N);
@@ -34,8 +35,9 @@ function dil_sim
     z_pe_dl = z_pe/z_scale;
     z_u_dl = z_u/z_scale;
     
-    init_Iv = newt_solve_crit_Iv(theta0,rho_p,rho_f);
-    init_umax = init_Iv/eta_f_dl*(density_ratio-1)*phi_c*cosd(theta0)/2;
+%     init_Iv = newt_solve_crit_Iv(theta0,rho_p,rho_f);
+%     init_umax = init_Iv/eta_f_dl*(density_ratio-1)*phi_c*cosd(theta0)/2;
+    init_umax = Fr*3/2*sqrt(cosd(theta));
 %     pe_crit = p_b_dl+crit_grad*(1-z_pe);
     t_step = 1;
     % for l=1:90
@@ -67,10 +69,11 @@ function dil_sim
 %         end
 %         init_file_name = fname;
 %     init_file_name = "Ive_comp_9_2_deep_long_run.txt";
-        fname = "Ive_"+num2str(theta)+"deg_"+num2str(theta0)+"init_short_ts.txt";
+%         fname = "Ive_"+num2str(theta)+"deg_"+num2str(theta0)+"init_small_part.txt";
+        fname = "Ive_"+num2str(theta)+"deg_Fr_"+num2str(Fr)+"_gravel.txt";
         run_dil_sim()
         movefile(fname,'Results/');
-        write_record('Results/result_record.csv',fname,'dil',{N,h,d,reg_param,density_ratio,alpha_dl,phi_c,theta,eta_f_dl,t_step});
+        write_record('Results/result_record.csv',fname,{'dil',N,h,d,1e10,density_ratio,alpha_dl,phi_c,theta,eta_f_dl,t_step});
 %     end
 
     % The function that defines the evolution of p_e, phihat, u_p and u_f
@@ -147,15 +150,15 @@ function dil_sim
 %         whole_data = ;
         for j=1:N
 %             vec(j,1) = p_b_dl(j)*-0.4;
-            vec(j,1) = (cosd(theta0)-cosd(theta))*(1-z_u_dl(j));
-            vec(N+j,1) = phi_c/(1+sqrt(init_Iv));
+            vec(j,1) = 0*(1-z_u_dl(j));
+            vec(N+j,1) = phi_init; %phi_c/(1+sqrt(init_Iv));
             vec(2*N+j,1) = (1-(1-z_u_dl(j))^2)*init_umax; %(1-(1-z_u_dl(j))^2)*3/2*flux+(1-phi_c).*sind(theta_init)./beta_fn(init_phi)./(1-phi_c)^2; %init_uf(j);
             vec(3*N+j,1) = (1-(1-z_u_dl(j))^2)*init_umax; %(1-(1-z_u_dl(j))^2).*3/2*flux; %init_up(j);
         end
 
         % No initial pressure of phihat and initial values of u_p and u_f
         % defined above
-        time_vals = linspace(0,0.5);
+        time_vals = [0,200];
         opts=odeset('AbsTol',1e-8,'RelTol',1e-8,'Stats','on');
 
         [tvals,vec]=ode15s(@dilatancy_derivs,time_vals,vec,opts);

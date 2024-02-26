@@ -1,7 +1,12 @@
-function write_record(db_file,data_file,params)
+function write_record(db_file,data_file,params, text_params)
     T = readtable(db_file);
     in_table = strcmp(T.Name, data_file);
-    row_data = [{data_file},params];
+    if exist('text_params','var')
+        row_data = array2table([data_file,text_params,params]);
+    else
+        row_data = array2table([data_file,params]);
+    end
+    row_data.Properties.VariableNames = T.Properties.VariableNames;
     if (sum(in_table) == 0)
         T = [T;row_data];
     else

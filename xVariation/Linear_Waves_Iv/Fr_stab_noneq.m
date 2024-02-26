@@ -1,5 +1,10 @@
 function fn_out = Fr_stab_noneq(h0,u0,phi0,pb0,theta, rho_p, rho_f, d, eta_f, alpha,tau0)
 % Finds the critical Froude number for the specified condition
+    short = 2*4.3034e-04;
+    long = 1.8;
+    short_k = 2*pi/short;
+    long_k = 2*pi/long;
+
     phi_c=0.585; % Volume fraction
     g=9.81; % m/s^2
     
@@ -18,6 +23,9 @@ function fn_out = Fr_stab_noneq(h0,u0,phi0,pb0,theta, rho_p, rho_f, d, eta_f, al
     p_scale = crit_pb;
     z_scale = h0;
     t_scale = z_scale/v_scale;
+    
+    short_k_dl = short_k*z_scale;
+    long_k_dl = long_k*z_scale;
 
     eta_f_dl = eta_f/(p_scale*t_scale);
     alpha_dl = alpha*p_scale;
@@ -28,6 +36,7 @@ function fn_out = Fr_stab_noneq(h0,u0,phi0,pb0,theta, rho_p, rho_f, d, eta_f, al
     rho_p_dl = rho_p*v_scale^2/p_scale;
     rho0_dl = rho_p_dl*phi0+rho_f_dl*(1-phi0);
     d_dl = d/z_scale;
+    tau_dl=tau0/p_scale;
     
     u_ratio = u0/crit_u;
     phi_ratio = phi0/crit_phi;
@@ -39,10 +48,10 @@ function fn_out = Fr_stab_noneq(h0,u0,phi0,pb0,theta, rho_p, rho_f, d, eta_f, al
     zeta = 3/(2*alpha_dl) + P0/4;
     beta_dl = 150*phi_c.^2.*eta_f_dl./((1-phi_c).^3.*d_dl^2);
 
-    dIvdu = Iv0;
+    dIvdu = Iv0/u_ratio;
     dIvdh = -Iv0*(2*rho0_dl-rho_f_dl)/(rho0_dl-rho_f_dl);
-    dIvdp = Iv0/p_p_dl;
-    dIvdphi = -Iv0/crit_phi;
+    dIvdp = Iv0/pp0_dl;
+    dIvdphi = -Iv0/phi0;
 
     dmudu = dmudIv_fn(Iv0).*dIvdu;
     dmudp = dmudIv_fn(Iv0).*dIvdp;
@@ -65,33 +74,44 @@ function fn_out = Fr_stab_noneq(h0,u0,phi0,pb0,theta, rho_p, rho_f, d, eta_f, al
     sigma_mat = zeros(4,num_k);
     phase_ang = zeros(4,num_k);
 
-    A_mat(1,3) = -2*P0*1i/beta_dl*pb_ratio;
-    A_mat(1,4) = -P0*D*rho_f_dl*(rho_p_dl-rho_f_dl)/rho0_dl^2;
-    A_mat(2,3) = 1i*tand(theta)/(rho0_dl-rho_f_dl) - 1i*P0*g_dl*cosd(theta)*dmudp;
-    A_mat(2,4) = 1i*tand(theta)/(rho0_dl-rho_f_dl)*(rho_p_dl-rho_f_dl)/rho0_dl - 1i*P0*g_dl*cosd(theta)*dmudphi;
-    A_mat(3,1) = -9/2*1i/alpha_dl*dpsidIv*dIvdh; %  - 1i*zeta*2/beta_dl-2/beta_dl*P0*1i;
-    A_mat(3,4) = -9/2*1i/alpha_dl*(crit_phi+dpsidIv*dIvdphi);
-    A_mat(4,3) = (P0+rho_f_dl/rho0_dl)*2/beta_dl*1i;
-
     k_unstab = NaN;
     max_eig = NaN;
     
-    k_val = logspace(-5,3,num_k);
+    k_val = logspace(log10(long_k_dl),log10(short_k_dl),num_k);
     for i = 1:num_k
         k = k_val(i);
-        A_mat(1,1) = u_ratio*k +2*1i*P0/beta_dl;
+        A_mat(1,1) = u_ratio*k + 2*1i*P0/beta_dl*pb_ratio;
         A_mat(1,2) = k;
-        A_mat(2,1) = g_dl*cosd(theta)*k-P0*g_dl*cosd(theta)*dmudh*1i-dudt;
-        A_mat(2,2) = k - 1i*P0*g_dl*cosd(theta)*dmudu-dhdt; 
-        A_mat(3,2) = chi0_dl*rho0_dl*g_dl*cosd(theta)*k - 9/2*1i/alpha_dl*dpsidIv*dIvdu;
-        A_mat(3,3) = k -9/2*1i/alpha_dl*dpsidIv*dIvdp  + 1i*2/beta_dl*(P0/4-zeta);
-        A_mat(4,4) = k;
+        A_mat(1,3) = -2*P0*1i/beta_dl;
+        A_mat(1,4) = -1i*D*rho_f_dl*(rho_p_dl-rho_f_dl)/rho0_dl^2;
+        
+        A_mat(2,1) = g_dl*cosd(theta)*k+1i*g*sin(theta)-mu_Iv_fn(Iv0)*g_dl*cosd(theta)*1i-1i*pp0_dl/rho0_dl*dmudh+u_ratio*P0*2/beta_dl*pb_ratio*1i; %-dudt*1i;
+        A_mat(2,2) = u_ratio*k + P0*D*1i -1i*pp0_dl/rho0_dl*dmudu+P0*D*i; %-dhdt*1i;
+        A_mat(2,3) = -mu_Iv_fn(Iv0)/rho0_dl*1i-1i*pp0_dl/rho0_dl*dmudp-u_ratio*1i*D*rho_f_dl*(rho_p_dl-rho_f_dl)/rho0_dl^2;
+        A_mat(2,4) = -1i*tau_dl/rho0_dl*(rho_p_dl-rho_f_dl)-1i*mu_Iv_fn(Iv0)*pb_ratio*(rho_p_dl-rho_f_dl)/rho0_dl-1i*pp0_dl/rho0_dl*dmudphi - u_ratio*2*P0*1i/beta_dl;
+        
+        A_mat(3,1) = 1i*zeta*2/beta_dl*pb_ratio+1i*D*(-3/2/alpha_dl)+9/2*1i/alpha_dl*u_ratio*tanpsi-9/2*1i/alpha_dl*u_ratio*dpsidIv*dIvdh; %  -2/beta_dl*P0*1i;
+        A_mat(3,2) = chi0_dl*rho0_dl*g_dl*cosd(theta)*k - 9/2*1i/alpha_dl*tanpsi- 9/2*1i/alpha_dl*u_ratio*dpsidIv*dIvdu;
+        A_mat(3,3) = u_ratio*k + 1i*(-2/beta_dl)*zeta-9/2*1i/alpha_dl*u_ratio*dpsidIv*dIvdp;  
+        A_mat(3,4) = 1i*D*(g_dl*cosd(theta)*rho_f_dl^2*(rho_p_dl-rho_f_dl)/4/rho0_dl^2)-9/2*1i/alpha_dl*u_ratio*(1+dpsidIv*dIvdphi);
+        
+        A_mat(4,1) = -phi0*2/beta_dl*pb_ratio*1i; %-dphidt*1i;
+        A_mat(4,3) = phi0*2/beta_dl*1i;
+        A_mat(4,4) = u_ratio*k-1i*D/rho0_dl*(phi0*rho_f_dl*(rho_p_dl-rho_f_dl)/rho0_dl-rho_f_dl+phi0*rho_f_dl/rho0_dl*(rho_p_dl-rho_f_dl)); %-1i*dhdt;
 
-        A_eig = eigs(A_mat);
+        [eig_vec,A_eig] = eigs(A_mat);
+        A_eig = diag(A_eig);
 %         top_eig = max(imag(A_eig));
         [top_eigs,~]=maxk(imag(A_eig),2);
         top_eig = top_eigs(2);
         sigma_mat(:,i) = sort(imag(A_eig),'descend');
+        
+        t_val = 0.001/t_scale;
+%         hold on
+%         for l=1:4
+%             exp_part = eig_vec(l,:)*exp(-i*t_val*A_eig(l));
+%             plot(exp_part)
+%         end
         
         if ((top_eig > max_eig) || (i==1))
             max_eig = top_eig;
@@ -99,15 +119,25 @@ function fn_out = Fr_stab_noneq(h0,u0,phi0,pb0,theta, rho_p, rho_f, d, eta_f, al
         end
 %                 phase_ang = phase(A_vec(ind,:));
     end
+    max_k = max(k_val(max(sigma_mat,[],2)>0));
     num_unstab = sum(max(sigma_mat,[],2)>0);
-    fn_out = [num_unstab k_unstab];
-%     f = figure;
+    fn_out = [num_unstab,1/max_k*z_scale];
+%     f = figure();
+    SetPaperSize(8,8)
 %     set(f, 'PaperUnits', 'centimeters');
 %     set(f, 'PaperSize', [10 10]);
-%     plot(k_val(1:45),sigma_mat(1:2,1:45))
-%     xlabel('Wavenumber')
-%     ylabel('Eigenvalue Complex Part')
+%     semilogx(k_val,sigma_mat)
+    xvals = linspace(0,short/z_scale,100);
+    comp = eig_vec(:,4).*exp(1i*k*xvals);
+    plot(xvals,comp)
+%     legend('$h$','$u$', '$p_b$', '$\phi$','Location', 'best')
+%     ylim([-100,100])
+%     ax=gca;
+%     ax.YAxis.Exponent = 0;
+    xlabel('Wavenumber')
+    ylabel('Eigenvector real part')
+    title('Non steady state: Unstable mode')
 %     title('$\theta = 18$, $d = 10^{-4}$, $\alpha = 10^{-4}$, $Fr = 5$, Phase = Air')
-%     exp_graph(f,"Air_18deg_multi_unstab.png")
+    exp_graph(gca,"Noneq_eigvec_4.pdf")
 %     
 end
