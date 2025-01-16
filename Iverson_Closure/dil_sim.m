@@ -50,7 +50,7 @@ function dil_sim
 %         fname = append(fname,"_"+num2str(r)+"_deep.txt");
 %     end
 %     fname = "Ive_comp_4_deep_v2.txt";
-    flux_con = load('Results/flux_conditions.txt');
+    % flux_con = load('Results/flux_conditions.txt');
 %     for l=10:10
 %     l = 20;
 %         flux=flux_con(l,1);
@@ -96,7 +96,7 @@ function dil_sim
         dpdz=[0 diff(p_e)./dz_dl]; % transposes u and then finds differences to approx deriv
         dufdz=diff(u_f)./dz_dl;
         dupdz=diff(u_p)./dz_dl;
-        d2updz2=[0 diff(dupdz)./dz_dl];
+        % d2updz2=[0 diff(dupdz)./dz_dl];
         
         p_p = p_b_dl - p_e;
 

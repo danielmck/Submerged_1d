@@ -1,12 +1,12 @@
 function Ive_da_Fr_spec
 h0 = 0.5; % layer height (m)
-d=1e-4; % grain diameter (m)
-tlen = 200;
+d=5e-3; % grain diameter (m)
+tlen = 5;
 
 [phi_c,rho_f,rho_p,~,eta_f,g] = get_params_water();
 theta = 5; % deg
 Fr0 = 5;
-phi0 = 0.582;
+phi0 = 0.58;
 u0 = Fr0*sqrt(g*cosd(theta)*h0);
 change_t = 0;
 % fric_ang = 0.65;
@@ -55,7 +55,7 @@ init_u_dl = init_u/v_scale;
 %     run_Ive_da_sim()
 %     movefile(fname,'Results/');
 % end
-fname = "Ive_da_"+num2str(theta)+"deg_Fr_"+num2str(Fr0)+"_sand.txt";
+fname = "Ive_da_"+num2str(theta)+"deg_Fr_"+num2str(Fr0)+"_gravel_short.txt";
 run_Ive_da_sim()
 movefile(fname,'Results/');
 % EOS_write_record(fname,N,h,d,reg_param,density_ratio,phi_c,theta,eta_f_dl,a_dl,phi_rcp,phi_rlp,t_step,2,shear_lim_dl);

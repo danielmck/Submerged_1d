@@ -1,6 +1,6 @@
 function Ive_depth_ave_system
 h0 = 0.5; % layer height (m)
-d=1e-4; % grain diameter (m)
+d=5e-3; % grain diameter (m)
 [phi_c,rho_f,rho_p,~,eta_f,g] = get_params_water();
 theta = 5; % deg
 theta0 = 10;
@@ -47,7 +47,7 @@ init_u_dl = init_u/v_scale;
 %     run_Ive_da_sim()
 %     movefile(fname,'Results/');
 % end
-fname = "Ive_da_"+num2str(theta)+"deg_"+num2str(theta0)+"init_change_"+num2str(change_t)+"_sm.txt";
+fname = "Ive_da_"+num2str(theta)+"deg_"+num2str(theta0)+"_gravel_short.txt";
 run_Ive_da_sim()
 movefile(fname,'Results/');
 % EOS_write_record(fname,N,h,d,reg_param,density_ratio,phi_c,theta,eta_f_dl,a_dl,phi_rcp,phi_rlp,t_step,2,shear_lim_dl);
@@ -98,12 +98,12 @@ movefile(fname,'Results/');
 %         pb_init=cosd(theta)+vec(1);
 %         Iv_init = 3*depth_u*eta_f_dl/((2.5*0.6+0.4)*cosd(theta)-pb_init);
 %         depth_phi = phi_c/(1+sqrt(Iv_init));
-        da_init_data = load('Results/Ive_da_13deg_13init.txt');
-        init_vec = da_init_data(end,:);
+        % da_init_data = load('Results/Ive_da_13deg_13init.txt');
+        % init_vec = da_init_data(end,:);
         
         % No initial pressure of phihat and initial values of u_p and u_f
         % defined above
-        time_vals = linspace(0,10,1500);
+        time_vals = linspace(0,5,1500);
 %         opts=odeset('AbsTol',1e-12,'RelTol',1e-12,'Stats','on');
 
 %         [~,vec]=ode15s(@Ive_depth_ave,time_vals,[1,depth_phi_orig,depth_u,pb_init],opts);
