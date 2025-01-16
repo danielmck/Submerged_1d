@@ -74,14 +74,14 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
         
         set_h_min = false;
         h_min = 0.772823929784104;
-        lambda_final = 12;
+        lambda_final = 15;
         
         pres_h = true;
         rel_flux = 1;
 
         % h_alt specifies the distance from the static minimum that the
         % wave must begin at.
-        filename = "check_model.txt";      
+        filename = "lambda_15.txt";      
     else
         param_cell = num2cell(params);
         [Fr_eq,theta,wlen_val,set_h_min,tau0,alpha,d,pres_h,rel_flux] = param_cell{:};
@@ -182,7 +182,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
         xi_eps = 1e-3;
         if counter > 10
             out_vec = vertcat(xi_in,y_in);
-            fail_name = ":.txt";
+            fail_name = ":new_out.txt";
             save("Results/"+fail_name,"out_vec","-ascii")
             write_record("Results/full_record.csv",fail_name,{"full","water",Fr_vals(1),theta_vals(1),alpha_vals(1),d_vals(1),tau0_vals(1),p_in(1),p_in(2),p_in(3),0})
             error("Max iteration depth reached, non convergence")
@@ -247,7 +247,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
                     solOut = bvp4c(@viscous_syst_static,@bc_vals,solInit1,opts);
                 else
                     solInit1=bvpinit(xi_in,@bvp_guess,p_in);
-                    opts = bvpset('RelTol',tol,'NMax',500*counter);
+                    opts = bvpset('RelTol',tol,'NMax',800*counter);
                     solOut = bvp4c(@(x,y,r,p) viscous_syst(x,y,r,p),@bc_vals,solInit1,opts);
                     
 %                     y_in = solOut_np.y;

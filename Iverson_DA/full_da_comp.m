@@ -1,5 +1,5 @@
-    full_name = "Ive_5deg_Fr_5_gravel.txt";
-    da_name = "Ive_da_5deg_Fr_5_gravel.txt";
+    full_name = "Ive_5deg_Fr_10_mud.txt";
+    da_name = "Ive_da_5deg_Fr_10_mud_early.txt";
 
 
     [phi_c,rho_f,rho_p,~,eta_f,g] = get_params_water();
@@ -44,10 +44,15 @@
     phi = full_vec(:,N+1:2*N)';
     u_f = full_vec(:,2*N+1:3*N)';
     u_p = full_vec(:,3*N+1:end)';
+    dupdz = vertcat(diff(u_p,1),zeros(1,size(t_vals,1)))*(N-0.5);
+    iv= dupdz*eta_f_dl./max(p_p,1e-8);
+    tan_psi = phi-phi_c./(1+sqrt(iv));
     
     u_p_full_ave = depth_average(u_p,N,n_times);
     u_f_full_ave = depth_average(u_f,N,n_times);
+    u_full_ave = phi_c*u_p_full_ave+(1-phi_c)*u_f_full_ave;
     phi_full_ave = depth_average(phi,N,n_times);
+    tan_psi_full_ave = depth_average(tan_psi,N,n_times);
     pe_full_base = p_e(1,:);
     pp_full_base = p_p(1,:);
     
@@ -64,6 +69,9 @@
     pp_da = (density_ratio-1)*phi_c*cosd(theta)*h_da-pe_da;
     pe_da_quart = pe_da*3/4;
     pp_da_quart = pp_da*3/4;
+    
+    iv_da = 3*u_da*eta_f_dl./pp_da./h_da;
+    tan_psi_da = phi_da-phi_c./(1+sqrt(iv_da));
 %%
     SetPaperSize(7.8,7.8)
 %     SetPaperSize(10,10)
@@ -77,11 +85,11 @@
     da_min = max(sum(t_vals_da<t_min),1);
     da_max = min(sum(t_vals_da<t_max)+1,size(t_vals_da,1));
     
-    plot(t_vals(full_min:full_max), pe_full_base(full_min:full_max),'DisplayName',"Full model", 'color', '#fc8d62','LineWidth',1.3) %[0.127,0.201,0.127])
-    plot(t_vals_da(da_min:da_max), pe_da(da_min:da_max),'DisplayName',"DA model", 'color', '#8da0cb','LineWidth',1.3)
-%     legend('Location', "best",'UserData', 8);
+    plot(t_vals(full_min:full_max), tan_psi_full_ave(full_min:full_max),'DisplayName',"Full model", 'color', '#fc8d62','LineWidth',1.3) %[0.127,0.201,0.127])
+    plot(t_vals_da(da_min:da_max), tan_psi_da(da_min:da_max),'DisplayName',"DA model", 'color', '#8da0cb','LineWidth',1.3)
+    legend('Location', "best",'UserData', 8);
     xlabel("$t$");
-    ylabel('$p_e^b$');%,'Position',[-35 0.0045]);
+    ylabel('$\tan\bar{\psi}$');%,'Position',[-35 0.0045]);
     xlim([t_min t_max])
-    exp_graph(gcf,"Comp_pe_early_gravel.pdf")
+    exp_graph(gcf,"Comp_tanpsi_early_mud.pdf")
     

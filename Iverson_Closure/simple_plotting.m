@@ -1,5 +1,5 @@
 function simple_plotting
-    names = ["Ive_5deg_Fr_5_sand.txt"]; %Ive_5deg_13initIve_5deg_13init.txt"Ive_comp_4_deep_1_flux.txt"];%,"Ive_comp_4_deep_9_2_start.txt""Ive_comp_4_deep_9_1_start.txt","
+    names = ["Crit_pe_test.txt"]; %Ive_5deg_13initIve_5deg_13init.txt"Ive_comp_4_deep_1_flux.txt"];%,"Ive_comp_4_deep_9_2_start.txt""Ive_comp_4_deep_9_1_start.txt","
     % names = ["Ive_comp_5_deep_custom_time_IC.txt"]; %,"Ive_comp_5_deep_custom_time_IC.txt"];%
     % Loads the data to compare and puts them in a list of simulations
 
@@ -202,47 +202,50 @@ function simple_plotting
     crit_grad_new = -(density_ratio(i)*phi_c(i)+(1-phi_c(i)))*sind(theta(i))/0.32;
     crit_pe_new = (rho-1)*cosd(theta)*(1-z_pe{i,1})+crit_grad_new*(1-z_pe{i,1});
     
-    nline=4;
+    nline=5;
     n_subs = 1;
-    C = viridis(nline+1);
-    plot_vec = phi{i,1};
+    % C = viridis(nline+1);
+    plot_vec = u_p{i,1};
 %     plot_cell = {p_e{i,1},phi{i,1}};
     t_init = 0;
-    t_step = 50;
+    t_step = 0.5;
     t_maxes = linspace(t_init,t_init+t_step*(nline-1),nline);
-    t_maxes(1)=2;
-    SetPaperSize(7.8,7.8)
-    
+%     t_maxes(1)=2;
+    SetPaperSize(15,10);
+    plot(plot_vec(:,end),z_u{i,1})
+
     f = zeros(1,nline);
     a = zeros(1,2);
     hold on
 %     a(1) = plot([NaN],[NaN],'color','k','DisplayName',"Full");
 %     a(2) = plot([NaN],[NaN],'color','k','LineStyle','--','DisplayName',"Approx.");
-    for k = 1:n_subs
-        subplot(1,n_subs,k);
-        hold on
-%         plot_vec = plot_cell{1,k};
-        for j=linspace(1,nline,nline)
-    %         t_vals{j,1}(t1(j))
-            t_max = t_maxes(j);
-    %         t_max = [50000,100000];
-    %         t_val = (k-1)*t_step(i);
-            t1=[sum(t_vals{i,1}<t_max)+1];
-            f(j) = plot(plot_vec(1:end-1,t1),z_pe{i,1}(1:end-1),'color',C(j,:),'DisplayName',"t="+num2str(t_max));
-%             plot(pe_medium_new(:,t1),z_pe{i,1},'LineStyle','--','color',C(j,:),'HandleVisibility','off');
-%             plot(tan_psi_fast_new(1:end,t1),z_pe{i,1}(1:end),'LineStyle','--','color',C(j,:),'DisplayName',"Approximation")
-        end
-%         if k == 1
-        ylabel('$z$','Interpreter','latex')
-        xlabel('$\phi$','Interpreter','latex')
-%         else\frac{\partial u}{\partial z}
-%             xlabel('$\phi$','Interpreter','latex')
+%     for k = 1:n_subs
+%         gca=subplot(1,3,3);
+%         hold on
+% %         plot_vec = plot_cell{1,k};
+%         for j=linspace(1,nline,nline)
+%     %         t_vals{j,1}(t1(j))
+%             t_max = t_maxes(j);
+%     %         t_max = [50000,100000];
+%     %         t_val = (k-1)*t_step(i);
+%             t1=[sum(t_vals{i,1}<t_max)+1];
+%             f(j) = plot(plot_vec(1:end-1,t1),z_pe{i,1}(1:end-1),'color',C(j,:),'DisplayName',"t="+num2str(t_max));
+% %             plot(pe_medium_new(:,t1),z_pe{i,1},'LineStyle','--','color',C(j,:),'HandleVisibility','off');
+% %             plot(tan_psi_fast_new(1:end,t1),z_pe{i,1}(1:end),'LineStyle','--','color',C(j,:),'DisplayName',"Approximation")
 %         end
-    end
-%     plot(crit_pe_new,z_pe{i,1}(1:end),'LineStyle','--','color','r','DisplayName',"$p_{crit}$")
+% %         if k == 1
+%         ylabel('$z$','Interpreter','latex')
+%         xlabel('$\phi$','Interpreter','latex')
+%         gca.Position(2)=0.22;
+%         gca.Position(4)=0.7;
+% %         else\frac{\partial u}{\partial z}
+% %             xlabel('$\phi$','Interpreter','latex')
+% %         end
+%     end
+    % plot(crit_pe_new(1)*ones(N,1),z_pe{i,1}(1:end),'LineStyle','--','color','r','DisplayName',"$p_{crit}$")
 %     legend([a,f],'Location','southoutside'); %["Full Profile","Approximation","t=1","t=2"]
 %     legend([f(1),f(2)],{"Full Profile","Approximation"},'Location','east');
-%     legend('Position',[0.65 0.65 0.1 0.2],'Interpreter','latex');
+%     leg=legend('Position',[0.65 0.65 0.1 0.2],'Interpreter','latex');
 %     xlabel('$\frac{\partial u}{\partial z}$')
 %     xlabel('$p_e$')
 %     ylabel('$z$')
@@ -253,10 +256,11 @@ function simple_plotting
 %     'String',{'Increasing $t$'},...
 %     'FitBoxToText','off');
 %     title("t="+num2str(t_max))
-    xlim([0.581,0.5855]);
-    figname = "Ive_slow_phi_late_sand.pdf";
+    ylim([0.4,0.5]);
+    figname = "Quad_pe_u_.pdf";
 %     exportgraphics(gcf,figname,"Resolution",300)
     exp_graph(gcf,figname)
+    clf()
 %     movefile(figname,"Figures/BAMC_Talk")
 
 

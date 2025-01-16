@@ -60,7 +60,7 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
                 master_name="master_wave_var_rho.txt";
             else
 %                 master_name = "master_wave_no_pe.txt";
-                master_name = "theta12_Fr1_convert.txt";
+                master_name = "lambda_10_no_pe.txt";
             end
             master_file = load(strcat("Results/",master_name));
             master_xi = master_file(1,:);
@@ -88,7 +88,7 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
     rho = rho_p*phi_c+rho_f*(1-phi_c);
 %     P = (rho-rho_f)/rho;
     
-    delta_vals = logspace(-6,0,50);
+    delta_vals = logspace(-6,0,100);
     delta_vals = horzcat(0,delta_vals);
     if reverse
         delta_vals = wrev(delta_vals(2:end));
@@ -101,8 +101,8 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
         u_init = Fr*sqrt(g*cosd(theta)*h0_init);
 
         crit_pb_init = rho_f*g*cosd(theta)*h0_init;
-        nu_init = 3/4*mu_Iv_fn(crit_Iv_init)*eta_f/crit_Iv_init/rho*nu_ratio;
-        nu_dl = nu_init/(u_init)^2;
+        nu_init = 3/2*mu_Iv_fn(crit_Iv_init)*eta_f/crit_Iv_init/rho*nu_ratio;
+        nu_dl = nu_init/(u_init*h0_init);
 
         z_scale_init = h0_init;
         v_scale_init = u_init;
@@ -139,14 +139,15 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
     end
     if ~custom_init && ~reverse && ~provide_init
         out_vec = vertcat(xi_out,y_out);
-        filename = "theta12_Fr1_full.txt";
+        filename = "lambda_20_var_rho.txt";
+%         filename = "master_wave_var_rho.txt";
         save("Results/"+filename,"out_vec","-ascii")
         if pres_h
             type = "var_rho_pres_h";
         else
             type = "var_rho";
         end
-        write_record("Results/wave_record.csv",filename,{type,"water",Fr,theta,lambda,nu,alpha,d,tau0})
+        write_record("Results/wave_record.csv",filename,{type,"water",Fr,theta,lambda,nu_ratio,alpha,d,tau0})
     end
 
     u_w_f = y_out(1,1);
@@ -191,9 +192,9 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
             
             p_tot = rho*g*cosd(theta);
             crit_pb = rho_f*g*cosd(theta)*h0;
-            
+
             nu = 3/4*mu_Iv_fn(crit_Iv)*eta_f/crit_Iv/rho_eq*nu_ratio;
-            nu_dl = nu/(u_eq)^2;
+            nu_dl = nu/(u_eq*h0);
 
             z_scale = h0;
             v_scale = u_eq;
@@ -216,7 +217,7 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
             chi = (rho_f+3*rho)/(4*rho);
             
             solInit1=bvpinit(xi_in,@bvp_guess);
-            opts = bvpset('RelTol',tol,'NMax',200*counter);
+            opts = bvpset('RelTol',tol,'NMax',800*counter);
             try
                 solN1 = bvp4c(@viscous_syst,@bc_vals,solInit1,opts);
                 resid = solN1.stats.maxres;
@@ -280,12 +281,12 @@ function [xi_out,y_out] = bvp_non_pe_to_var_rho(custom_init,reverse,params,provi
             dy6dxi = -delta_in*R_w3;
             dy7dxi = delta_in*R_w4/(u-u_w);
             dphidxi = (dy6dxi-phi*dQdxi)/Q1;
-            dPdxi = delta_in*rho_f_dl*(rho_p_dl-rho_f_dl)./rho_dl^2*dphidxi;
+            dPdxi = rho_f_dl*(rho_p_dl-rho_f_dl)./rho_dl^2*dphidxi;
             dpbdxi = dy7dxi + rho_dl*g_dl*cosd(theta)*chi*dhdxi + 3/4*g_dl*cosd(theta)*(rho_p_dl-rho_f_dl)*dphidxi;
             dDdxi = -2/beta_dl*(dpbdxi/h-pb/h^2*dhdxi);
 %             dndxi = 1/Q1/nu_dl*(n_coeff*n-force_bal+delta_in*u*dQdxi)-delta_in*h/Q1*(P*dDdxi+D*dPdxi);
-            dndxi_old = 1/Q1/nu_dl*(n_coeff*n - force_bal-nu_dl*(h*D*dPdxi-P*2/beta_dl*dpbdxi));
-            dndxi = 1/h*n^2+P*d/Q1*n-delta_in*h*D/Q1*dPdxi-delta_in*h*P/Q1*dDdxi+h/Q1/nu_dl*((n_coeff+delta_in*nu_dl*P*(D+2/beta_dl))*n - force_bal);
+%             dndxi_old = 1/Q1/nu_dl*(n_coeff*n - force_bal-nu_dl*(h*D*dPdxi-P*2/beta_dl*dpbdxi));
+            dndxi = 1/h*n^2-delta_in*h*D/Q1*dPdxi-delta_in*h*P/Q1*dDdxi+delta_in*P*D/Q1*n+h/Q1/nu_dl*(n_coeff*n - force_bal); %
             dydxi = [0,dQdxi,dhdxi,dndxi,dmdxi,dy6dxi,dy7dxi]';  
         end
         

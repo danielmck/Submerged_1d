@@ -1,4 +1,4 @@
-filelist = ["var_rho_master_pres_h.txt"]; %long_low_pe
+filelist = ["report_full_demo.txt"]; %long_low_pe
 n_files = size(filelist,2);
 
 mu1_Iv = 0.32;
@@ -294,10 +294,11 @@ for j=1:size(xi{i,1},2)
 end
 % 
 Iv_coeff = 3/2/(u_w-u_e)/eta_f_dl/alpha_dl;
-app_rate = phi_e/(1+sqrt(Iv_e))/2*sqrt(Iv_e^3).*Iv_coeff;
+app_rate = phi_e/(1+sqrt(Iv_e))*sqrt(Iv_e^3).*Iv_coeff;
 % app_rate2 = phi_c/(1+sqrt(Iv_e))^2/2*Iv_e^(1/2)*9/2/alpha_dl*u_e/h_e/pp_e/(u_w-u_e);
 xi_app = linspace(lambda-0.10,lambda,100);
-tan_psi_eq = alpha_dl(i)*h{i,1}/9*2./u{i,1}.*(diffusion{i,1}+P{i,1}.*D{i,1});
+% tan_psi_eq = alpha_dl(i)*h{i,1}/9*2./u{i,1}.*(diffusion{i,1}+P{i,1}.*D{i,1});
+tan_psi_eq = 2*Q1_e*eta_f_dl*alpha_dl/(3*Iv_e*h_e)*((u_w-u_e)/h_e/u_e-1/h_e-rho_e*(1-chi_e)/pp_e/Fr^2)*dhdxi{i,1};
 tan_psi_app = tan_psi_eq(end)+(tan_psi_e-tan_psi_eq(end)).*exp(app_rate*(xi_app-lambda));
 Iv_app = (phi_c./(phi_e-tan_psi_app)-1).^2;
 pp_app = 3*u_e*eta_f_dl/h_e./Iv_app;
@@ -361,14 +362,14 @@ u_2e = u_w_2e - Q1_2e./h_2e;
 m_2e = y_temp_2e(5,:);
 
 %%
-SetPaperSize(7.6,7.6)
-% SetPaperSize(10,10)
+% SetPaperSize(7.6,7.6)
+SetPaperSize(7.8,7.8)
 C = viridis(3);
 hold on
 % plot(xi,2*Q1./Fr(i).^2.*dQdxi./(3.*h.^3), "DisplayName", "Waveform","color",C(1,:))
 for i=1:n_files
 %     plot(xi{i,1}(1:end),dh_term+R1_term+R4_term, "DisplayName", "Waveform")
-    plot(xi{i,1}*h0,h{i,1}*h0, "color",C(1,:), "DisplayName", "Waveform")
+%     plot(xi{i,1},h{i,1}, "color",C(1,:), "DisplayName", "Waveform")
 %     plot(xi_2e*h0_2e,u0_2e*h0_2e*Q1_2e*ones(size(xi_2e)), "color",C(2,:), "DisplayName", "No $p_e$ model")
 %     plot(xi{i,1}*h0,Q1_2e*ones(size(xi{i,1})),"--", "color",C(1,:), "DisplayName", "Uniform equilibrium")
 %     plot(xi{i,1},rho_eq_dl(i)*ones(size(xi{i,1})),"--", "color",C(2,:), "DisplayName", "Uniform equilibrium")
@@ -377,18 +378,52 @@ for i=1:n_files
 %     plot(xi{i,1}(1:end),tan_psi_eq, "DisplayName", "Waveform")
 %     plot(xi_app*h0,pb_app*crit_pb, "DisplayName", "Approximation")
 end
-% ylim([-0.001,0.001])
+
+
+% subplot(2,2,1)
+% % hold on
+% plot(xi{i,1},h{i,1},"DisplayName","Hydrostatic Pressure","color",C(1,:)) %,"color",C(1,:)
+% xlabel("$\xi$","interpreter","latex")
+% ylabel("$h$","interpreter","latex")
+% xlim([14.95,15])
+% ylim([1.75,2.0])
+% % set(gca,'XTickLabel',[]);
+% % legend("Location","best")
+% subplot(2,2,2)
+% % hold on
+% plot(xi{i,1},u{i,1},"DisplayName","Wave Profile","color",C(1,:))
+% ylabel("$\bar{u}$ ","interpreter","latex")
+% % set(gca,'XTickLabel',[]); %($ms^{-1}$)
+% xlabel("$\xi$","interpreter","latex")
+% xlim([14.95,15])
+% ylim([2.75,3.0])
+% % % % yticks([0,0.25,0.5])
+% subplot(2,2,3)
+% plot(xi{i,1},phi{i,1},"DisplayName","Wave Profile","color",C(1,:))
+% xlabel("$\xi$","interpreter","latex")
+% ylabel("$\phi$","interpreter","latex")
+% xlim([14.95,15])
+% ylim([0.545,0.55])
+% % set(gca,'XTickLabel',[]);
+% subplot(2,2,4)
+% hold on
+plot(xi{i,1},tan_psi{i,1},"DisplayName","Wave Profile","color","#8da0cb")%C(1,:)) %,"color",C(2,:)
+plot(xi_app,tan_psi_app, "DisplayName", "Approximation","color","#fc8d62")
+% plot(xi{i,1},(rho_f./rho),"--r")
+ylabel("$\tan\psi$","interpreter","latex")
+
+xlim([14.95,15])
 % xlim([(lambda-0.1)*h0,lambda*h0])
-xlabel("$\xi$ ($m$)")
-% ylim([-0.001,0.001])
-% ax = gca;
-% ax.YAxis.Exponent = 0;
+xlabel("$\xi$","interpreter","latex")
+ylim([-0.015,0.0001])
+ax = gca;
+ax.YAxis.Exponent = 0;
 % ylabel("$h$ ($m$)")
 % ylabel("$u$ ($ms^{-1}$)")
-ylabel("$\phi$")
-% ylabel("$p_b$ ($Pa$)")
+% ylabel("$\phi$")
+% ylabel("$p_p^b$")
 % ylabel("$\tan \psi$")
 % ylabel("Liquefaction ratio $\frac{p_b}{p_{tot}}$")
 % legend("Location","best")
-title("$Fr = 1.0$, $\theta = "+num2str(theta)+"^{\circ}$, $\tau_0 = "+num2str(tau0)+"Pa$")
-% exp_graph(gcf,"acc_case_phi.pdf")
+% sgtitle("$Fr = 1.0$, $\theta = "+num2str(theta)+"^{\circ}$, $\tau_0 = "+num2str(tau0)+"Pa$")
+exp_graph(gcf,"wave_end_tanpsi_match.pdf")

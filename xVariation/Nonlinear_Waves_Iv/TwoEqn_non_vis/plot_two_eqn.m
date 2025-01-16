@@ -1,4 +1,4 @@
-filelist = ["tau0_low_long.txt"]; %long_low_pe"",no_pe_static_show.txt
+filelist = ["no_pe_no_vis_master.txt"]; %long_low_pe"",no_pe_static_show.txt
 n_files = size(filelist,2);
 
 [phi_c,rho_f,rho_p,rho,eta_f,g] = get_params_water();
@@ -16,7 +16,9 @@ u_w = zeros(n_files,1);
 Q1 = zeros(n_files,1);
 lambda = zeros(n_files,1);
 h_crit_xi = zeros(n_files,1);
-crit_Iv = zeros(n_files,1);
+crit_Iv = zeros(n_files,1);% ylim([-0.025,0.025])
+% yticks([-0.02,-0.01,0.0,0.01,0.02])
+
 pp_eq_grad = zeros(n_files,1);
 u_const = zeros(n_files,1);
 h0 = zeros(n_files,1);
@@ -79,6 +81,8 @@ dmdxi = cell([n_files,1]);
 %     [phi_max,phi_max_ind] = max(phi);
 %     [phi_min,phi_min_ind] = min(phi);
 % end
+% ylim([-0.025,0.025])
+% yticks([-0.02,-0.01,0.0,0.01,0.02])
 
 for i=1:n_files
     filename = filelist(i);
@@ -157,6 +161,8 @@ for i=1:n_files
 
     h_min = roots([1,0,-u_w(i),-Q1(1)]);
     h_static = Q1(i)/u_w(i);
+    mu_1 = 0.32;
+    h_unif = tau0_dl/(rho_dl*cosd(theta)*g_dl*(tand(theta)-P*mu_1));
 
     [p_max,p_max_ind] = max(pb{i,1});
     [p_min,p_min_ind] = min(pb{i,1});
@@ -199,7 +205,9 @@ for i=1:n_files
     uval = u_w(i) - Q1(i)./h_alt_dl;
     Iv_in = crit_Iv(i).*uval./h_alt_dl.^2;
     mu = P.*mu_Iv_fn(Iv_in)+tau0_dl(i)*rho_f/rho./h_alt_dl;
-    fb = tand(theta(i))-sign(uval).*mu;
+    fb = tand(theta(i))-sign(uval).*mu;% ylim([-0.025,0.025])
+% yticks([-0.02,-0.01,0.0,0.01,0.02])
+
 %     plot(h_alt_dl,fb, "DisplayName", "$\tau_0 = "+num2str(tau0(i))+"Pa$", "color",C(i,:))
 %     if (i==2)
 %         plot(Q1(i)/u_w(i),fb(1), 'rx','HandleVisibility','on',"DisplayName","$\frac{Q}{u_w}$")
@@ -212,22 +220,22 @@ end
 %%
 
 % C = viridis(3);
-SetPaperSize(7.5,7.5)
+SetPaperSize(15,7.5)
 % hold on
-% subplot(1,2,1)
-plot(h{i,1},force_bal{i,1}, "DisplayName", "$\nu=0$","color",C(1,:))
-ylabel("Force balance")
-xlabel("$h$")
-plot([h_static,h_static],[-0.025,0.025],"r--")
-text(h_static+0.1,0.02,"$h=h_{stop}$","color","red","FontSize",12,"Interpreter","latex");
+subplot(1,2,1)
+plot(xi{i,1},h{i,1}, "DisplayName", "$\nu=0$","color",C(1,:))
+xlabel("$\xi$")
+ylabel("$h$")
+% plot([h_static,h_static],[-0.025,0.025],"r--")
+% text(h_static+0.1,0.02,"$h=h_{stop}$","color","red","FontSize",12,"Interpreter","latex");
 % xlim([0,500])
 % xticks([0,100,200,300,400,500])
-% subplot(1,2,2)
-% plot(xi{i,1},u{i,1}, "DisplayName", "$\nu=0$","color",C(1,:))
-% ylabel("$\bar{u}$")
-% xlabel("$\xi$")
-ylim([-0.025,0.025])
-yticks([-0.02,-0.01,0.0,0.01,0.02])
+subplot(1,2,2)
+plot(xi{i,1},u{i,1}, "DisplayName", "$\nu=0$","color",C(1,:))
+ylabel("$\bar{u}$")
+xlabel("$\xi$")
+% ylim([-0.025,0.025])
+% yticks([-0.02,-0.01,0.0,0.01,0.02])
 for i=1:n_files
 %     plot(h_alt,force_bal{i,1}, "DisplayName", "Waveform relation", "color",C(1,:))
 %     plot(h_alt,max(u_eq.*(u_w(i) - Q1(i)./h_alt*h0),0), "DisplayName", "Waveform relation", "color",C(1,:))
@@ -247,4 +255,4 @@ ax.YAxis.Exponent = 0;
 % legend("Location","best")
 sgtitle("$\theta = "+num2str(theta(1))+"^{\circ}$, $Fr = "+num2str(Fr(1))+"$, $\tau_0 = "+num2str(tau0)+"Pa$")
 % title("$\theta = "+num2str(theta(1))+"^{\circ}$, Base flow $Fr = "+num2str(Fr(1))+"$, $\tau_0 = "+num2str(tau0)+"Pa$"); %$
-exp_graph(gcf,"two_eqn_tau0_low_fb.pdf")
+% exp_graph(gcf,"two_eqn_tau0_high_hu.pdf")

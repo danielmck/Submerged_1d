@@ -24,8 +24,9 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, 
     z_scale = h0;
     v_scale = u_eq;
     t_scale = z_scale/v_scale;
+    
 
-    nu_dl = nu/(v_scale)^2;
+    nu_dl = nu/(v_scale*z_scale);
     R = u_eq*h0/nu;
     
 %     u_w = 1+sqrt(g_dl*cosd(theta));
@@ -36,8 +37,8 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, 
     uw_out = 0;
     xi_out = [];
     y_out = [];
-    del_uw = [1e-5,5e-5,1e-4,1.2e-3,1.1e-3];
-    for i = 1:5
+    del_uw = [1e-5,5e-5,1e-4,1.2e-4,5e-4];
+    for i = 1:size(del_uw,2)
         u_w_dl = 1+1/Fr_eq-del_uw(i);
         Q1_dl = u_w_dl-1;
 

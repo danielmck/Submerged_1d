@@ -1,4 +1,5 @@
 fname = ["Ive_da_5deg_Fr_5_gravel_short.txt"]; % 
+fname = ["Ive_da_5deg_Fr_5_gravel_short.txt"]; % 
 % plot_titles = ["$\alpha = 10^{-3}$","$\alpha = 10^{-4}$","$\alpha = 10^{-5}$"];
 
 sim_num = size(fname,2);
@@ -7,7 +8,7 @@ n_times = zeros(sim_num,1);
 custom_times = zeros(sim_num,1);
 
 h0 = [5e-1]';
-d= 1e-4*ones(sim_num,1);
+d= 5e-3*ones(sim_num,1);
 
 phi_c= 0.585*ones(sim_num,1);
 eta_f = 0.0010016*ones(sim_num,1);
@@ -88,7 +89,7 @@ u_init = u(1);
 rho_init = rho(1);
 pp_fast_ss = 3*eta_f_dl*u_init/Iv_eq_init;
 pb_fast_ss = rho_init*cosd(theta)-pp_fast_ss;
-tan_psi_ss_new = alpha_dl.*eta_f_dl/Iv_eq_init/u_init.*dudt+2/3/u_init/beta_dl*(pb_fast_ss-cosd(theta));
+tan_psi_ss_new = alpha_dl.*eta_f_dl/Iv_eq_init/u_init.*dudt; %+2/3/u_init/beta_dl*(pb_fast_ss-cosd(theta));
 tan_psi_approx_new = tan_psi_ss_new + (tan_psi_init-tan_psi_ss_new).*exp(-phi_init*Iv_eq_init^(3/2)/2/eta_f_dl/alpha_dl*t_vals);
 pp_fast_new = 3*u_init*eta_f_dl*phi_init^2./(tan_psi_approx_new+(phi_c-phi_init)).^2;
 fast_ts = 2*eta_f_dl*alpha_dl/(phi_init*Iv_eq_init^(3/2));
@@ -198,7 +199,9 @@ for i=1:sim_num
         phi_smooth(i,k) = phi_ave;
         phi_Iv_smooth(i,k) = phi_Iv_ave;
     end
-    SetPaperSize(7.8,7.8);  
+    
+%%
+    % SetPaperSize(7.8,7.8);  
     if (i == 1)
         colour = "blue";
     else
@@ -207,7 +210,7 @@ for i=1:sim_num
     
     
     t_start = 0;
-    t_stop = 5;
+    t_stop = 15000;
     t_begin = max(sum(t_vals(i,1:n_times(1,i))<t_start)-1,1);
     t_end = min(sum(t_vals(i,1:n_times(1,i))<t_stop)+1,n_times(1,i));
     pe_ave = 0;
@@ -224,29 +227,52 @@ for i=1:sim_num
     phi_pe_ave = phi_pe_ave/(t_vals(t_end)-t_vals(t_begin));
     pe_mag = pe_mag/(t_vals(t_end)-t_vals(t_begin));
     phi_pe_mag = phi_pe_mag/(t_vals(t_end)-t_vals(t_begin));
-    hold on
+    % hold on
     
     [pos,ind] = max(phi_approx);
     
     % C = plasma(5);
-    plot(t_vals(i,t_begin:t_end), Iv(t_begin:t_end),'DisplayName',"$p_e^b$", 'color', '#fc8d62','LineWidth',1.3) %[0.127,0.201,0.127])
-    plot(t_vals(i,t_begin:t_end), Iv_phi(t_begin:t_end),'DisplayName',"$I_v(\bar{\phi})$", 'color', '#8da0cb','LineWidth',1.3)
-%     plot(t_vals(i,t_begin:t_end), tan_psi_approx(t_begin:t_end),'DisplayName',"Smoothed $\phi$")
+    
+%     subplot(4,2,2)
+    % % hold on
+    plot(t_vals(i,t_begin:t_end), phi(t_begin:t_end),'DisplayName',"Model", 'color', '#fc8d62','LineWidth',1.3) %[0.127,0.201,0.127])
+%     ylabel("$h$")
+%     xlim([t_start,t_stop])
+%     ylim([0.5,1.1])
+%     subplot(4,2,4)
+%     plot(t_vals(i,t_begin:t_end), u(t_begin:t_end),'DisplayName',"Model", 'color', '#8da0cb')
+%     ylabel("$\bar{u}$")
+%     xlim([t_start,t_stop])
+%     ylim([0,10])
+%     subplot(4,2,6)
+%     plot(t_vals(i,t_begin:t_end), phi(t_begin:t_end),'DisplayName',"Model", 'color', '#8da0cb')
+%     ylabel("$\bar{\phi}$")
+%     xlim([t_start,t_stop])
+%     ylim([0.575,0.59])
+%     subplot(4,2,8)
+%     plot(t_vals(i,t_begin:t_end), pb(t_begin:t_end),'DisplayName',"Model", 'color', '#8da0cb')
+%     ylabel("$p_f^b$")
+%     xlim([t_start,t_stop])
+%     ylim([0.9,1.5])
+%     xlabel('$t$')
+        % plot(t_vals(i,t_begin:t_end), pp_fast_new(t_begin:t_end),'DisplayName',"Approximation", 'color', '#8da0cb','LineWidth',1.3)
+    [phi_app_max,phi_app_ind]=max(phi_approx);
+    plot(t_vals(i,t_begin:phi_app_ind), phi_Iv(t_begin:phi_app_ind),'DisplayName',"Approximation", 'color', '#8da0cb','LineWidth',1.3)
 
 end
 % plot(t_vals(i,t_begin:t_end),(rho(2,1)-1)*cosd(13).*ones(1,t_end-t_begin+1),"--k",'DisplayName',"Previous Slope Value")
-legend('Location', "best",'UserData', 8);
+% legend('Location', "best",'UserData', 8);
 xlabel("$t$");
-ylabel('$p_e^b$');%,'Position',[-35 0.0045]);
+ylabel('$p_p^b$');%);
 xlim([t_start t_stop])
-% ylim([-3e-3 1e-3])
+% ylim([-0.00025, 0])
 box on
 % title('Exact Value and Approximation of $\tan \psi$ during the Fast Timescale')
 
-ax = gca;
+% ax = gca;
 %      set(gca,'ytick',[])
 % ax.YAxis.Exponent = 0;
 % yticks(-1e-4:2e-5:0)
 % ytickformat('%5.0e');
 % ax.YAxis.Exponent = 0;
-exp_graph(gcf,"Ive_da_pe_gravel_fast.pdf")
+exp_graph(gcf,"phi_out_examine.pdf")

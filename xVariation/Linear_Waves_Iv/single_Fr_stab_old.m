@@ -1,10 +1,10 @@
-function fn_out = single_Fr_stab(Fr,crit_Iv,theta, rho_p, rho_f, d, eta_f, alpha, tau0)
+function fn_out = single_Fr_stab_old(Fr,crit_Iv,theta, rho_p, rho_f, d, eta_f, alpha)
 % Finds the critical Froude number for the specified condition
 %     short = 2*4.3034e-04;
 %     long = 1.8;
 %     short_k = 2*pi/short;
 %     long_k = 2*pi/long;
-
+    
     phi_c=0.585; % Volume fraction
     g=9.81; % m/s^2
     
@@ -23,16 +23,14 @@ function fn_out = single_Fr_stab(Fr,crit_Iv,theta, rho_p, rho_f, d, eta_f, alpha
     z_scale = h;
     t_scale = z_scale/v_scale;
 
-    
     short_dl = 0.1;
     long_dl = 500;
-    short_k_dl = 2*pi/short_dl;
-    long_k_dl = 2*pi/long_dl;
+    short_k_dl = 2*pi/short_dl; %short_k*z_scale;
+    long_k_dl = 2*pi/long_dl; %long_k*z_scale;
     
     eta_f_dl = eta_f/(p_scale*t_scale);
     alpha_dl = alpha*p_scale;
     g_dl = g*t_scale/v_scale;
-    tau0_dl= tau0/p_scale;
 
     p_p_dl = p_p/p_scale;
     rho_f_dl = rho_f*v_scale^2/p_scale;
@@ -47,14 +45,13 @@ function fn_out = single_Fr_stab(Fr,crit_Iv,theta, rho_p, rho_f, d, eta_f, alpha
 
     dIvdu = crit_Iv;
     dIvdh = -crit_Iv*(2*rho0_dl-rho_f_dl)/(rho0_dl-rho_f_dl);
-    dIvdp = crit_Iv*Fr^2/(rho0_dl-Fr^2);
+    dIvdp = crit_Iv/p_p_dl;
     dIvdphi = -crit_Iv/crit_phi;
-    
-    dmudIv = dmudIv_fn(crit_Iv);
-    dmudu = dmudIv.*dIvdu;
-    dmudp = dmudIv.*dIvdp;
-    dmudh = dmudIv.*dIvdh;
-    dmudphi = dmudIv.*dIvdphi;
+
+    dmudu = dmudIv_fn(crit_Iv).*dIvdu;
+    dmudp = dmudIv_fn(crit_Iv).*dIvdp;
+    dmudh = dmudIv_fn(crit_Iv).*dIvdh;
+    dmudphi = dmudIv_fn(crit_Iv).*dIvdphi;
             
     dpsidIv = phi_c/2/(1+sqrt(crit_Iv))^2/sqrt(crit_Iv);
 
@@ -64,33 +61,32 @@ function fn_out = single_Fr_stab(Fr,crit_Iv,theta, rho_p, rho_f, d, eta_f, alpha
     phase_ang = zeros(4,num_k);
 
     A_mat(1,3) = -2*P0*1i/beta_dl;
-    A_mat(2,3) = 1i*mu_Iv_fn(crit_Iv)/(rho0_dl) - 1i*P0*dmudp/Fr^2;
-    A_mat(2,4) = -1i*mu_Iv_fn(crit_Iv)*P0/rho0_dl + 1i*tau0_dl*(rho_p_dl-rho_f_dl)/rho0_dl^2 - 1i*P0/Fr^2*dmudphi;
-    A_mat(3,1) = -9/2*1i/alpha_dl*dpsidIv*dIvdh + 1i*zeta*2/beta_dl;
+    A_mat(2,3) = 1i*tand(theta)/(rho0_dl-rho_f_dl) - 1i*P0*g_dl*cosd(theta)*dmudp;
+    A_mat(2,4) = 1i*tand(theta)/(rho0_dl-rho_f_dl)*(rho_p_dl-rho_f_dl)/rho0_dl - 1i*P0*g_dl*cosd(theta)*dmudphi;
+    A_mat(3,1) = -9/2*1i/alpha_dl*dpsidIv*dIvdh - 1i*zeta*2/beta_dl-2/beta_dl*P0*1i;
     A_mat(3,4) = -9/2*1i/alpha_dl*(crit_phi+dpsidIv*dIvdphi);
-    A_mat(4,1) = -2/beta_dl*1i;
-    A_mat(4,3) = 2/beta_dl*1i;
+    A_mat(4,3) = (P0+rho_f_dl/rho0_dl)*2/beta_dl*1i;
 
     k_unstab = NaN;
     max_eig = NaN;
     
-    k_val = logspace(-5,5,num_k);
-    % k_val = logspace(log10(long_k_dl),log10(short_k_dl),num_k);
+%     k_val = logspace(-5,3,num_k);
+    k_val = logspace(log10(long_k_dl),log10(short_k_dl),num_k);
     for i = 1:num_k
         k = k_val(i);
         A_mat(1,1) = k+2*1i*P0/beta_dl;
         A_mat(1,2) = k;
-        A_mat(2,1) = k/Fr^2-1i/rho0_dl*mu_Iv_fn(crit_Iv)-P0/Fr^2*dmudh*1i+1i*tau0_dl/rho0_dl;
-        A_mat(2,2) = k - 1i*P0*dmudu/Fr^2; 
-        A_mat(3,2) = rho0_dl*chi0_dl/Fr^2*k - 9/2*1i/alpha_dl*dpsidIv*dIvdu;
-        A_mat(3,3) = k - 1i*2/beta_dl*zeta -9/2*1i/alpha_dl*dpsidIv*dIvdp;
+        A_mat(2,1) = g_dl*cosd(theta)*k-P0*g_dl*cosd(theta)*dmudh*1i;
+        A_mat(2,2) = k - 1i*P0*g_dl*cosd(theta)*dmudu; 
+        A_mat(3,2) = chi0_dl*rho0_dl*g_dl*cosd(theta)*k - 9/2*1i/alpha_dl*dpsidIv*dIvdu;
+        A_mat(3,3) = k -9/2*1i/alpha_dl*dpsidIv*dIvdp  + 1i*2/beta_dl*(P0/4-zeta);
         A_mat(4,4) = k;
 
         [eig_vec,A_eig] = eigs(A_mat);
         A_eig = diag(A_eig);
-        top_eig = max(imag(A_eig));
-%         [top_eigs,~]=maxk(imag(A_eig),2);
-%         top_eig = top_eigs(2);
+%         top_eig = max(imag(A_eig));
+        [top_eigs,~]=maxk(imag(A_eig),2);
+        top_eig = top_eigs(2);
         sigma_mat(:,i) = sort(imag(A_eig),'descend');
         
         if ((top_eig > max_eig) || (i==1))
@@ -101,20 +97,20 @@ function fn_out = single_Fr_stab(Fr,crit_Iv,theta, rho_p, rho_f, d, eta_f, alpha
     end
     num_unstab = sum(max(sigma_mat,[],2)>0);
     fn_out = [num_unstab k_unstab];
-%     f = figure;
-%     SetPaperSize(8,8)
-% %     set(f, 'PaperUnits', 'centimeters');
-% %     set(f, 'PaperSize', [10 10]);
-% %     semilogx(k_val,sigma_mat)
-%     xvals = linspace(0,short/z_scale,100);
-%     comp = eig_vec(:,4).*exp(1i*k*xvals);
-%     plot(xvals,comp)
-% %     legend('$h$','$u$', '$p_b$', '$\phi$','Location', 'best')
-% %     ylim([-0.5,0.5])
-%     xlabel('Wavenumber')
-%     ylabel('Eigenvector real part')
-%     title('Full model: 2nd most stable mode')
-% %     title('$\theta = 18$, $d = 10^{-4}$, $\alpha = 10^{-4}$, $Fr = 5$, Phase = Air')
-%     exp_graph(f,"Full_Eigvec_4.pdf")
+    f = figure;
+    SetPaperSize(8,8)
+%     set(f, 'PaperUnits', 'centimeters');
+%     set(f, 'PaperSize', [10 10]);
+%     semilogx(k_val,sigma_mat)
+    xvals = linspace(0,short_dl/z_scale,100);
+    comp = eig_vec(:,4).*exp(1i*k*xvals);
+    plot(xvals,comp)
+%     legend('$h$','$u$', '$p_b$', '$\phi$','Location', 'best')
+%     ylim([-0.5,0.5])
+    xlabel('Wavenumber')
+    ylabel('Eigenvector real part')
+    title('Full model: 2nd most stable mode')
+%     title('$\theta = 18$, $d = 10^{-4}$, $\alpha = 10^{-4}$, $Fr = 5$, Phase = Air')
+    exp_graph(f,"Full_Eigvec_4.pdf")
 %     
 end

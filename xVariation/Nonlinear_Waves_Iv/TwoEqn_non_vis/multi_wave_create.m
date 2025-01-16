@@ -1,11 +1,11 @@
 function multi_wave_create
     lambda = 50;
-%     tau0 = 0;
+    tau0 = 0;
     theta = 10;
-    npts = 20;
+    npts = 50;
     h_crit_mat = zeros(npts,npts);
     theta_start = 10;
-    theta_stop = 200;
+    theta_stop = 500;
     theta_list = linspace(theta_start,theta_stop,npts);
     Fr_start = 1;
     Fr_stop = 5;

@@ -27,7 +27,7 @@
         max_Iv = 1e-2;
         min_Iv = 1e-8;
         Iv = newt_solve_crit_Iv(theta,rho_p,rho_f,rho_var,phi_param);
-        while (abs(resid)>max_tol)
+        while (abs(resid)>max_tol && max_Iv>1.1e-8)
             resid = force_bal_fn(Iv);
             if Iv > 1e-7
                 force_deriv = force_bal_deriv(Iv);

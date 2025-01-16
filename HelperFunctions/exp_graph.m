@@ -1,7 +1,8 @@
 function exp_graph(fig, fname)
     a=findobj(fig,'type','axe');
+    temp_a=a;
     m = size(a,1);
-    sub_ind = 1:m;
+    sub_ind = ones(1,m);
     posx = zeros(1,m);
     posy = zeros(1,m);
     for n = 1:m
@@ -10,27 +11,50 @@ function exp_graph(fig, fname)
     end
     Ncols = numel(unique(posx));
     Nrows= numel(unique(posy));
+    xlabs = strings(1,m);
+    figtitles = strings(1,m);
+    ylabs = strings(1,m);
+    xCols = zeros(m,3);
+    yCols = zeros(m,3);
     for k=1:m
-        ind = k;
-        while (ind>1)
+        a_now = a(k);
+        if size(get(get(a_now,'xlabel'),'string'),1)<1
+            xlabs(k)="";
+        else
+            xlabs(k)=get(get(a_now,'xlabel'),'string');
+        end
+        if size(get(get(a_now,'title'),'string'),1)<1
+            figtitles(k)="";
+        else
+            figtitles(k)=get(get(a_now,'title'),'string');
+        end
+        if size(get(get(a_now,'ylabel'),'string'),1)<1
+            ylabs(k)="";
+        else
+            ylabs(k)=get(get(a_now,'ylabel'),'string');
+        end
+%         figtitles(k) = get(get(a_now,'title'),'string');
+        xCols(k,:) = get(a_now,'XColor');
+%         ylabs(k)=get(get(a_now,'ylabel'),'string');
+        yCols(k,:) = get(a_now,'YColor');
+        for l=1:m
             pos1 = get(a(k),'Position');
-            pos2 = get(a(sub_ind(ind-1)),'Position');
-            if (pos1(2)<pos2(2)-0.01)
-                temp = sub_ind(ind-1);
-                sub_ind(ind-1) = k;
-                sub_ind(ind) = temp;
-                ind=ind-1;
-            elseif (pos1(2)<pos2(2)+0.01)
-                if (pos1(1)<pos2(1))
-                    temp = sub_ind(ind-1);
-                    sub_ind(ind-1) = k;
-                    sub_ind(ind) = temp;
-                    ind=ind-1;
-                else
-                    break
+            pos2 = get(a(l),'Position');
+            if (l~=k)
+                if (pos1(2)<pos2(2)-0.01)
+%                     temp = sub_ind(ind-1);
+%                     sub_ind(ind-1) = k;
+                    sub_ind(k) = sub_ind(k)+1;
+%                     ind=ind-1;
+                elseif (pos1(2)<pos2(2)+0.01)
+                    if (pos1(1)>pos2(1))
+%                         temp = sub_ind(ind-1);
+%                         sub_ind(ind-1) = k;
+%                         sub_ind(ind) = temp;
+%                         ind=ind-1;
+                        sub_ind(k) = sub_ind(k)+1;
+                    end
                 end
-            else
-                break
             end
         end
     end
@@ -38,15 +62,14 @@ function exp_graph(fig, fname)
         if (m>1)
             subplot(Nrows,Ncols,sub_ind(j))
         end
-        a_now = a(j,1);
+        a_now = a(j);
         xlab=get(get(a_now,'xlabel'),'string');
         figtitle = get(get(a_now,'title'),'string');
         fs = 12;
-        H = get(a_now,'Children');
-        if size(xlab,2)
+        if size(xlabs(k),2)
             xCol = get(a_now,'XColor');
-            xlabel(xlab,'Interpreter','latex','FontSize', fs)
-            set(gca,'XColor', xCol)
+            xlabel(xlabs(j),'Interpreter','latex','FontSize', fs)
+            set(gca,'XColor', xCols(j,:))
         end
         Yax = get(gca,'yaxis');
         if (size(Yax,2)==2)
@@ -63,12 +86,15 @@ function exp_graph(fig, fname)
             yyaxis left
         end
         box on
-        ylab=get(get(a_now,'ylabel'),'string');
-        yCol = get(a_now,'YColor');
-        ylabel(ylab,'Interpreter','latex','FontSize', fs)
-        set(gca,'YColor', yCol)
-        if size(figtitle,2)
-            title(figtitle,'Interpreter','latex','FontSize', fs)
+%         ylab=get(get(a_now,'ylabel'),'string');
+%         yCol = get(a_now,'YColor');
+        
+%         temp_anow = temp_a(7);
+%         
+        ylabel(ylabs(j),'Interpreter','latex','FontSize', fs)
+        set(gca,'YColor', yCols(j,:))
+        if size(figtitles(j),2)
+            title(figtitles(j),'Interpreter','latex','FontSize', fs)
         end
         set(gca,'TickLabelInterpreter','latex','FontSize', fs)
         if (sum(size(get(a_now,'legend')))> 0)
@@ -85,7 +111,7 @@ function exp_graph(fig, fname)
     end
     if ~isempty(findobj(fig, 'Type','subplottext'))
         sglab = findobj(fig, 'Type','subplottext');
-        sgtitle(sglab.String,'FontSize',fs, 'Interpreter','latex');
+        sgtitle(sglab.String,'FontSize',fs+3, 'Interpreter','latex');
     end
 %     if ~strcmp(fname(end-4:end),'.png')
 %         fname = strcat(fname,".png");

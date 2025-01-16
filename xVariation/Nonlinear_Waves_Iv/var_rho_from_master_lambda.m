@@ -1,4 +1,4 @@
-function [xi_final,y_final] = var_rho_from_master(params,master_y,master_xi,master_params)
+function [xi_final,y_final] = var_rho_from_master_lambda(params,master_y,master_xi,master_params)
     % Uses the master solution to parameter step to the desired values
     % specified in params. If the params vector is not set then the default
     % values specified are used.
@@ -29,12 +29,12 @@ function [xi_final,y_final] = var_rho_from_master(params,master_y,master_xi,mast
     % Defines parameters if not specified
     if ~exist('params','var')
         custom_init = false;
-        wave_type = "var_rho";
-        Fr_eq = 0.5;
+        wave_type = "var_rho_pres_h";
+        Fr_eq = 0.6;
         
         theta = 12;
-        lambda = 30;
-        nu_coeff = 1.0;
+        lambda = 50;
+        nu_coeff = 2;
         alpha = 1e-5;
         d = 1e-4;
         tau0 = 0; % Pa
@@ -44,7 +44,7 @@ function [xi_final,y_final] = var_rho_from_master(params,master_y,master_xi,mast
 %         h0 = 0.1;
 %         [Fr_eq, ~] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h0, tau0);
         params = [Fr_eq,theta,lambda,nu_coeff,alpha,d,tau0,rel_flux,pres_h];
-        filename = "Fr_point5_lambda_30.txt";
+        filename = "Fr_point6_lambda_50_nu_high.txt";
     else
         custom_init = true;
         param_cell = num2cell(params);
@@ -58,7 +58,7 @@ function [xi_final,y_final] = var_rho_from_master(params,master_y,master_xi,mast
     end
     
     if ~exist('master_y','var')
-        master_name = "Fr_point6_lambda_15.txt"; %master_wave_var_rho
+        master_name = "Fr_point6_lambda_30_nu_high.txt"; %master_high_viscmaster_wave_var_rho
         master_file = load(Res_dir+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -66,7 +66,7 @@ function [xi_final,y_final] = var_rho_from_master(params,master_y,master_xi,mast
 
         in_table = strcmp(record.Name, master_name);
         master_wave_type = record.wave_type(in_table);
-        master_pres_h = (master_wave_type == "var_rho_pres_h");
+        master_pres_h = (master_wave_type{1}(1:7) == "var_rho");
         master_theta = record.theta(in_table); 
         master_lambda = record.lambda(in_table);
         master_Fr = record.Fr(in_table);
@@ -155,7 +155,7 @@ function [xi_final,y_final] = var_rho_from_master(params,master_y,master_xi,mast
 %         [xi_nope,y_nope] = viscous_Iv_bvp_from_master(true,new_params,true,xi_nope,y_nope,master_params);
 %         [xi_lambda,y_lambda] = bvp_non_pe_to_full(true,false,[new_params(1:4),master_params(5:7)],true,xi_nope,y_nope);
 %     else
-        xi_lambda = master_xi;
+        xi_lambda = master_xi/master_xi(end);
         y_lambda = master_y;
 %     end
     % Sets lists for parameter stepping between master and designated
@@ -183,7 +183,7 @@ function [xi_final,y_final] = var_rho_from_master(params,master_y,master_xi,mast
 %         phi = y_final(6,:)./Q1;
 %         chi = 
 %         pb = y_final(7,:) + rho/rho_f*chi.*h;
-        out_vec = vertcat(xi_final,y_final);
+        out_vec = vertcat(xi_final*lambda,y_final);
         
         write_record(Res_dir+"wave_record.csv",filename,{wave_type,"water",Fr_eq,theta,lambda,nu_coeff,alpha,d,tau0})
         save(Res_dir+filename,"out_vec","-ascii")
@@ -210,9 +210,9 @@ function [xi_final,y_final] = var_rho_from_master(params,master_y,master_xi,mast
         % that way.
         if counter > 5
             out_vec = vertcat(xi_in,y_in);
-%             fail_name = filename;
-%             write_record(Res_dir+"wave_record.csv",fail_name,{wave_type,"water",Fr_vals(1),theta_vals(1),lambda_vals(1),nu_vals(1),alpha_vals(1),d_vals(1),tau0_vals(1)})
-%             save(Res_dir+fail_name,"out_vec","-ascii")
+            fail_name = filename;
+            write_record(Res_dir+"wave_record.csv",fail_name,{wave_type,"water",Fr_vals(1),theta_vals(1),lambda_vals(1),nu_vals(1),alpha_vals(1),d_vals(1),tau0_vals(1)})
+            save(Res_dir+fail_name,"out_vec","-ascii")
             error("Max iteration depth reached, non convergence. Trying no excess pressure method")
             y_in = -1;
             xi_in = -1;
@@ -227,14 +227,12 @@ function [xi_final,y_final] = var_rho_from_master(params,master_y,master_xi,mast
                 Fr_in = Fr_vals(i);
                 tau0_in = tau0_vals(i);
                 rf_in = rf_vals(i);
-                xi_run = xi_in/lambda_vals(i-1)*lambda_vals(i);
-%                 xi_run = horzcat(linspace(0,3*lambda_vals(i)/4,70),linspace(3*lambda_vals(i)/4, lambda_vals(i),70));
                 [h0, crit_Iv] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in,false,true);
                 
                 u_eq = Fr_in*sqrt(g*cosd(theta_in)*h0);
                 phi_eq = phi_c/(1+sqrt(crit_Iv));
                 rho_eq = rho_p*phi_eq+rho_f*(1-phi_eq);
-                nu_in = 3/2*mu_Iv_fn(crit_Iv)*eta_f/crit_Iv/rho_eq*nu_vals(i);
+                nu_in = 3/4*mu_Iv_fn(crit_Iv)*eta_f/crit_Iv/rho_eq*nu_vals(i);
 %                 p_tot = rho*g*cosd(theta_in);
                 crit_pb = rho_f*g*cosd(theta_in)*h0;
                 nu_dl = nu_in/(u_eq*h0);
@@ -261,8 +259,8 @@ function [xi_final,y_final] = var_rho_from_master(params,master_y,master_xi,mast
                 beta_dl = 150*phi_c.^2.*eta_f_dl./((1-phi_c).^3.*d_dl^2);
 
                 % Solves the stepped system
-                solInit1=bvpinit(xi_run,@bvp_guess);
-                opts = bvpset('RelTol',tol,'NMax',500*counter);
+                solInit1=bvpinit(xi_in,@bvp_guess);
+                opts = bvpset('RelTol',tol,'NMax',800*counter);
                 delta_in=1;
                 try
                     solN1 = bvp4c(@full_syst,@bc_vals,solInit1,opts);
@@ -331,12 +329,12 @@ function [xi_final,y_final] = var_rho_from_master(params,master_y,master_xi,mast
         end
         
         function guess = bvp_guess(xi)
-            guess_ind = sum(xi_run<xi)+1;
-            if guess_ind == max(size(xi_run))
+            guess_ind = sum(xi_in<xi)+1;
+            if guess_ind == max(size(xi_in))
                 guess = y_in(:,end);
             else
-                gap = xi_run(guess_ind+1)-xi_run(guess_ind);
-                guess = y_in(:,guess_ind)*(xi-xi_run(guess_ind))/gap + y_in(:,guess_ind+1)*(xi_in(guess_ind+1)-xi)/gap;
+                gap = xi_in(guess_ind+1)-xi_in(guess_ind);
+                guess = y_in(:,guess_ind)*(xi-xi_in(guess_ind))/gap + y_in(:,guess_ind+1)*(xi_in(guess_ind+1)-xi)/gap;
             end
         end
         
@@ -382,7 +380,7 @@ function [xi_final,y_final] = var_rho_from_master(params,master_y,master_xi,mast
 %             dndxi_old = 1/Q1/nu_dl*(n_coeff*n-force_bal+u*dQdxi)-h/Q1*(P*dDdxi+D*dPdxi);
 %             dndxi = 1/Q1/nu_dl*((n_coeff+nu_dl*P*(D-1))*n - force_bal+nu_dl*(h*D*dPdxi-P*2/beta_dl*dpbdxi));
             dndxi = 1/h*n^2-h*D/Q1*dPdxi-h*P/Q1*dDdxi+P*D/Q1*n+h/Q1/nu_dl*(n_coeff*n - force_bal); %
-            dydxi = [0,dQdxi,dhdxi,dndxi,dmdxi,dy6dxi,dy7dxi]';  
+            dydxi = [0,dQdxi,dhdxi,dndxi,dmdxi,dy6dxi,dy7dxi]*lambda_in';  
         end
         
         function resid = bc_vals(ya,yb)

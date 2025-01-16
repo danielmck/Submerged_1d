@@ -87,8 +87,8 @@ movefile(fname,'Results/');
         dhdt = (rho-1)/rho*D;
 %         dhdt=0;
         dphidt = -phi*D/rho;
-        dudt = sind(theta_in)*h-tau_zx/rho;
-        dpbdt = -3/(alpha_dl*beta_dl*h^2)*pe+cosd(theta_in)*dhdt/4-3*abs(u)/(h*alpha_dl)*(abs(u)>1.5e-2)*(tan_psi);
+        dudt = sind(theta_in)*h-tau_zx/rho; %(-3/(2*alpha_dl*h)+h*cosd(theta_in)/4*(rho-1)/rho)*D
+        dpbdt = -3/(alpha_dl*beta_dl*h^2)*pe+cosd(theta_in)*dhdt/4-9/2*abs(u)/(h*alpha_dl)*(abs(u)>1.5e-2)*(tan_psi);
 %         dIvdt = dudt.*3.*eta_f_dl./pp+1./pp.*Iv.*(-3*abs(u)/(h*alpha_dl)*(tan_psi));
 %         tan_psi_eq = -(sind(theta_in)-tand(theta0)/cosd(theta_in)).*3.*eta_f_dl./((rho-1).*cosd(theta0))/(-init_Iv^2./eta_f_dl/((h*alpha_dl)));
         
@@ -97,10 +97,10 @@ movefile(fname,'Results/');
 
     function success = run_Ive_da_sim()
         time_vals = linspace(0,tlen,15000);
-%         opts=odeset('AbsTol',1e-12,'RelTol',1e-12,'Stats','on');
+        opts=odeset('AbsTol',1e-8,'RelTol',1e-6,'Stats','on');
 
 %         [~,vec]=ode15s(@Ive_depth_ave,time_vals,[1,depth_phi_orig,depth_u,pb_init],opts);
-        [tvals,vec]=ode15s(@Ive_depth_ave,time_vals,[1,init_phi,init_u_dl,cosd(theta)]);
+        [tvals,vec]=ode15s(@Ive_depth_ave,time_vals,[1,init_phi,init_u_dl,cosd(theta)],opts);
         vec = horzcat(tvals,vec);
         size(vec);
 %         vec = vec.*[t_scale,z_scale,1,v_scale,p_scale];

@@ -16,7 +16,7 @@ function viscous_Iv_bvp_from_ode
     rho_p = 2500;
     
     Fr_eq = 0.8; 
-    lambda = 12;
+    lambda = 15;
     
     rho = rho_p*phi_c+rho_f*(1-phi_c);
     P = (rho-rho_f)/rho;
@@ -29,13 +29,18 @@ function viscous_Iv_bvp_from_ode
     h0 = ((Fr_eq*sqrt(g*cosd(theta)))./u_const)^(2/3);
     
     u_eq = u_const.*h0^2;
-    nu = 3/4*crit_mu*eta_f/crit_Iv/rho;
+    nu = 3/4*mu_Iv_fn(crit_Iv)*eta_f/crit_Iv/rho;
     
     z_scale = h0;
     v_scale = u_eq;
     t_scale = z_scale/v_scale;
+    p_scale = rho_f*g*cosd(theta)*h0;
 
-    nu_dl = nu/(v_scale)^2;
+    eta_f_dl = eta_f/(p_scale*t_scale);
+    rho_f_dl = rho_f*v_scale^2/p_scale;
+    rho_p_dl = rho_p*v_scale^2/p_scale;
+    rho_init_dl = rho_p_dl*phi_c + rho_f_dl*(1-phi_c);
+    nu_dl = nu/(v_scale*z_scale);
     R = u_eq*h0/nu;
     
     % Gets the waveform from the ode solver
@@ -94,21 +99,23 @@ function viscous_Iv_bvp_from_ode
             try
                 solN1 = bvp4c(@viscous_syst,@bc_vals,solInit1,opts);
                 resid = solN1.stats.maxres;
+                h_wave = solN1.y(3,:);
+                h_diff = max(h_wave)-min(h_wave);
             catch ME
                 switch ME.identifier
                     case 'MATLAB:UndefinedFunction'
                         warning('Function is undefined.  Assigning a value of NaN.');
                         resid = 2*tol;
+                    case 'MATLAB:bvp4c:SingJac'
+                        warning('Singular Jacobian encountered, reducing step size');
+                        resid = 2*tol;
                     otherwise
                         rethrow(ME)
                 end
-                
             end
             % Solves the 5 value bvp for u_w, Q1, h, n and m.
-            h_wave = solN1.y(3,:);
-            h_diff = max(h_wave)-min(h_wave);
-            if h_diff>1e-4
-                if resid < tol
+            if resid < tol
+                if h_diff>1e-4
                     y_in = solN1.y;
                     xi_in = solN1.x;
                 else

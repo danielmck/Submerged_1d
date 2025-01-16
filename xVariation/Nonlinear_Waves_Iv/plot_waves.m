@@ -1,4 +1,4 @@
-filename = "visc_comp_nu_point1.txt"; %long_low_pe
+filename = "Fr_point6_lambda_70.txt"; %long_low_pe
 master_file = load("Results/"+filename);
 xi = master_file(1,:);
 y = master_file(2:end,:);
@@ -13,10 +13,15 @@ Fr = record.Fr(in_table);
 nu = record.nu(in_table);
 tau0 = record.tau0(in_table);
 % if strcmp(extract(wave_type{1,1},1),"full")
-full_model= all(wave_type=='var_rho_full');
+if (size(wave_type,2)>5)
+    full_model= all(wave_type(1:7)=='var_rho');
+    var_rho = all(wave_type(1:7)=='var_rho');
+else
+    full_model=0;
+    var_rho = 0;
+end
 d = record.d(in_table);
 alpha = record.alpha(in_table);
-var_rho = all(wave_type(1:min(7,size(wave_type,2)))=='var_rho');
 % else
 %     full_model=false;
 %     alpha=0;
@@ -155,7 +160,8 @@ force_bal_max = tand(theta)-sign(u).*mu_val_min;
 n_eq = (force_bal)./n_coeff;
 n_diff = n_coeff.*n - force_bal;
 dQdxi = -P.*D;
-dndxi = 1./(2.*h).*n.^2 + h.^(3/2)/Fr^2./nu_dl./Q1.*n_coeff.*(n-n_eq);
+
+dndxi = 1./h.*n.^2 + h.^2/Fr^2./nu_dl./Q1.*(n_coeff.*n-force_bal);
 dn_term1 = 1./(2.*h).*n.^2;
 dn_term2 = h.^(3/2)/Fr^2./nu_dl./Q1.*n_coeff.*(n-n_eq);
 dmdxi = h./lambda.*u;
@@ -163,12 +169,16 @@ dmdxi = h./lambda.*u;
 if full_model
     dy6dxi = -R_w3;
     dphidxi = (dy6dxi-phi.*dQdxi)./Q1;
+    dPdxi = rho_f_dl*(rho_p_dl-rho_f_dl)./rho_dl.^2.*dphidxi;
     dy7dxi = R_w4./(u-u_w);
     if var_rho
         dpbdxi = dy7dxi + rho_dl.*g_dl.*cosd(theta).*chi.*dhdxi + 3/4.*g_dl.*cosd(theta).*(rho_p_dl-rho_f_dl).*dphidxi;
     else
         dpbdxi = dy7dxi+ rho_dl.*g_dl.*cosd(theta_in).*chi.*dhdxi;
     end
+    dDdxi = -2/beta_dl.*(dpbdxi./h-pb./h.^2.*dhdxi);
+    dndxi_add = -h.*D./Q1.*dPdxi-h.*P./Q1.*dDdxi+P.*D./Q1.*n;
+    dndxi = dndxi+dndxi_add;
     dpbdxi_scale = dpbdxi/(p_max-p_min);
     dhdxi_scale = n/(h_max-h_min);
 end
@@ -185,10 +195,10 @@ end
 % save("time_d_load_pbh.txt","vec_save","-ascii");
 %%
 C = viridis(4);
-SetPaperSize(7.5,7.5)
+% SetPaperSize(7.5,7.5)
 hold on
 %     plot(linspace(0.5,1),get_force_bal(linspace(0.5,1)))
-plot(xi,h, "DisplayName", "$\nu = 0.1\nu_n$","color",C(3,:))%
+plot(xi,pb, "DisplayName", "$\nu = 0.1\nu_n$","color",C(1,:))%
 %     plot(xi,h,"--","DisplayName","$Q_1/u_w$","color","r")
 %     plot(xi,ones(size(xi))*h_stop_dl,"--","DisplayName","$h_{stop}$","color","y")
 %     plot(xi(xi<5),n_eq(xi<5), "DisplayName", "Waveform","color",C(2,:))

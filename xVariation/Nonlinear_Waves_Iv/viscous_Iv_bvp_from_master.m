@@ -41,7 +41,7 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
         provide_init = false;
     end
     if ~provide_init
-        master_name = "master_wave_no_pe.txt"; %
+        master_name = "master_wave_no_pe.txt"; %master_wave_no_pe
         master_file = load("Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -69,16 +69,16 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
     end
     
     if ~specify_param
-        Fr_eq = 0.8; 
-        lambda = 12;
+        Fr_eq = 1.0; 
+        lambda = 10;
         theta = 12;
-        nu_ratio = 1;
+        nu_ratio = 1.0;
         tau0 = 0;
         rel_flux = 1;
         pres_h = 1;
 %         h0 = 0.1;
         [h0, Iv_final] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr_eq, tau0);
-        filename = "theta12_Fr3_convert.txt";
+        filename = "lambda_10_no_pe.txt";
     else
         param_cell = num2cell(params);
         if (size(param_cell,2) == 5)
@@ -174,7 +174,7 @@ function [xi_final,y_final] = viscous_Iv_bvp_from_master(specify_param,params,pr
             [h0, crit_Iv] = crit_Iv_tau0(theta_in, rho_p, rho_f, eta_f, Fr_in, tau0_in);
             u_eq = Fr_in*sqrt(g*cosd(theta_in)*h0);
             nu = 3/4*mu_Iv_fn(crit_Iv)*eta_f/crit_Iv/rho*nu_vals(i);
-            nu_dl = nu/(u_eq)^2;
+            nu_dl = nu/(u_eq*h0);
             tau0_dl = tau0_in/(rho_f*g*cosd(theta_in)*h0);
             lambda_old = lambda_vals(i-1);
             lambda_in = lambda_vals(i);

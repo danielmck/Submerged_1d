@@ -24,7 +24,7 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
         provide_init = false;
     end
     if ~provide_init
-        master_name = "no_pe_no_vis_master_pres_h.txt"; %;"tau0_low_very_long.txt"
+        master_name = "no_pe_no_vis_master.txt"; %;"Fr_point8_theta_12.txt"
         master_file = load("Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
@@ -54,18 +54,18 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
     master_rf = master_y(5,end);
     
     if ~specify_param
-        Fr_eq = 3.0; 
+        Fr_eq = 0.8; 
         theta = 12;
-        tau0 = 0;
+        tau0 = 10;
         stat_len=0;
         h_min = -1;
         rel_flux = 1;
-        lambda_spec = 300;
+        lambda_spec = 1000;
         pres_h = true;
         set_h_min = false;
         % h_alt specifies the distance from the static minimum that the
         % wave must begin at.
-        filename = "Fr3_theta12_long.txt";
+        filename = "Fr_point8_theta_12.txt";
         
     else
         param_cell = num2cell(params);
@@ -114,7 +114,7 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
         sl_step = 2;
     end
     if ratio_sum > 1e-6
-        n_step = max(min(ceil(30*ratio_sum),400),90);
+        n_step = max(min(ceil(20*ratio_sum),400),2);
     else
         n_step=max(2,sl_step);
     end
@@ -203,19 +203,31 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
                 end
             else
                 if stat_reg 
-                    if y_in(6,1) < 1e-6
+                    if (y_in(6,1) < 1e-6 && len_vals(i)<=len_vals(i-1))
                         stat_reg = false;
                         y_in = y_in(1:5,:);
                     end
                 elseif ~stat_reg && (y_in(4,1)-y_in(2,1)/y_in(1,1))/y_in(4,1)^2*eq_Iv<2.5e-7
                     stat_reg = true;
                     y_in = vertcat(y_in,zeros(size(xi_in)));
+                    lambda_in = len_vals(i-1);
                     opts = bvpset('RelTol',tol);
-                    solInit1=bvpinit(xi_in,@bvp_guess);
-                    solN1 = bvp4c(@viscous_syst_static,@bc_vals_static,solInit1,opts);
+                    try
+                        solInit1=bvpinit(xi_in,@bvp_guess);
+                        solN1 = bvp4c(@viscous_syst_static,@bc_vals_static,solInit1,opts);
+                        resid = solN1.stats.maxres;
+                        catch ME
+                        switch ME.identifier
+                            case 'MATLAB:bvp4c:SingJac'
+                            resid = tol+1;
+                        end
+                    end
                     if resid < tol
                         y_in = solN1.y;
                         xi_in = solN1.x;
+                    else
+                        stat_reg = false;
+                        y_in = y_in(1:5,:);
                     end
                 end
             end
@@ -274,8 +286,8 @@ function [xi_final,y_final] = construct_depo_wave(specify_param,params,provide_i
                     linspace(len_vals(i-1),len_vals(i),3),stat_reg,xi_in, y_in, tol, counter+1);
             end
         end
-        y_out = solN1.y;
-        xi_out = solN1.x;
+        y_out = y_in;
+        xi_out = xi_in;
         
         function guess = bvp_guess(xi)
             % Initial guess function from the ode soln

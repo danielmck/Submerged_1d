@@ -15,6 +15,7 @@ function wave_stability_theta
     
 %     theta = 20; % deg
     alpha = 1e-4; % 1/Pa
+    tau0=0;
     
       
     n_pts = 100;
@@ -31,9 +32,9 @@ function wave_stability_theta
         Fr = Fr_list(j);
         for l = 1:n_pts  
             theta = theta_list(l);
-            [h0, crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, 0,false,true);
+            [h0, crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, tau0,false,true);
 %             d = d_dl*h0;
-            stab_out = single_Fr_stab(Fr,crit_Iv,theta, rho_p, rho_f, d, eta_f, alpha);
+            stab_out = single_Fr_stab(Fr,crit_Iv,theta, rho_p, rho_f, d, eta_f, alpha, tau0);
             num_unstab(l,j) = stab_out(1);
             k_unstab(l,j) = stab_out(2);
         end
