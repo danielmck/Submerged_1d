@@ -17,6 +17,7 @@ function critical_Fr_val
 %     d_dl = 2e-4;
 %     d = 2e-4;
     
+    
 %     alpha_list = [1e-6 5e-6 1e-5 5e-5 1e-4];
 %     n_pts1 = size(alpha_list,2);
 
@@ -59,7 +60,7 @@ function critical_Fr_val
                     crit_Fr(i,j) = get_critical_Fr(theta, rho_p, rho_f, d, eta_f, alpha, tau0);
                 end
             end
-            save("crit_Fr_"+var_names(b)+"_theta_"+phase_name(a)+"_no_pe.txt", 'crit_Fr','-ascii')
+            save("crit_h_"+var_names(b)+"_theta_"+phase_name(a)+".txt", 'crit_Fr','-ascii')
         end
     end
     

@@ -1,9 +1,9 @@
 function fn_out = single_Fr_stab(Fr,crit_Iv,theta, rho_p, rho_f, d, eta_f, alpha, tau0)
 % Finds the critical Froude number for the specified condition
-%     short = 2*4.3034e-04;
-%     long = 1.8;
-%     short_k = 2*pi/short;
-%     long_k = 2*pi/long;
+    short = 2*4.3034e-04;
+    long = 1.8;
+    short_k = 2*pi/short;
+    long_k = 2*pi/long;
 
     phi_c=0.585; % Volume fraction
     g=9.81; % m/s^2
@@ -74,8 +74,8 @@ function fn_out = single_Fr_stab(Fr,crit_Iv,theta, rho_p, rho_f, d, eta_f, alpha
     k_unstab = NaN;
     max_eig = NaN;
     
-    k_val = logspace(-5,5,num_k);
-    % k_val = logspace(log10(long_k_dl),log10(short_k_dl),num_k);
+    % k_val = logspace(-5,5,num_k);
+    k_val = logspace(log10(long_k_dl),log10(short_k_dl),num_k);
     for i = 1:num_k
         k = k_val(i);
         A_mat(1,1) = k+2*1i*P0/beta_dl;
@@ -101,20 +101,35 @@ function fn_out = single_Fr_stab(Fr,crit_Iv,theta, rho_p, rho_f, d, eta_f, alpha
     end
     num_unstab = sum(max(sigma_mat,[],2)>0);
     fn_out = [num_unstab k_unstab];
+    % temp = sigma_mat(1,43:49);
+    % sigma_mat(1,43:49) = sigma_mat(2,43:49);
+    % sigma_mat(2,43:49) = temp;
+    % temp = sigma_mat(2,59:end);
+    % sigma_mat(2,59:end) = sigma_mat(3,59:end);
+    % sigma_mat(3,59:end) = temp;
 %     f = figure;
-%     SetPaperSize(8,8)
+%     SetPaperSize(15.6,8)
 % %     set(f, 'PaperUnits', 'centimeters');
 % %     set(f, 'PaperSize', [10 10]);
-% %     semilogx(k_val,sigma_mat)
-%     xvals = linspace(0,short/z_scale,100);
-%     comp = eig_vec(:,4).*exp(1i*k*xvals);
-%     plot(xvals,comp)
-% %     legend('$h$','$u$', '$p_b$', '$\phi$','Location', 'best')
-% %     ylim([-0.5,0.5])
-%     xlabel('Wavenumber')
-%     ylabel('Eigenvector real part')
-%     title('Full model: 2nd most stable mode')
-% %     title('$\theta = 18$, $d = 10^{-4}$, $\alpha = 10^{-4}$, $Fr = 5$, Phase = Air')
-%     exp_graph(f,"Full_Eigvec_4.pdf")
+%     subplot(1,2,1)
+    semilogx(k_val,sigma_mat)
+
+    % xvals = linspace(0,short/z_scale,100);
+    % comp = eig_vec(:,4).*exp(1i*k*xvals);
+    % plot(xvals,comp)
+%     legend('$h$','$u$', '$p_b$', '$\phi$','Location', 'best')
+%     ylim([-0.5,0.5])
+    % xlabel('Wavenumber $k$')
+    % ylabel('Linear Growth Rate $\Im(\omega)$')
+    % 
+    % subplot(1,2,2)
+    % semilogx(k_val,sigma_mat(1:3,:))
+    % xlabel('Wavenumber $k$')
+    % ylim([-0.5,0.5])
+    % ylabel('Linear Growth Rate $\Im(\omega)$')
+    % title('Full model: 2nd most stable mode')
+    % sgt = sgtitle('$\theta = 10^{\circ}$, $d = 10^{-4}$m, $\alpha = 10^{-5}$Pa$^{-1}$, $Fr = 0.3$, $\tau_0 = 10$Pa, $h_0=0.29$m');
+    % sgt.FontSize = 8;
+    % exp_graph(f,"Full_Eigvec_4_Fr0.3.pdf")
 %     
 end

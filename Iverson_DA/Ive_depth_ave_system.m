@@ -103,7 +103,7 @@ movefile(fname,'Results/');
         
         % No initial pressure of phihat and initial values of u_p and u_f
         % defined above
-        time_vals = linspace(0,5,1500);
+        time_vals = linspace(0,2,1500);
 %         opts=odeset('AbsTol',1e-12,'RelTol',1e-12,'Stats','on');
 
 %         [~,vec]=ode15s(@Ive_depth_ave,time_vals,[1,depth_phi_orig,depth_u,pb_init],opts);

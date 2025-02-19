@@ -1,5 +1,5 @@
-    full_name = "Ive_5deg_Fr_10_mud.txt";
-    da_name = "Ive_da_5deg_Fr_10_mud_early.txt";
+    full_name = "Ive_5deg_Fr_5_gravel.txt";
+    da_name = "Ive_da_5deg_Fr_5_gravel_short.txt";
 
 
     [phi_c,rho_f,rho_p,~,eta_f,g] = get_params_water();
@@ -59,7 +59,7 @@
     pe_full_quart = p_e(N/4,:);
     pp_full_quart = p_p(N/4,:);
     
-    da_file = load(da_name);
+    da_file = load('Results/'+da_name);
     t_vals_da = da_file(:,1);
     h_da = da_file(:,2);
     phi_da = da_file(:,3)./h_da;
@@ -85,11 +85,11 @@
     da_min = max(sum(t_vals_da<t_min),1);
     da_max = min(sum(t_vals_da<t_max)+1,size(t_vals_da,1));
     
-    plot(t_vals(full_min:full_max), tan_psi_full_ave(full_min:full_max),'DisplayName',"Full model", 'color', '#fc8d62','LineWidth',1.3) %[0.127,0.201,0.127])
-    plot(t_vals_da(da_min:da_max), tan_psi_da(da_min:da_max),'DisplayName',"DA model", 'color', '#8da0cb','LineWidth',1.3)
-    legend('Location', "best",'UserData', 8);
+    plot(t_vals(full_min:full_max), pe_full_base(full_min:full_max),'DisplayName',"Full model", 'color', '#fc8d62','LineWidth',1.3) %[0.127,0.201,0.127])
+    plot(t_vals_da(da_min:da_max), pe_da(da_min:da_max),'DisplayName',"DA model", 'color', '#8da0cb','LineWidth',1.3)
+    % legend('Location', "best",'UserData', 8);
     xlabel("$t$");
-    ylabel('$\tan\bar{\psi}$');%,'Position',[-35 0.0045]);
+    ylabel('$p_e^b$');%,'Position',[-35 0.0045]);
     xlim([t_min t_max])
-    exp_graph(gcf,"Comp_tanpsi_early_mud.pdf")
+    exp_graph(gcf,"Comp_pe_early_gravel.pdf")
     

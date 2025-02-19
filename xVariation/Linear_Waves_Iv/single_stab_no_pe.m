@@ -38,7 +38,7 @@ function fn_out = single_stab_no_pe(Fr,crit_Iv,theta, rho_p, rho_f, eta_f, tau0)
     end
     
     k = 10;
-    A_mat = zeros(4);
+    A_mat = zeros(2);
     A_mat(1,1) = k;
     A_mat(1,2) = k;
     A_mat(2,1) = k/Fr^2-1i*P0/Fr^2*dmudh+1i*tau0_dl/rho0_dl;

@@ -26,11 +26,11 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
     end
     if ~provide_init
         Res_dir = "~/Documents/MATLAB/1D_System/xVariation/Nonlinear_Waves_Iv/VarRho_NonVis/";
-        master_name = "master_pres_h.txt"; %master_pres_h
-        master_file = load(Res_dir+"Results/"+master_name);
+        master_name = "report_full_demo.txt"; %master_pres_h
+        master_file = load("Results/"+master_name);
         master_xi = master_file(1,:);
         master_y = master_file(2:end,:);
-        record = readtable(Res_dir+"Results/full_record.csv");
+        record = readtable("Results/full_record.csv");
 
         in_table = strcmp(record.Name, master_name);
         wave_type = record.wave_type(in_table);
@@ -74,7 +74,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
         
         set_h_min = false;
         h_min = 0.772823929784104;
-        lambda_final = 15;
+        lambda_final = 20;
         
         pres_h = true;
         rel_flux = 1;
@@ -182,7 +182,7 @@ function [xi_final,y_final] = full_depo_wave_var_rho(specify_param,params,provid
         xi_eps = 1e-3;
         if counter > 10
             out_vec = vertcat(xi_in,y_in);
-            fail_name = ":new_out.txt";
+            fail_name = "new_out.txt";
             save("Results/"+fail_name,"out_vec","-ascii")
             write_record("Results/full_record.csv",fail_name,{"full","water",Fr_vals(1),theta_vals(1),alpha_vals(1),d_vals(1),tau0_vals(1),p_in(1),p_in(2),p_in(3),0})
             error("Max iteration depth reached, non convergence")

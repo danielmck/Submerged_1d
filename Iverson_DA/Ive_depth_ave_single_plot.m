@@ -1,5 +1,5 @@
-fname = ["Ive_da_5deg_Fr_5_gravel_short.txt"]; % 
-fname = ["Ive_da_5deg_Fr_5_gravel_short.txt"]; % 
+fname = ["Ive_da_5deg_Fr_5_gravel.txt"]; % 
+% fname = ["Ive_da_5deg_Fr_5_gravel_short.txt"]; % 
 % plot_titles = ["$\alpha = 10^{-3}$","$\alpha = 10^{-4}$","$\alpha = 10^{-5}$"];
 
 sim_num = size(fname,2);
@@ -201,7 +201,7 @@ for i=1:sim_num
     end
     
 %%
-    % SetPaperSize(7.8,7.8);  
+    SetPaperSize(7.8,7.8);  
     if (i == 1)
         colour = "blue";
     else
@@ -210,7 +210,7 @@ for i=1:sim_num
     
     
     t_start = 0;
-    t_stop = 15000;
+    t_stop = 100;
     t_begin = max(sum(t_vals(i,1:n_times(1,i))<t_start)-1,1);
     t_end = min(sum(t_vals(i,1:n_times(1,i))<t_stop)+1,n_times(1,i));
     pe_ave = 0;
@@ -235,7 +235,7 @@ for i=1:sim_num
     
 %     subplot(4,2,2)
     % % hold on
-    plot(t_vals(i,t_begin:t_end), phi(t_begin:t_end),'DisplayName',"Model", 'color', '#fc8d62','LineWidth',1.3) %[0.127,0.201,0.127])
+    plot(t_vals(i,t_begin:t_end), pe(t_begin:t_end),'DisplayName',"Model", 'color', '#fc8d62','LineWidth',1.3) %[0.127,0.201,0.127])
 %     ylabel("$h$")
 %     xlim([t_start,t_stop])
 %     ylim([0.5,1.1])
@@ -256,14 +256,14 @@ for i=1:sim_num
 %     ylim([0.9,1.5])
 %     xlabel('$t$')
         % plot(t_vals(i,t_begin:t_end), pp_fast_new(t_begin:t_end),'DisplayName',"Approximation", 'color', '#8da0cb','LineWidth',1.3)
-    [phi_app_max,phi_app_ind]=max(phi_approx);
-    plot(t_vals(i,t_begin:phi_app_ind), phi_Iv(t_begin:phi_app_ind),'DisplayName',"Approximation", 'color', '#8da0cb','LineWidth',1.3)
+    % [phi_app_max,phi_app_ind]=max(phi_approx);
+    % plot(t_vals(i,t_begin:phi_app_ind), phi_Iv(t_begin:phi_app_ind),'DisplayName',"Approximation", 'color', '#8da0cb','LineWidth',1.3)
 
 end
 % plot(t_vals(i,t_begin:t_end),(rho(2,1)-1)*cosd(13).*ones(1,t_end-t_begin+1),"--k",'DisplayName',"Previous Slope Value")
 % legend('Location', "best",'UserData', 8);
 xlabel("$t$");
-ylabel('$p_p^b$');%);
+ylabel('$p_e^b$');%);
 xlim([t_start t_stop])
 % ylim([-0.00025, 0])
 box on
@@ -275,4 +275,4 @@ box on
 % yticks(-1e-4:2e-5:0)
 % ytickformat('%5.0e');
 % ax.YAxis.Exponent = 0;
-exp_graph(gcf,"phi_out_examine.pdf")
+exp_graph(gcf,"Ive_da_Fr_5_gravel_pe.pdf")

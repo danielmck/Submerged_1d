@@ -71,7 +71,8 @@ function [xi_out, y_out, uw_out] = viscous_wave_replica_Iv(theta, rho_f, rho_p, 
 %     hold on
 %     opts_nv = odeset('Events',@NV_WaveEndFn);
 %     [xi_nv,out_nv] = ode15s(@non_viscous_system,[0, 50],min_h,opts_nv);
-%     plot(xi_nv(:,1),out_nv(:,1))
+    % plot(xi_nv(:,1),out_nv(:,1))
+    plot(xi_out,y_out(:,2))
 
     function dhdx = non_viscous_system(x,y)
         h = y(1);

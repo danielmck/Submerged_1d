@@ -1,15 +1,14 @@
-function fn_out = two_eqn_stab(h0,theta, rho_p, rho_f, eta_f, tau0)
+function fn_out = two_eqn_stab(Fr,theta, rho_p, rho_f, eta_f, tau0)
 % Finds the critical Froude number for the specified condition
+    phi_c=0.585; % Volume fraction
+    g=9.81; % m/s^2
+    
+    [h0,crit_Iv] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, tau0,0,false);
     short = h0/1000;
     long = 50000*h0;
     short_k = 2*pi/short;
     long_k = 2*pi/long;
-
-    phi_c=0.585; % Volume fraction
-    g=9.81; % m/s^2
-    
-    [Fr,crit_Iv] = crit_Iv_tau0_h(theta, rho_p, rho_f, eta_f, h0, tau0,0,false);
-    crit_phi = phi_c./(1+sqrt(crit_Iv));
+    crit_phi = phi_c; %./(1+sqrt(crit_Iv));
     u_const = crit_Iv/eta_f/3*(rho_p-rho_f)*g*crit_phi*cosd(theta);
     rho_0 = crit_phi*rho_p + (1-crit_phi)*rho_f;
     
@@ -17,7 +16,7 @@ function fn_out = two_eqn_stab(h0,theta, rho_p, rho_f, eta_f, tau0)
     
     crit_phi = phi_c;
     crit_pb = rho_f*g*cosd(theta)*h0;
-    crit_u = crit_Iv/eta_f/2*p_p*h0;
+    crit_u = crit_Iv/eta_f/3*p_p*h0;
     
     v_scale = crit_u;
     p_scale = crit_pb;
@@ -54,7 +53,7 @@ function fn_out = two_eqn_stab(h0,theta, rho_p, rho_f, eta_f, tau0)
     % long_k_dl = long_k*z_scale;
     % k_val = logspace(log10(long_k_dl),log10(short_k_dl),num_k);
     for i = 1:num_k
-        k = k_val(i);
+        k = 10;%k_val(i);
         A_mat(1,1) = k;
         A_mat(1,2) = k;
         A_mat(2,1) = g_dl*cosd(theta)*k-1i*P0*g_dl*cosd(theta)*dmudh+1i*tau0_dl/rho0_dl;
@@ -88,6 +87,6 @@ function fn_out = two_eqn_stab(h0,theta, rho_p, rho_f, eta_f, tau0)
     ylabel('Linear Growth Rate $\Im(\omega)$')
     % title('Two eqn model: Stable mode')
     title('$\theta = 10^{\circ}$, $Fr = 1$, $\tau_0=10$Pa, $h_0 = 0.04$m')
-    exp_graph(f,"TwoEqn_Eigvec.pdf")
+    % exp_graph(f,"TwoEqn_Eigvec.pdf")
 %     
 end

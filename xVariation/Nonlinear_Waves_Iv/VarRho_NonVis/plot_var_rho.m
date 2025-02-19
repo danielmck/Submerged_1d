@@ -1,4 +1,4 @@
-filelist = ["report_full_demo.txt"]; %long_low_pe
+filelist = ["new_out.txt"]; %long_low_pe
 n_files = size(filelist,2);
 
 mu1_Iv = 0.32;
@@ -340,26 +340,26 @@ dil_cont = u{i,1}./pp{i,1}./Q1{i,1}.*h{i,1}.*dilatancy{i,1};
 
 % [h0_2e, crit_Iv_2e] = crit_Iv_tau0(theta, rho_p, rho_f, eta_f, Fr, tau0,false,false);
 % u0_2e = Fr*sqrt(g*cosd(theta)*h0_2e);
-filename_2e = "report_demo_wave_v2.txt";
-master_file_2e = load("../TwoEqn_non_vis/Results/"+filename_2e);
-xi_temp_2e = master_file_2e(1,:);
-y_temp_2e = master_file_2e(2:end,:);
-record = readtable('../TwoEqn_non_vis/Results/wave_record.csv');
-
-in_table_2e = strcmp(record.Name, filename_2e);
-wave_type_2e = record.wave_type(in_table_2e);
-theta_2e = record.theta(in_table_2e); 
-Fr_2e = record.Fr(in_table_2e);
-tau0_2e = record.tau0(in_table_2e);
-
-lambda_2e = y_temp_2e(3,1);
-xi_2e = xi_temp_2e*lambda_2e;
-Q1_2e = y_temp_2e(2,1);
-u_w_2e = y_temp_2e(1,1);
-
-h_2e = y_temp_2e(4,:);
-u_2e = u_w_2e - Q1_2e./h_2e;
-m_2e = y_temp_2e(5,:);
+% filename_2e = "report_demo_wave_v2.txt";
+% master_file_2e = load("../TwoEqn_non_vis/Results/"+filename_2e);
+% xi_temp_2e = master_file_2e(1,:);
+% y_temp_2e = master_file_2e(2:end,:);
+% record = readtable('../TwoEqn_non_vis/Results/wave_record.csv');
+% 
+% in_table_2e = strcmp(record.Name, filename_2e);
+% wave_type_2e = record.wave_type(in_table_2e);
+% theta_2e = record.theta(in_table_2e); 
+% Fr_2e = record.Fr(in_table_2e);
+% tau0_2e = record.tau0(in_table_2e);
+% 
+% lambda_2e = y_temp_2e(3,1);
+% xi_2e = xi_temp_2e*lambda_2e;
+% Q1_2e = y_temp_2e(2,1);
+% u_w_2e = y_temp_2e(1,1);
+% 
+% h_2e = y_temp_2e(4,:);
+% u_2e = u_w_2e - Q1_2e./h_2e;
+% m_2e = y_temp_2e(5,:);
 
 %%
 % SetPaperSize(7.6,7.6)
@@ -407,15 +407,15 @@ end
 % % set(gca,'XTickLabel',[]);
 % subplot(2,2,4)
 % hold on
-plot(xi{i,1},tan_psi{i,1},"DisplayName","Wave Profile","color","#8da0cb")%C(1,:)) %,"color",C(2,:)
-plot(xi_app,tan_psi_app, "DisplayName", "Approximation","color","#fc8d62")
+plot(xi{i,1},pb{i,1},"DisplayName","Wave Profile","color","#8da0cb")%C(1,:)) %,"color",C(2,:)
+% plot(xi_app,tan_psi_app, "DisplayName", "Approximation","color","#fc8d62")
 % plot(xi{i,1},(rho_f./rho),"--r")
 ylabel("$\tan\psi$","interpreter","latex")
 
-xlim([14.95,15])
+% xlim([14.95,15])
 % xlim([(lambda-0.1)*h0,lambda*h0])
 xlabel("$\xi$","interpreter","latex")
-ylim([-0.015,0.0001])
+% ylim([-0.015,0.0001])
 ax = gca;
 ax.YAxis.Exponent = 0;
 % ylabel("$h$ ($m$)")
@@ -426,4 +426,4 @@ ax.YAxis.Exponent = 0;
 % ylabel("Liquefaction ratio $\frac{p_b}{p_{tot}}$")
 % legend("Location","best")
 % sgtitle("$Fr = 1.0$, $\theta = "+num2str(theta)+"^{\circ}$, $\tau_0 = "+num2str(tau0)+"Pa$")
-exp_graph(gcf,"wave_end_tanpsi_match.pdf")
+% exp_graph(gcf,"wave_end_tanpsi_match.pdf")

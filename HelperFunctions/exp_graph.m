@@ -111,7 +111,8 @@ function exp_graph(fig, fname)
     end
     if ~isempty(findobj(fig, 'Type','subplottext'))
         sglab = findobj(fig, 'Type','subplottext');
-        sgtitle(sglab.String,'FontSize',fs+3, 'Interpreter','latex');
+
+        sgtitle(sglab.String,'FontSize',fs+1, 'Interpreter','latex');
     end
 %     if ~strcmp(fname(end-4:end),'.png')
 %         fname = strcat(fname,".png");
